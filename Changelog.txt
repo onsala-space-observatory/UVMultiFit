@@ -1,0 +1,198 @@
+#################################
+Older versions: UVMULTIFIT 1.0
+                UVMULTIFIT 2.0b:
+                UVMULTIFIT 2.01
+                UVMULTIFIT 2.1.2
+                UVMULTIFIT 2.1.3
+                UVMULTIFIT 2.1.4
+                UVMULTIFIT 2.2.0
+                UVMULTIFIT 2.2.0-r3/r4
+                UVMULTIFIT 2.2.1
+                UVMULTIFIT 2.2.1-r2/r3
+#################################
+
+- 3.0.0:
+
+ - Data arranged in a more efficient way (as complex arrays, which did
+   not work in the older numpy C++ API versions (i.e., for CASA 5.X).
+
+ - Gains to be fitted van be generic functions of frequency and time.
+
+ - Helper Fringe-Fitting function (based on Quinn estimators of FFT peaks).
+
+ - New examples in the test suite, i.e.:
+    -  The "only_flux" functionality.
+    -  A case of "immultifit".
+    -  An example of Global Fringe Fitting.
+
+- 2.2.1-r3:
+
+- Added extra info to the output file, regardin the use of
+  primary-beam corrections.
+
+- The frequency written in the output file for fits to the continuum
+  (i.e., when OneFitPerChannel is False) is now the AVERAGE frequency
+  over the spws.
+
+- 2.2.1-r2:
+
+- Corrected missing keywords in immultifit.
+- Adapted to CASA 5.x (so far)
+
+- 2.2.1-r1:
+
+- Correction of small bug in the model-writting operation onto the
+  measurement set (i.e., when write_model='model'
+
+- 2.2.1:
+
+- Faster data read and model fitting (more efficient code). In some
+  cases, the speed-up can even be of x2.
+
+- Improved w-term treatment in mosaics.
+
+- Added a "test suite" with some example cases.
+
+- New model (GaussianRing) and new parameter (HankelOrder), to work
+  with models with no explicit Hankel transform (in these cases, the
+  Bessel Function J0 is approximated with a Taylor series of
+  HankelOrder order).
+
+- New keywords:
+
+   -ldfac: to fine-tune the proportionality between FWHM of the primary beam
+           and the dish diameter: FWHM = ldfac*lambda/D (default: 1.22)
+
+   -phase_gains and amp_gains: to define parameterized antenna-gain
+       functions, to be fitted simultaneously with the source parameters.
+
+   -HankelOrder: to set the approximation degree of J0 in the expansion
+       of source models with no explicit analytic form (new feature).
+
+
+- 2.2.0-r4:
+
+- Corrected bug in "expo" model. It was not returning "major" as
+  defined in the documentation (i.e., as the FWHM).
+
+- 2.2.0-r3:
+
+- Added ichan and echan keywords to the "modelFromClean" function.
+
+- Changed "write_model" to "write", where "write" can be set to
+  either '', 'model', or 'residuals'. The new 'residuals' feature
+  saves the post-fit residuals into the CORRECTED column.
+
+- 2.2.0-r1:
+
+- Changed pow(x,0.5) by sqrt in w-term correction. Speed-up by roughly
+  a factor 3 !
+
+- 2.2.0:
+
+- Added "phase_center" keyword, for the user to specify the reference
+  point on the sky to locate the model components.
+
+- Full support of W projection.
+
+- Better support for mosaic observations. Phase rotation is not needed
+  anymore, but primary beams are still approximated using circular
+  Gaussians (hence, the flux densities fitted to sources close to the
+  edge of the primary beam(s) may be biased).
+
+  In addition, the model components must be small, compared to the
+  primary beams. If very large sources are to be fitted, please use
+  the "immultifit" function, instead of "uvmultifit".
+
+
+- PATCH 2.1.4-r3:
+
+- More precise estimates of derivatives for the Hessian matrix, when
+  using spectral-line mode.
+
+- Re-fitting with fine tunning was broken. Now, it is back again.
+
+- PATCH 2.1.4-r2:
+
+- The fit is not aborted if all visibilities of a frequency channel
+  are flagged and OneFitPErChannel = True.
+
+- Added a clarifying message about re-scaling of weigths after the
+  fit.
+
+- Corrected bug: the power index of the weights used in the fit was
+  twice the one specified in "wgt_power". The effect of this bug on
+  the fitted parameters is small (typically within 1 sigma). It is
+  similar to a re-tunning of the "robust" parameter when imaging with
+  the Briggs weighting.
+
+- NEW IN 2.1.4:
+
+ 1. Changed two wrong explanations in the documentation (about meaning
+ of pre-scaled reduced Chi-Squared and about relationship between
+ axis-ratio definition and position angle)
+
+ 2. New keyword 'only_flux', to accelerate fits of many components
+ with only their flux density as free parameter (e.g., for simple
+ implementations of sparse-sampling deconvolution techniques)
+
+ 3. New keyword 'proper_motion', to correct for proper motions of fast
+ moving sources (e.g., binary stars) during the fit, on-the-fly.
+
+ 4. Corrected bug that broke the possibility of using MJDrange. Now,
+ if user wants to refit the dataset (e.g., with a new MJDrange) the
+ fit() function shall be called with "reinit_model=False", to avoid
+ memory leaks.
+
+ TODO: Implement possibility of FITTING the proper motions.
+
+- NEW IN 2.1.3:
+
+ 1. Improved convergence of Levenberg-Marquardt
+ 2. Simulated full-pol data can now be fitted with no problems.
+
+- NEW IN 2.1.2:
+
+ 1. Corrected bug that gave flipped coordinate offsets in IMMULTIFIT
+
+
+- NEW IN 2.01:
+
+ 1. Improved convergence of LM.
+
+ 2. Corrected bug that didn't read the coordinates shifts of mosaic
+ observations IN NON-SIMULATED DATA.
+
+
+
+- NEW IN 2.0b:
+
+ 1. Better memory handling in C++ extension.
+
+ 2. Faster processing (less overhead with Python API)
+
+ 3. Own implementation of Levenberg-Marquardt, to avoid the huge
+ memory usage of the standard Scipy library (although at the cost of
+ speed if the number of fitting parameters is large).
+
+ 4. Full support for CASA 4.2
+
+ 5. Added keywords LMtune and SMPtune, to tune the parameters that
+ control the Levenberg-Marquardt and the Simplex algorithm,
+ respectively.
+
+ 6. New feature in immultifit. Now, it also saves an image (cube) with
+ the best-fit unconvolved model. BEWARE, however, of the "window
+ effect", that will indeed convolve the model by the FT of the image
+ FFT coverage.
+
+ - REMOVED:
+
+ 1. Keyword clib is removed. Now, all processing is done with the C++
+ extension. User must compile it as explained in the README file.
+
+ 2. Keywords rstep and rxtol are removed (now use the SMPtune keyword)
+
+ 3. The GUI has been removed (PySide doesn't seem to work well with
+ the current CASA release. We will try to add it back in a future
+ version).

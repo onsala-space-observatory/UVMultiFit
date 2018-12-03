@@ -1,0 +1,50 @@
+MAIN NEW FEATURES IN UVMULTIFIT 3.0:
+
+1. Both data read and fitting are now (quite) faster. Just look at the
+timing in the "test suite" log files. For some examples (spectral-line
+mode), the fits are a factor 3-4 faster.
+
+The reason is that the data arrays are now read as arrays of
+complex128 numbers, instead of separate double arrays for the real and
+imaginary parts of the visibilities. I had to choose the former
+approach because of the older API versions for numpy C++ libraries,
+which had problems with pointers to complex numbers.
+
+BUT if you have an old computer and encounter problems (or use use a
+CASA version older than 5.0) and encounter problems, please ask me (or
+downgrade your version of UVMULTIFIT to 2.2.1-r3).
+
+2. The gain fitting (amplitude and phase) is now more mature. Even
+Global Fringe Fitting (for VLBI) is working on some simple
+datasets. More experimentation is on the way.
+
+3. LMTune is now extended with another number (but the program is of
+course backwards-compatible with previous versions for your current
+scripts). The new value is the maximum allowed error for the FITTING
+PARAMETERS (notice that in the previous versions, the same quantity
+was assigned for the maximum error of the chisquare AND the
+parameters). Besides, both conditions are now complementary (and not
+inclusively mandatory), which may accelerate the fit (i.e., less
+strict convergence criteria).
+
+4. IMMULTIFIT has a new keyword (dBcut), to control the minimum
+allowed gridded weights for the fitting (i.e., which values of the
+gridded visibilities are discarded). The default cutoff in previous
+versions was not very conservative (10dB), but this shouldn't affect
+much the results.
+
+5. A new function has been added (compilation is optional and
+disconnected by default; look at the setup script) for finding fringe
+peaks in delay-rate space and globalize the estimate as antenna-based
+quantities (delay, rate, and phase). The model defined in UVMULTIFIT
+(either the variable or the fixed one, or both) can be set as models
+for the Fringe Fitting.
+
+Currently, there is no documentation for the use of this function. But
+you can contact me if you want to experiment with this. I'd like to
+see how the UVMULTIFIT's GFF works on different VLBI observations!
+
+No calibration tables are generated, but setting write='model' will
+write the (gain-corrected) model, so that dividing the data by that
+model will magically calibrate your delays, rates, and phases (there
+is an example in the TEST SUITE).
