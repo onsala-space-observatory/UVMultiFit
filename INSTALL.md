@@ -20,8 +20,8 @@ sudo port install gsl
 export LIBRARY_PATH="/opt/local/lib"
 export LD_LIBRARY_PATH="/opt/local/lib"
 ```
-(and either run the setup script from that terminal or
-       update your LIBRARY_PATHs in your configuration).
+(and either run the setup script from that terminal or update your
+LIBRARY_PATHs in your configuration).
 
 ### Compile the C++ module. Just run:
 
