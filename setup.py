@@ -6,7 +6,7 @@ import numpy as np
 
 ######################
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
-BUILD_QUINN_FITTER = False
+BUILD_QUINN_FITTER = True
 ######################
 
 # DIRECTORY TO THE GSL LIBRARIES:

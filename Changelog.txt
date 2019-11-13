@@ -1,5 +1,14 @@
 # Version history
 
+## 3.0.0-patch2:
+
+ - Replaced ms tool by tb tool in data I/O, due to problems with new
+   ms tool.
+
+## 3.0.0-patch1:
+
+ - Solved problems with new ms tool in CASA > 5.x.
+
 ## 3.0.0:
 
  - Data arranged in a more efficient way (as complex arrays, which did

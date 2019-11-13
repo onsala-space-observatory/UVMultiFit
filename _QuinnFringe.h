@@ -13,10 +13,10 @@ class QuinnFringe {
 
     int GFF(int refant, int doGlobal, int doModel);
 
-    double *getRates();
-    double *getDelays();
-    double *getPhases();
-    double *getBins();
+    int getRates(double *Rates);
+    int getDelays(double *Delays);
+    int getPhases(double *Phases);
+    int getBins(double *Bins);
 
   private:
     cplx64f *ObsVis, *ModVis;
