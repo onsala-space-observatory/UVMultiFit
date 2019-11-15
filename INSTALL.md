@@ -35,7 +35,7 @@ After this step, the file "_uvmultimodel.so" should have been created.
    destination directory. The name of this directory could be, e.g.
 
 ```
-UVMULTIFIT_PATH = $HOME/.casa/Nordic_Tools/uvfit
+~/.casa/Nordic_Tools/uvfit
 ```
 
  * Import the module into CASA. You can do it from the init.py file or
@@ -43,6 +43,7 @@ UVMULTIFIT_PATH = $HOME/.casa/Nordic_Tools/uvfit
    following line at the end of your $HOME/.casa/init.py:
 
 ```
+UVMULTIFIT_PATH = "$HOME/.casa/Nordic_Tools/uvfit"
 import imp
 uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
 ```
