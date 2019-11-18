@@ -215,7 +215,7 @@ and so on. If there is only 1 fitting parameter:
 >>> pylab.plot(myfit.result['Frequency'][3], myfit.result['Parameters'][3])
 
 .. note:: The fitted parameters are ordered by spectral window *in the order given
-     by the "spw" parameter*. Hence, if spw='2, 3', then the first element of the
+     by the 'spw' parameter*. Hence, if spw='2, 3', then the first element of the
      list of parameters (i.e., ``myfit.result['Parameters'][0]``) will be the
      parameters fitted for the spw number 2.
 
@@ -1275,7 +1275,7 @@ class uvmultifit(object):
             paridx = zip([m.start() + 1 for m in re.finditer('\[', self.var[i])], [m.start() for m in re.finditer('\]', self.var[i])])
             maxpar = max([maxpar] + map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx]))
             if component not in self.implemented:
-                msg = "\nModel component '' + str(component) + '' is not known!\n"
+                msg = "\nModel component '" + str(component) + "' is not known!\n"
                 fmt = "Supported models are:" + " '%s' " * len(self.implemented)
                 msg += fmt % tuple(self.implemented)
                 self._printError(msg)
@@ -1714,7 +1714,7 @@ class uvmultifit(object):
                     self._printError("Cannot convert to '+self.stokes+'!!")
                     return False
             else:
-                self._printError("Polarization '+self.stokes+' not understood.\n ABORTING!")
+                self._printError("Polarization " + self.stokes + " not understood.\n ABORTING!")
                 return False
 
             ms.close()
@@ -2638,7 +2638,7 @@ from the pointing direction.\n\n""")
                 print("")
 
                 for nuidx in range(rang):
-                    self._printInfo("\r Fitting channel '+str(nuidx+1)+' of '+str(rang)+' in spw " + str(si))
+                    self._printInfo("\r Fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
 
                     self.mymodel.currspw = si
                     self.mymodel.currchan = nuidx
@@ -2841,7 +2841,7 @@ from the pointing direction.\n\n""")
             parshead.append(pp)
             parshead.append(pp)
 
-        headstr = ("# Frequency (Hz)   '+'p[%i]  error(p[%i])   ' * len(self.p_ini)+'Red. Chi Sq.\n") % tuple(parshead)
+        headstr = ("# Frequency (Hz)   " + "p[%i]  error(p[%i])   " * len(self.p_ini) + "Red. Chi Sq.\n") % tuple(parshead)
         outf.write(headstr)
 
         if not self.OneFitPerChannel:
