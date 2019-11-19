@@ -176,12 +176,9 @@ if DoFit:
     os.system('rm -rf %s.*' % Cfile)
     os.system('rm -rf %s.*' % Rfile)
 
-    cleancmd = "clean('%s/%s.%s.noisy.ms', imagename='%s', cell='%s', imsize=%d, niter=0)" % \
-               (imname, imname, config, Cfile, cell, 2*Npix)
-    print cleancmd
-    clean('%s/%s.%s.noisy.ms' % (imname, imname, config),
-          imagename=Cfile, cell=cell,
-          imsize=2*Npix, niter=0)
+    tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
+           imagename=Cfile, cell=cell,
+           imsize=2*Npix, niter=0)
 
     ia.open('%s.image' % Cfile)
     resdat = ia.getchunk()[:, :, 0, 0]
@@ -201,12 +198,9 @@ if DoFit:
     os.system('%s -c STEP1_FIT.py' % casaexe)
 
     os.system('rm -rf %s.*' % Rfile)
-    cleancmd = "clean('%s/%s.%s.noisy.ms', imagename='%s', cell='%s', imsize=%d, niter=0)" % \
-               (imname, imname, config, Rfile, cell, 2*Npix)
-    print cleancmd
-    clean('%s/%s.%s.noisy.ms' % (imname, imname, config),
-          imagename=Rfile, cell=cell,
-          imsize=2*Npix, niter=0)
+    tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
+           imagename=Rfile, cell=cell,
+           imsize=2*Npix, niter=0)
 
     impeak *= 0.01
 
@@ -269,12 +263,9 @@ if DoFit:
 
         clearcal('%s/%s.%s.noisy.ms' % (modnam, modnam, config))
 
-        cleancmd = "clean('%s/%s.%s.noisy.ms', imagename='%s', cell='%s', imsize=%d, niter=0)" % \
-                   (modnam, modnam, config, Cfile, cell, 2*Npix)
-        print cleancmd
-        clean('%s/%s.%s.noisy.ms' % (modnam, modnam, config),
-              imagename=Cfile, cell=cell,
-              imsize=2*Npix, niter=0)
+        tclean('%s/%s.%s.noisy.ms' % (modnam, modnam, config),
+               imagename=Cfile, cell=cell,
+               imsize=2*Npix, niter=0)
 
         ia.open('%s.image' % Cfile)
         resdat = ia.getchunk()[:, :, 0, 0]
@@ -293,12 +284,9 @@ if DoFit:
         impeak = np.max(resdat)
         os.system('%s -c STEP2_FIT_%s.py' % (casaexe, modnam))
         os.system('rm -rf %s.*' % Rfile)
-        cleancmd = "clean('%s/%s.%s.noisy.ms', imagename='%s', cell='%s', imsize=%d, niter=0)" % \
-                   (modnam, modnam, config, Cfile, cell, 2*Npix)
-        print cleancmd
-        clean('%s/%s.%s.noisy.ms' % (modnam, modnam, config),
-              imagename=Rfile, cell=cell,
-              imsize=2*Npix, niter=0)
+        tclean('%s/%s.%s.noisy.ms' % (modnam, modnam, config),
+               imagename=Rfile, cell=cell,
+               imsize=2*Npix, niter=0)
 
         impeak *= 0.01
 

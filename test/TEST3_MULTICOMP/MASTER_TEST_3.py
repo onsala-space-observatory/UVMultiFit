@@ -137,9 +137,9 @@ if DoFit:
     os.system('rm -rf %s.*' % Cfile)
     os.system('rm -rf %s.*' % Rfile)
 
-    clean('%s/%s.%s.noisy.ms' % (imname, imname, config),
-          imagename=Cfile, cell=cell,
-          imsize=Npix, niter=0)
+    tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
+           imagename=Cfile, cell=cell,
+           imsize=Npix, niter=0)
 
     ia.open('%s.image' % Cfile)
     resdat = ia.getchunk()[:, :, 0, 0]
@@ -165,9 +165,9 @@ if DoFit:
     # ms.putdata(data)
     # ms.close()
     os.system('rm -rf %s.*' % Rfile)
-    clean('%s/%s.%s.noisy.ms' % (imname, imname, config),
-          imagename=Rfile, cell=cell,
-          imsize=Npix, niter=0)
+    tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
+           imagename=Rfile, cell=cell,
+           imsize=Npix, niter=0)
 
     impeak *= 0.01
 

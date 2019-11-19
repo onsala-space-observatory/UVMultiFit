@@ -80,8 +80,8 @@ if DoFit:
         clearcal(vis=visname, addmodel=True)
 
         os.system('rm -rf %s.*' % Cfile)
-        clean(vis=visname, field=field, imagename=Cfile, cell=cell, imsize=Npix,
-              interactive=False, niter=0, imagermode='mosaic', pbcor=True, phasecenter=phref)
+        tclean(vis=visname, field=field, imagename=Cfile, cell=cell, imsize=Npix,
+               interactive=False, niter=0, imagermode='mosaic', pbcor=True, phasecenter=phref)
 
         ia.open('%s.image' % Cfile)
         resdat = ia.getchunk()[:, :, 0, 0]
@@ -151,8 +151,8 @@ if DoFit:
         #  ms.putdata(data)
         #  ms.close()
 
-        clean(vis=visname, imagename=Rfile, cell=cell, imsize=Npix, field=field,
-              interactive=False, niter=0, imagermode='mosaic', pbcor=True, phasecenter=phref)
+        tclean(vis=visname, imagename=Rfile, cell=cell, imsize=Npix, field=field,
+               interactive=False, niter=0, imagermode='mosaic', pbcor=True, phasecenter=phref)
 
         ia.open('%s.image' % Rfile)
         resdat = ia.getchunk()[:, :, 0, 0]
