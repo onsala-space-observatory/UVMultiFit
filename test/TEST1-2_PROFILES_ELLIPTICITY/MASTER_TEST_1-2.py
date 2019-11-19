@@ -128,7 +128,6 @@ if DoSimObs:
                      mode='manual', uvrange='<%.1fm' % LAS)
 
 if DoFit:
-    _ = os.system("clear")
     print("---------------------------------------------")
     print("TEST 1")
     print("---------------------------------------------")
@@ -227,7 +226,6 @@ if DoFit:
 
     # TEST 2:
     for j, modnam in enumerate(imname2):
-        _ = os.system("clear")
         print("---------------------------------------------")
         print("TEST2: %s" % (modnam))
         print("---------------------------------------------")

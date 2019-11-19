@@ -273,6 +273,9 @@ if DoSimObs:
     sm.done()
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 8")
+    print("---------------------------------------------")
     tempfile = open('STEP8_FIT.py', 'w')
     print '\n\n\n   NON-DISPERSIVE FIT \n\n\n'
     import time

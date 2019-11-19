@@ -67,6 +67,9 @@ if DoSimObs:
                totaltime='300s', antennalist=arrayconfig)
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 3")
+    print("---------------------------------------------")
     tempfile = open('STEP3_FIT.py', 'w')
 
     # p[0] -> flux of outer disc

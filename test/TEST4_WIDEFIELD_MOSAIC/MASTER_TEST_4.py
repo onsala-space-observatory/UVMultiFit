@@ -65,6 +65,9 @@ if DoSimObs:
     print "Done"
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 4")
+    print("---------------------------------------------")
     pl.ioff()
     Cfile = 'TEST4.CLEAN'
     Rfile = 'TEST4.RESIDUALS'

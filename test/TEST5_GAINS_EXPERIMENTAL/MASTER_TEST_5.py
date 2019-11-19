@@ -171,6 +171,9 @@ if DoSimObs:
     ms.close()
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 5")
+    print("---------------------------------------------")
     # Get time range of observations:
     ms.open('%s.noisy' % vis)
     trange = ms.range(['time'])['time']/86400.

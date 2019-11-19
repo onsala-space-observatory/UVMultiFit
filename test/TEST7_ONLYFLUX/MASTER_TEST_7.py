@@ -73,6 +73,9 @@ if DoSimObs:
                totaltime='300s', antennalist=arrayconfig)
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 7")
+    print("---------------------------------------------")
     tempfile = open('STEP7_FIT.py', 'w')
 
     # p[0] -> Flux of first disc

@@ -67,6 +67,9 @@ if DoSimObs:
                totaltime='300s', antennalist=arrayconfig)
 
 if DoFit:
+    print("---------------------------------------------")
+    print("TEST 6")
+    print("---------------------------------------------")
     pl.ioff()
     Cfile = 'TEST6.CLEAN'
     clearcal('%s/%s.%s.noisy.ms' % (imname, imname, config))
