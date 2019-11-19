@@ -28,9 +28,7 @@ os.system("rm -rf %s %s" % (RESDIR, SCRDIR))
 os.system("mkdir %s" % (RESDIR))
 os.system("mkdir %s" % (SCRDIR))
 
-
 currdir = os.getcwd()
-
 for test in alltest:
     print("ENTERING %s" % (test))
     os.chdir(test)
