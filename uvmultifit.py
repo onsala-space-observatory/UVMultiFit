@@ -155,7 +155,7 @@ This dictionary has several keys worth noticing:
 * ``myfit.result['Parameters']`` The fitting parameters. If the fit is done in
   spectral-line mode, these are organized per spw and channel.
 
-* ``myfit.result['Frequencies']`` The frequency corresponding to each set of fitting
+* ``myfit.result['Frequency']`` The frequency corresponding to each set of fitting
   parameters (useful for cases of fits in spectral-line mode).
 
 * ``myfit.result['Uncertainties']`` The uncertainties of the fitted parameters.
@@ -782,7 +782,7 @@ class uvmultifit(object):
 #
     def _deleteData(self, delmodel=True):
         """ Delete pointers to the data.
-     Hopefully, this will release memory when gc.collect() is run."""
+        Hopefully, this will release memory when gc.collect() is run."""
 
         for i in range(len(self.averdata) - 1, -1, -1):
             del self.averdata[i]

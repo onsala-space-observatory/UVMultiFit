@@ -18,7 +18,7 @@ _This may need an update!_
 (and either run the setup script from that terminal or update your
 `LIBRARY_PATH`s in your configuration).
 
-### Compile the C++ module. Just run:
+### Compile the C++ module
 
     python setup.py build_ext --inplace
 
