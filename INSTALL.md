@@ -6,11 +6,11 @@ Steps to install the `UVMULTIFIT` package:
 
 ### For Linux (Ubuntu-like), in a terminal:
 
-    sudo apt-get install libgsl-dev
+    sudo apt-get install libgsl-dev libfftw3-dev
 
 ### For Mac OS, in a terminal:
 
-    sudo port install gsl
+    sudo port install gsl fft3
     export LIBRARY_PATH="/opt/local/lib"
     export LD_LIBRARY_PATH="/opt/local/lib"
 
