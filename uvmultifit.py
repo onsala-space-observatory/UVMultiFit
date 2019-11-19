@@ -64,36 +64,29 @@ Installation
 
 Just follow these steps:
 
-1. Download the latest version from `Launchpad`_.
-  .. _Launchpad: https://launchpad.net/uvmultifit
+1. Download the latest version from `GitHub`_ i.no a directory of your choice:
+   For example::
 
-2. Untar the contents of the package into a directory of your choice (e.g., in your
-   ``.casa`` directory). For example::
+    $ mkdir -p ~/.casa/NORDIC_TOOLS
+    $ cd ~/.casa/NORDIC_TOOLS
+    $ git clone https://github.com/onsala-space-observatory/UVMultiFit.git
 
-     mkdir ~/.casa/NORDIC_TOOLS
-     mv UVMULTIFIT_*.tar.gz   ~/.casa/NORDIC_TOOLS
-     cd ~/.casa/NORDIC_TOOLS
-     mkdir UVMULTIFIT.current
-     tar -xf UVMULTIFIT_*.tar.gz -C ./UVMULTIFIT.current
-
-  The names ``/NORDIC_TOOLS/UVMULTIFIT.current`` are just a suggestion.
-
-3. Install the dependencies (i.e., GNU Scientific Library, so far).
+2. Install the dependencies (i.e., GNU Scientific Library, so far).
 
   - In GNU/Linux, execute the following command:
 
-      sudo apt-get install libgsl-dev
+      sudo apt-get install libgsl-dev libfftw3-dev
 
   - In MacOS, execute **all** these commands::
 
-      sudo port install gsl
+      sudo port install gsl fftw
       export LIBRARY_PATH="/opt/local/lib"
       export LD_LIBRARY_PATH="/opt/local/lib"
 
-4. From the same terminal where you ran the previous step, go to the installation
+3. From the same terminal where you ran the previous step, go to the installation
    directory (if you are not already there) and compile the program::
 
-     cd ~/.casa/NORDIC_TOOLS/UVMULTIFIT.current
+     cd ~/.casa/NORDIC_TOOLS/UVMultiFit
      python setup.py build_ext --inplace
 
    After this step, the file ``_uvmultimodel.so`` should have been created.
@@ -102,21 +95,21 @@ Just follow these steps:
       pre-compiled file coming with the package (if there is one). Executing ``ls -ltr``
       should list it at the end and give you its exact creation date.
 
-5. Import the module into CASA. You can automate it by editing the file called
+4. Import the module into CASA. You can automate it by editing the file called
    ``init.py``, which resides in your ``.casa`` directory::
 
       gedit ~/.casa/init.py
 
    Add these two lines in your ``init.py``::
 
-      UVMULTIFIT_PATH = "YOUR_HOME_DIRECTORY/.casa/NORDIC_TOOLS/UVMULTIFIT.current"
+      UVMULTIFIT_PATH = "<YOUR_HOME_DIRECTORY>/.casa/NORDIC_TOOLS/UVMultiFit"
       import imp
       uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
 
    where ``YOUR_HOME_DIRECTORY`` should be (guess it!) your home directory (i.e.,
    the directory that is printed when you execute ``cd ~ ; pwd`` in a terminal).
 
-6. Enjoy!
+5. Enjoy!
 
 Any feedback, problem with the installation/running and/or bug report should be sent
 either to the ARC Nordic Node (contact@nordic-alma.se) or to the source maintainer
@@ -129,16 +122,16 @@ Basic Usage
 THESE ARE ALL THE KEYWORDS (AND THEIR DEFAULTS) OF THE CURRENT UVMULTIFIT VERSION:
 
 >>> uvmultifit(self,vis='', spw='0', column = 'data', field = 0, scans = [],
->>>          uniform=False, chanwidth = 1, timewidth = 1, stokes = 'I',
->>>          write='', MJDrange=[-1.0,-1.0], model=['delta'],
->>>          var=['p[0],p[1],p[2]'], p_ini=[0.0,0.0,1.0], phase_center = '',
->>>          fixed=[], fixedvar=[], scalefix='1.0', outfile = 'modelfit.dat',
->>>          NCPU=4, pbeam=False, ldfac = 1.22, dish_diameter=0.0, gridpix=0,
->>>          OneFitPerChannel=True, bounds=None, cov_return=False,
->>>          finetune=False, uvtaper=0.0, method='levenberg', wgt_power=1.0,
->>>          LMtune=[1.e-3,10.,1.e-5,200,1.e-3], SMPtune=[1.e-4,1.e-1,200],
->>>          only_flux=False, proper_motion = 0.0, HankelOrder = 80,
->>>          amp_gains = {}, phase_gains = {})
+>>>            uniform=False, chanwidth = 1, timewidth = 1, stokes = 'I',
+>>>            write='', MJDrange=[-1.0,-1.0], model=['delta'],
+>>>            var=['p[0],p[1],p[2]'], p_ini=[0.0,0.0,1.0], phase_center = '',
+>>>            fixed=[], fixedvar=[], scalefix='1.0', outfile = 'modelfit.dat',
+>>>            NCPU=4, pbeam=False, ldfac = 1.22, dish_diameter=0.0, gridpix=0,
+>>>            OneFitPerChannel=True, bounds=None, cov_return=False,
+>>>            finetune=False, uvtaper=0.0, method='levenberg', wgt_power=1.0,
+>>>            LMtune=[1.e-3,10.,1.e-5,200,1.e-3], SMPtune=[1.e-4,1.e-1,200],
+>>>            only_flux=False, proper_motion = 0.0, HankelOrder = 80,
+>>>            amp_gains = {}, phase_gains = {})
 
 Let us assume that you have imported this module with the alias ``uvm`` (which is the
 case if you followed the installation instructions). To fit the flux density of a point
@@ -146,7 +139,7 @@ source (centered at the coordinates of the field called ``M81``), using the cont
 emission in all the spws of a measurement set called ``myms.ms``, just do:
 
 >>> myfit = uvm.uvmultifit(vis="myms.ms", spw="", model="delta", var="0, 0, p[0]",
->>>         field="M81", OneFitPerChannel=False, outfile="results.dat")
+>>>                        field="M81", OneFitPerChannel=False, outfile="results.dat")
 
 The program will write the fitting result (and other useful metadata) into the file
 called ``results.dat``. But it will also return a so-called *uvmultifit instance*
