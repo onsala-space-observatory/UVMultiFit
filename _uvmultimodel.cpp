@@ -944,7 +944,7 @@ static PyObject *modelcomp(PyObject *self, PyObject *args)
     int nparsq = npar*npar;
 
     /* Parse the input tuple */
-    if (!PyArg_ParseTuple(args, "iii",&cIF,&nui,&mode)) {
+    if (!PyArg_ParseTuple(args, "iii", &cIF, &nui, &mode)) {
         printf("FAILED modelcomp!\n");
         fflush(stdout);
         return NULL;

@@ -113,7 +113,7 @@ Just follow these steps:
 
 Any feedback, problem with the installation/running and/or bug report should be sent
 either to the ARC Nordic Node (contact@nordic-alma.se) or to the source maintainer
-(ivan.marti-vidal@chalmers.se).
+(michael.olberg@chalmers.se).
 
 ===========
 Basic Usage
@@ -121,7 +121,7 @@ Basic Usage
 
 THESE ARE ALL THE KEYWORDS (AND THEIR DEFAULTS) OF THE CURRENT UVMULTIFIT VERSION:
 
->>> uvmultifit(self,vis='', spw='0', column = 'data', field = 0, scans = [],
+>>> uvmultifit(vis='', spw='0', column = 'data', field = 0, scans = [],
 >>>            uniform=False, chanwidth = 1, timewidth = 1, stokes = 'I',
 >>>            write='', MJDrange=[-1.0,-1.0], model=['delta'],
 >>>            var=['p[0],p[1],p[2]'], p_ini=[0.0,0.0,1.0], phase_center = '',
@@ -3024,7 +3024,7 @@ class modeler(object):
         self.dt = []
         self.dtArr = []
         self.dtIdx = []
-        self. imod = []
+        self.imod = []
         self.par2 = []
         # Arrays of data and pointers (to share access with C library):
         self.data = []

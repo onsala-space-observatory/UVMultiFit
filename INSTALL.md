@@ -43,4 +43,4 @@ After this step, the file `_uvmultimodel.so` should have been created.
 
 Any feedback and bug report should be sent either to the ARC Nordic
 Node (contact@nordic-alma.se) or to the source maintainer
-(ivan.marti-vidal@chalmers.se).
+(michael.olberg@chalmers.se).
