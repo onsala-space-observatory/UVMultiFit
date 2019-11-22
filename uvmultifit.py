@@ -776,10 +776,10 @@ class uvmultifit(object):
 
     global sys, goodlib, ms, uvmod, goodclib, time, np, sp, spopt, spec, os, gc, gentools, re, clearcal, ms, tb, cs
 
-############################################
-#
-#  FREE MEMORY
-#
+    ############################################
+    #
+    #  FREE MEMORY
+    #
     def _deleteData(self, delmodel=True):
         """ Delete pointers to the data.
         Hopefully, this will release memory when gc.collect() is run."""
@@ -830,10 +830,10 @@ class uvmultifit(object):
         uvmod.clearPointers(0)
         uvmod.clearPointers(1)
 
-############################################
-#
-#  CREATE INSTANCE
-#
+    ############################################
+    #
+    #  CREATE INSTANCE
+    #
     def __init__(self, vis='', spw='0', column='data', field=0, scans=[], uniform=False,
                  chanwidth=1, timewidth=1, stokes='I', write='', MJDrange=[-1.0, -1.0], ldfac=1.22,
                  model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0], phase_center='',
@@ -983,12 +983,11 @@ class uvmultifit(object):
         else:
             self._printError("\n\n ABORTING UVMULTIFIT! BAD MODEL! CHECK INPUTS!\n")
 
-############################################
-#
-#  PRINT MESSAGES AND ERRORS
-#
-###################
-# Functions overriden in GUI mode:
+    ############################################
+    #
+    #  PRINT MESSAGES AND ERRORS
+    #
+    # Functions overriden in GUI mode:
     def _printError(self, message):
         """ Prints a message and raises an exception."""
         sys.stdout.write(message)
@@ -1000,9 +999,9 @@ class uvmultifit(object):
         sys.stdout.write(message)
         sys.stdout.flush()
 
-##################################
-# FRINGE FITTER:
-#
+    ##################################
+    # FRINGE FITTER:
+    #
     def QuinnFF(self, IF, refant, doModel, doGlobal):
         """Perform a *Global Fringe Fitting* search in delay-rate space.
 
@@ -1040,10 +1039,10 @@ class uvmultifit(object):
       """
         return uvmod.QuinnFF(IF, refant, doModel, doGlobal)
 
-############################################
-#
-#  WRITE MODEL (OR RESIDUALS)
-#
+    ############################################
+    #
+    #  WRITE MODEL (OR RESIDUALS)
+    #
     def writeModel(self):
         """ Writes the requested information into the measurement sets.
 
@@ -1114,10 +1113,10 @@ class uvmultifit(object):
 
             self._printInfo("\n %s written successfully!\n" % column)
 
-############################################
-#
-#  SANITY CHECKS AND DEFINING BASIC PARAMETERS
-#
+    ############################################
+    #
+    #  SANITY CHECKS AND DEFINING BASIC PARAMETERS
+    #
     def _checkOrdinaryInputs(self):
         """ Performs some sanity checks on the input parameters.
       This function should not be called directly by the user."""
@@ -1380,10 +1379,10 @@ class uvmultifit(object):
             return False
         return True
 
-############################################
-#
-#  MORE SANITY CHECKS
-#
+    ############################################
+    #
+    #  MORE SANITY CHECKS
+    #
     def checkInputs(self):
         """ Reads all the inputs parameters and performs sanity checks.
 
@@ -2078,8 +2077,8 @@ from the pointing direction.\n\n""")
                                     Decoffi[:] = float(phshift[1])
                                     Stretchi[:] = float(strcos)
 
-#########################
-# CODE FOR TIMEWIDTH>1 HAS TO BE BASED ON TB TOOL. WORK IN PROGRESS
+                #########################
+                # CODE FOR TIMEWIDTH>1 HAS TO BE BASED ON TB TOOL. WORK IN PROGRESS
                 #     else:
 
                 #       ant1s = uvscan['antenna1'][crosscorr]
@@ -2128,7 +2127,7 @@ from the pointing direction.\n\n""")
                 #         averwgt[:, :, nt] = np.ma.sum(np.ones(np.shape(broadwgt))*GaussFact[np.newaxis, :, :], axis=2)
                 #       else:
                 #         averwgt[:, :, nt] = np.ma.sum(broadwgt*GaussFact[np.newaxis, :, :], axis=2)
-#########################
+                #########################
 
                                     ant1scan.append(np.copy(uvscan['antenna1'][:]))
                                     ant2scan.append(np.copy(uvscan['antenna2'][:]))

@@ -1,8 +1,9 @@
-import numpy as np
-import scipy as sp
-import pylab as pl
 import os
+import numpy as np
+import pylab as pl
 from simutil import *
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = True
@@ -111,8 +112,8 @@ if DoSimObs:
 
     sm.settimes(integrationtime=integ, usehourangle=True,
                 referencetime=mereftime)
-    sm.observemany(sourcenames=['SIM5'], spwname='spsim', starttimes=[
-                   '0s'], stoptimes=[Ttot], project='polsimulate')
+    sm.observemany(sourcenames=['SIM5'], spwname='spsim', starttimes=['0s'],
+                   stoptimes=[Ttot], project='polsimulate')
     sm.close()
 
     clearcal(vis=vis, addmodel=True)

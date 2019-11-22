@@ -1,7 +1,8 @@
-import numpy as np
-import scipy as sp
-import pylab as pl
 import os
+import numpy as np
+import pylab as pl
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = False

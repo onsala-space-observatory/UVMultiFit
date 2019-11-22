@@ -1,10 +1,12 @@
+import os
 import numpy as np
 import scipy as sp
 import pylab as pl
-import os
 
 # TEST 6: TWO OFFSET GAUSSIANS
 #         FIT DONE WITH GRIDDED VISIBILITIES
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = False
@@ -77,8 +79,7 @@ if DoFit:
 
     tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
            imagename=Cfile, cell=cell, weighting='briggs', robust=0.5,
-           psfmode='hogbom', ftmachine='ft', imagermode='',
-          imsize=Npix, niter=0)
+           psfmode='hogbom', ftmachine='ft', imagermode='', imsize=Npix, niter=0)
 
     ia.open('%s.image' % Cfile)
     resdat = ia.getchunk()[:, :, 0, 0]

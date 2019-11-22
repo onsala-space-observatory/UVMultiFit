@@ -1,9 +1,10 @@
-import numpy as np
-import scipy as sp
-import pylab as pl
 import os
+import numpy as np
+import pylab as pl
 
 # TEST 3: DISC WITH A HOLE PLUS AN OFFSET GAUSSIAN
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = False
@@ -103,11 +104,11 @@ if DoFit:
     string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
     print >> tempfile, string
 
-    for i in range(len(shapes)):
-        if shapes[i] == 'disk':
-            shapes[i] = 'disc'
-        if shapes[i] == 'gaussian':
-            shapes[i] = 'Gaussian'
+    for idx, shape in enumerate(shapes):
+        if shape == 'disk':
+            shapes[idx] = 'disc'
+        if shape == 'gaussian':
+            shapes[idx] = 'Gaussian'
 
     string = 'modelshape = [%s]' % (','.join(["'" + shi + "'" for shi in shapes]))
     print >> tempfile, string

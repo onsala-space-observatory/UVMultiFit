@@ -1,6 +1,6 @@
+import time
 import numpy as np
 import pylab as pl
-import time
 
 tic = time.time()
 

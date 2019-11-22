@@ -1,9 +1,10 @@
-import numpy as np
-import scipy as sp
-import pylab as pl
 import os
+import numpy as np
+import pylab as pl
 
 # TEST 7: SEVERAL SOURCES. ONLY FIT THE FLUX DENSITY.
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = False
@@ -37,8 +38,7 @@ s = [['disk',     1.0,  '0.5arcsec',  '0.5arcsec',  '0.0deg', Nu, 0.0, "J2000 10
      ['gaussian', 0.25, '0.4arcsec',  '0.4arcsec',  '0.0deg', Nu, 0.0, "J2000 10h00m00.0s   -30d00m02.0s"],
      ['gaussian', 2.5,  '0.1arcsec',  '0.1arcsec',  '0.0deg', Nu, 0.0, "J2000 09h59m59.692s -30d00m00.0s"],
      ['gaussian', 1.5,  '0.4arcsec',  '0.4arcsec',  '0.0deg', Nu, 0.0, "J2000 09h59m59.846s -29d59m58.0s"],
-     ['disk',     0.15, '0.85arcsec', '0.85arcsec', '0.0deg', Nu, 0.0, "J2000 09h59m59.692s -30d00m02.0s"]
-     ]
+     ['disk',     0.15, '0.85arcsec', '0.85arcsec', '0.0deg', Nu, 0.0, "J2000 09h59m59.692s -30d00m02.0s"]]
 
 OFFSETS = [[0., 0.], [2., 0.], [0., -2.], [-4., 0.], [-2., 2], [-4., -2.]]
 BiasFac = [0.6, 1.6, 1.8, 0.2, 0.8, 1.2]
@@ -109,11 +109,11 @@ if DoFit:
     string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
     print >> tempfile, string
 
-    for i in range(len(shapes)):
-        if shapes[i] == 'disk':
-            shapes[i] = 'disc'
-        if shapes[i] == 'gaussian':
-            shapes[i] = 'Gaussian'
+    for idx, shape in enumerate(shapes):
+        if shape == 'disk':
+            shapes[idx] = 'disc'
+        if shape == 'gaussian':
+            shapes[idx] = 'Gaussian'
 
     string = "modelshape = [%s]" % (','.join(["'" + shi +"'" for shi in shapes]))
     print >> tempfile, string

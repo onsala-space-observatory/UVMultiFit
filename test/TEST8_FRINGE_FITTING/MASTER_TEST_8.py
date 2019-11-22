@@ -1,10 +1,11 @@
-import numpy as np
-import scipy as sp
-import pylab as pl
 import os
+import numpy as np
+import pylab as pl
 from simutil import *
 
 # TEST 8: DISPERSIVE FRINGE FITTING
+
+#pylint: disable=undefined-variable
 
 # What to do:
 # DoSimObs = False # Regenerate the synthetic data
@@ -158,8 +159,9 @@ if DoSimObs:
         sources.append("FFTarget")
 
     for n in range(NSCAN):
-        sm.observemany(sourcenames=[sources[n]], spwname='spw0', starttimes=[
-                       starttimes[n]], stoptimes=[stoptimes[n]], project='UVFIT_TEST')
+        sm.observemany(sourcenames=[sources[n]], spwname='spw0',
+                       starttimes=[starttimes[n]], stoptimes=[stoptimes[n]],
+                       project='UVFIT_TEST')
     sm.close()
 
     # Apply the gains to the data:
@@ -181,8 +183,8 @@ if DoSimObs:
     T -= T[0]
 
     GARR = np.zeros((len(ANTNAMES), 4))
-    for ant in range(len(ANTNAMES)):
-        GARR[ant, :] = GAINS[ANTNAMES[ant]]
+    for idx, antname in enumerate(ANTNAMES):
+        GARR[idx, :] = GAINS[antname]
 
     for i in range(len(T)):
         if not i % 1000:
@@ -292,13 +294,13 @@ if DoFit:
     allgains = {}
     ai = 0
     ri = -1
-    for ant in range(len(ANTNAMES)):
+    for idx, antname in enumerate(ANTNAMES):
         pc = 3*ai
-        if ANTNAMES[ant] != REFANT:
-            allgains[ant] = '2.*3.1416*(p[%i]*(nu - nu0)*(1.e-9) + p[%i]*t) + p[%i]' % (pc, pc+1, pc+2)
+        if antname != REFANT:
+            allgains[idx] = '2.*3.1416*(p[%i]*(nu - nu0)*(1.e-9) + p[%i]*t) + p[%i]' % (pc, pc+1, pc+2)
             ai += 1
         else:
-            ri = ant
+            ri = idx
 
     # Number of parameters (not counting the gains of REFANT!):
     Npar = len(allgains.keys())*3
@@ -476,9 +478,9 @@ if DoFit:
         fig.subplots_adjust(wspace=0.01, hspace=0.01)
         NPLOT = len(ANTNAMES)-1
         k = 0
-        for i in range(len(ANTNAMES)):
-            if ri != i:
-                BASI = np.logical_or((ANT1 == ri)*(ANT2 == i), (ANT2 == ri)*(ANT1 == i))
+        for idx, antname in enumerate(ANTNAMES):
+            if ri != idx:
+                BASI = np.logical_or((ANT1 == ri)*(ANT2 == idx), (ANT2 == ri)*(ANT1 == idx))
                 AverData = np.average(CORRDATA[BASI, :], axis=0)
                 sub = fig.add_subplot(2, NPLOT, k+1)
                 sub.plot(np.angle(AverData)*r2d, '.r')
@@ -488,7 +490,7 @@ if DoFit:
                 else:
                     sub.set_ylabel('Phase (deg.)')
                 pl.ylim((-180., 180.))
-                sub.set_title(ANTNAMES[i])
+                sub.set_title(antname)
                 sub = fig.add_subplot(2, NPLOT, NPLOT + k+1)
                 pl.setp(sub.get_xticklabels(), 'visible', False)
                 if k > 0:
@@ -613,19 +615,19 @@ if DoFit:
         allgains = {}
         ai = 0
         ri = -1
-        for ant in range(len(ANTNAMES)):
+        for idx, antname in enumerate(ANTNAMES):
             pc = 3*ai
-            if ANTNAMES[ant] != REFANT:
-                allgains[ant] = '2.*3.1416*(p[%i]*(nu - nu0)*(1.e-9) + %.16e*t  + %.16e*(p[%i]/%.16e*(nu-nu0)  + p[%i]/nu - p[%i]/nu0)) + p[%i]' % \
-                    (pc+1, FittedGains[ant][1], TECFAC, pc, NuAvgSq, pc, pc, pc+2)
+            if antname != REFANT:
+                allgains[idx] = '2.*3.1416*(p[%i]*(nu - nu0)*(1.e-9) + %.16e*t  + %.16e*(p[%i]/%.16e*(nu-nu0)  + p[%i]/nu - p[%i]/nu0)) + p[%i]' % \
+                    (pc+1, FittedGains[idx][1], TECFAC, pc, NuAvgSq, pc, pc, pc+2)
                 pini[pc] = 0.0
-                pini[pc+1] = FittedGains[ant][0]
+                pini[pc+1] = FittedGains[idx][0]
                 bounds[pc] = [None, None]
-                bounds[pc+1] = [FittedGains[ant][0] -
-                                2*Dtau, FittedGains[ant][0]+2*Dtau]
+                bounds[pc+1] = [FittedGains[idx][0] -
+                                2*Dtau, FittedGains[idx][0]+2*Dtau]
                 ai += 1
             else:
-                ri = ant
+                ri = idx
 
         # three parameters, since we FIX THE RATE
         Npar = len(allgains.keys())*3
@@ -641,9 +643,9 @@ if DoFit:
         # Read the disperive-model gains back:
         FittedGainsD = []
         pf = 0
-        for pi in range(len(ANTNAMES)):
+        for antname in ANTNAMES:
             FittedGainsD.append([])
-            if ANTNAMES[pi] != REFANT:
+            if antname != REFANT:
                 FittedGainsD[-1] = myfit.result['Parameters'][3*pf:3*pf+3]
                 pf += 1
             else:
@@ -717,9 +719,9 @@ if DoFit:
         fig.subplots_adjust(wspace=0.01, hspace=0.01)
         NPLOT = len(ANTNAMES)-1
         k = 0
-        for i in range(len(ANTNAMES)):
-            if ri != i:
-                BASI = np.logical_or((ANT1 == ri)*(ANT2 == i), (ANT2 == ri)*(ANT1 == i))
+        for idx, antname in enumerate(ANTNAMES):
+            if ri != idx:
+                BASI = np.logical_or((ANT1 == ri)*(ANT2 == idx), (ANT2 == ri)*(ANT1 == idx))
                 AverData = np.average(CORRDATA[BASI, :], axis=0)
                 sub = fig.add_subplot(2, NPLOT, k+1)
                 sub.plot(np.angle(AverData)*r2d, '.r')
@@ -729,7 +731,7 @@ if DoFit:
                 else:
                     sub.set_ylabel('Phase (deg.)')
                 pl.ylim((-180., 180.))
-                sub.set_title(ANTNAMES[i])
+                sub.set_title(antname)
                 sub = fig.add_subplot(2, NPLOT, NPLOT + k+1)
                 pl.setp(sub.get_xticklabels(), 'visible', False)
                 if k > 0:
