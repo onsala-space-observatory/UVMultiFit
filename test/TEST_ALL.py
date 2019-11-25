@@ -1,10 +1,12 @@
+from __future__ import print_function
+
 import os
 import glob
 import time
 
 # REDO SIMULATIONS? (SET TO TRUE THE FIRST TIME YOU
 # RUN THE TEST SUIT)
-DoSimObs = True
+DoSimObs = False
 
 # DO THE FITS? (OF COURSE!)
 DoFit = True
@@ -34,11 +36,11 @@ for test in alltest:
     os.chdir(test)
     scr = open(glob.glob("MASTER*.py")[0])
     scr2 = open("aux.py", 'w')
-    print >> scr2, "DoSimObs = %s" % str(DoSimObs)
-    print >> scr2, "DoFit = %s" % str(DoFit)
-    print >> scr2, "casaexe = '%s'" % str(casaexe)
+    print("DoSimObs = %s" % str(DoSimObs), file=scr2)
+    print("DoFit = %s" % str(DoFit), file=scr2)
+    print("casaexe = '%s'" % str(casaexe), file=scr2)
     for line in scr.readlines():
-        print >> scr2, line[:-1]
+        print(line[:-1], file=scr2)
     scr2.close()
     scr.close()
     os.system("%s -c aux.py" % casaexe)
@@ -51,7 +53,7 @@ for test in alltest:
 
 tac = time.time()
 off = open("dur.dat", 'w')
-print >> off, "\n\n THE FULL TEST LASTED %.1f SECONDS.\n\n" % (tac-tic)
+print("\n\n THE FULL TEST LASTED %.1f SECONDS.\n\n" % (tac-tic), file=off)
 off.close()
 
 os.system("cat %s/test*.dat dur.dat > %s/FIT_RESULTS.dat" % (RESDIR, RESDIR))
