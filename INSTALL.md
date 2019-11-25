@@ -23,8 +23,8 @@ _This may need an update!_
 Pick a directory where you want to install `UVMultiFit`, e.g.
 
 	cd ~
-    mkdir -p .casa/Nordic_tools
-	cd .casa/Nordic_tools
+    mkdir -p .casa/Nordic_Tools
+	cd .casa/Nordic_Tools
     git clone https://github.com/onsala-space-observatory/UVMultiFit.git
 	cd UVMultiFit
 
