@@ -18,22 +18,52 @@ _This may need an update!_
 (and either run the setup script from that terminal or update your
 `LIBRARY_PATH`s in your configuration).
 
-### Compile the C++ module
+## Clone the repository or update your installation
+
+Pick a directory where you want to install `UVMultiFit`, e.g.
+
+	cd ~
+    mkdir -p .casa/Nordic_tools
+	cd .casa/Nordic_tools
+    git clone https://github.com/onsala-space-observatory/UVMultiFit.git
+	cd UVMultiFit
+
+If you already had a `git` based version installed, pull in the latest changes:
+
+	git pull
+
+## Compile the C++ module
 
     python setup.py build_ext --inplace
 
-After this step, the file `_uvmultimodel.so` should have been created.
+After this step, the file `_uvmultimodel.so` should have been
+created. You may check that you can load the module and execute some
+of its support functions:
 
- * Copy the `uvmultifit.py` and `_uvmultimodel.so` files into a
-   destination directory. The name of this directory could be, e.g.
+    python test/test_uvmultimodel.py
 
-        ~/.casa/Nordic_Tools/uvfit
+which should produce output like this
 
- * Import the module into CASA. You can do it from the init.py file or
+> ....
+> ----------------------------------------------------------------------
+> Ran 4 tests in 0.000s
+>
+> OK
+
+## Running the test suite
+
+From the `UVMultiFit` directory created above, do
+
+    cd test
+	python TEST_ALL.py
+
+## Use inside CASA
+
+* Import the module into CASA. You can do it from the init.py file or
    from inside CASA. To import the module from the init file, add the
    following line at the end of your $HOME/.casa/init.py:
 
-        UVMULTIFIT_PATH = "$HOME/.casa/Nordic_Tools/uvfit"
+        UVMULTIFIT_PATH = "$HOME/.casa/Nordic_Tools/UVMultiFit"
         import imp
         uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
 
