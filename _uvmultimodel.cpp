@@ -1023,10 +1023,11 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
         return ret;
     }
 
-    QuinnFringe *FringeFit = new QuinnFringe(Nants,vis.nt[IFFit],vis.nnu[IFFit],vis.ObsVis[IFFit],mod.ModVis[IFFit],vis.ants[0][IFFit], vis.ants[1][IFFit],vis.dt[IFFit],vis.fittable[IFFit],vis.freqs[IFFit],vis.wgt[0][IFFit]);
-
+    QuinnFringe *FringeFit = new QuinnFringe(Nants, vis.nt[IFFit], vis.nnu[IFFit],
+                                             vis.ObsVis[IFFit], mod.ModVis[IFFit],vis.ants[0][IFFit],
+                                             vis.ants[1][IFFit], vis.dt[IFFit],vis.fittable[IFFit],
+                                             vis.freqs[IFFit],vis.wgt[0][IFFit]);
     int result = FringeFit->GFF(refant, doGlobal, doModel);
-
     if (result != 0) {
         ret = Py_BuildValue("i", result);
         return ret;
@@ -1047,7 +1048,6 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
 
     npy_intp Dims[1];
     Dims[0] = Nants;
-
     printf("\nNants: %i\n",Nants);
 
     PyRate = PyArray_SimpleNewFromData(1, Dims, NPY_FLOAT64, (void *)Rates);
