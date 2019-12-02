@@ -77,9 +77,9 @@ if DoFit:
     clearcal('%s/%s.%s.noisy.ms' % (imname, imname, config))
     os.system('rm -rf %s.*' % Cfile)
 
-    tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
-           imagename=Cfile, cell=cell, weighting='briggs', robust=0.5,
-           psfmode='hogbom', ftmachine='ft', imagermode='', imsize=Npix, niter=0)
+    clean('%s/%s.%s.noisy.ms' % (imname, imname, config),
+          imagename=Cfile, cell=cell, weighting='briggs', robust=0.5,
+          psfmode='hogbom', ftmachine='ft', imagermode='', imsize=Npix, niter=0)
 
     ia.open('%s.image' % Cfile)
     resdat = ia.getchunk()[:, :, 0, 0]
