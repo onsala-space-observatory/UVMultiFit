@@ -6,7 +6,7 @@ import time
 
 # REDO SIMULATIONS? (SET TO TRUE THE FIRST TIME YOU
 # RUN THE TEST SUIT)
-DoSimObs = False
+DoSimObs = True
 
 # DO THE FITS? (OF COURSE!)
 DoFit = True
