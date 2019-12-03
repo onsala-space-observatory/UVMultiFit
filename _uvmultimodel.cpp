@@ -49,7 +49,6 @@
 #OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 */
-
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include <pthread.h>
@@ -191,7 +190,7 @@ PyMODINIT_FUNC init_uvmultimodel(void)
     import_array();
 }
 
-void *clearData()
+void clearData()
 {
     int i,j;
 
@@ -227,9 +226,8 @@ void *clearData()
     }
 }
 
-void *clearModel()
+void clearModel()
 {
-    int i, j, k;
     if (isModel) {
         delete mod.vars;
         delete mod.fixp;
@@ -316,8 +314,8 @@ void *writemod(void *work)
     int widx = (Iam == -1) ? 0 : Iam;
     // int pmax = (mode == -1) ? npar+1 : 1;
     // int mmax = (mode == 0) ? 1 : ncomp;
-    int pmax, mmax;
-    bool write2mod, writeDer;
+    int pmax = 0, mmax = 0;
+    bool write2mod = false, writeDer = false;
 
     switch (mode) {
       case  0:
@@ -1040,9 +1038,13 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
     double *Bins = new double[2];
 
     ErrStat = FringeFit->getRates(Rates);
+    if (ErrStat != 0) return NULL;
     ErrStat = FringeFit->getDelays(Delays);
+    if (ErrStat != 0) return NULL;
     ErrStat = FringeFit->getPhases(Phases);
+    if (ErrStat != 0) return NULL;
     ErrStat = FringeFit->getBins(Bins);
+    if (ErrStat != 0) return NULL;
 
     PyObject *PyRate, *PyDelay, *PyPhase;
 

@@ -292,7 +292,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                 double AbsP;
                 double rmsFringe = 0.0;
                 double AvgFringe = 0.0;
-                double LastPeak = 0.0;
+                // double LastPeak = 0.0;
                 double Dnpix = (double) Nchan*NcurrVis;
                 double FringeSNR;
 
