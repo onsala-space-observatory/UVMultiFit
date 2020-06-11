@@ -34,6 +34,12 @@ If you already had a `git` based version installed, pull in the latest changes:
 
 ## Compile the C++ module
 
+Open the `setup.py` file and edit the line where it says
+
+    CASA_INSTALLATION = "/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7"
+
+replace with the path of your own `casa` installation. Save and close. Then run
+
     python setup.py build_ext --inplace
 
 After this step, the file `_uvmultimodel.so` should have been
