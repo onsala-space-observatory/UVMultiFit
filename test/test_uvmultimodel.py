@@ -1,8 +1,7 @@
+from NordicARC import uvmultifit as uvm
 import unittest
-import imp
-# import numpy as np
 
-uvm = imp.load_dynamic("_uvmultimodel", "_uvmultimodel.so")
+# import numpy as np
 
 class TestUVMultiModel(unittest.TestCase):
 
@@ -22,25 +21,25 @@ class TestUVMultiModel(unittest.TestCase):
 
     def test_clearPointers(self):
         # test clearPointers with argument 2
-        result = uvm.clearPointers(2)
+        result = uvm.uvmod.clearPointers(2)
         # we expect 0 back
         self.assertEqual(result, 0)
 
     def test_clearData(self):
         # we can clear data by calling clearPointers with argument 0
-        result = uvm.clearPointers(0)
+        result = uvm.uvmod.clearPointers(0)
         # we expect 0 back
         self.assertEqual(result, 0)
 
     def test_clearModel(self):
         # we can clear model by calling clearPointers with argument 1
-        result = uvm.clearPointers(1)
+        result = uvm.uvmod.clearPointers(1)
         # we expect 0 back
         self.assertEqual(result, 0)
 
     def test_setNspw(self):
         # function takes one integer
-        result = uvm.setNspw(10)
+        result = uvm.uvmod.setNspw(10)
         # we expect 0 back
         self.assertEqual(result, 0)
 
@@ -48,7 +47,7 @@ class TestUVMultiModel(unittest.TestCase):
 #         IF = 10
 #         nui = 100
 #         mode = 0
-#         result = uvm.modelcomp(IF, nui, mode)
+#         result = uvm.uvmod.modelcomp(IF, nui, mode)
 
 #     def test_setData(self):
 #         IF = 1
@@ -78,7 +77,7 @@ class TestUVMultiModel(unittest.TestCase):
 #
 #         Nants = 10
 #
-#         result = uvm.setData(IF, pu, pv, pw, pwgt, preal, poreal, pfreqs, pfittable, pwgtcorr,
+#         result = uvm.uvmod.setData(IF, pu, pv, pw, pwgt, preal, poreal, pfreqs, pfittable, pwgtcorr,
 #                              dtime, tArr, tIdx, RAoffset, Decoffset, Stretchoff,
 #                              ant1l, ant2l, iG, Nants)
 #
@@ -89,7 +88,7 @@ class TestUVMultiModel(unittest.TestCase):
 #     def test_setNCPU(self):
 #         # function takes one integer
 #         i = 4
-#         result = uvm.setNCPU(i)
+#         result = uvm.uvmod.setNCPU(i)
 #         # we expect 0 back
 #         self.assertEqual(result, 0)
 

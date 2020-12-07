@@ -1,14 +1,22 @@
-from distutils.core import setup, Extension
+# from distutils.core import setup, Extension
+from setuptools import setup, Extension, find_packages
+
 import numpy as np
 import platform
+import sys
 import os
 import fnmatch
 
 ####################################
 # CONFIGURATION
 
-# DEFINE YOUR CASA INSTALLATION
-CASA_INSTALLATION = "/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7"
+print("argv:", sys.argv)
+if len(sys.argv) > 2 and sys.argv[2].startswith("--prefix="):
+    CASA_INSTALLATION = sys.argv[2].split("=")[1]
+else:
+    CASA_INSTALLATION = os.getenv("CASA_INSTALLATION")
+
+print("using CASA_INSTALLATION", CASA_INSTALLATION)
 
 # typically you won't have to change anything below this line
 CASA_PYTHON_INCLUDE = CASA_INSTALLATION + "/include/python2.7"
@@ -44,10 +52,6 @@ elif platform.system() == "Darwin":
     _extra_link_args=["-Xlinker", "-L/opt/local/lib"]
 #####################################
 
-# for root, dirnames, filenames in os.walk(CASA_INSTALLATION):
-#     for dirname in fnmatch.filter(dirnames, "numpy"):
-#         np_include = root.replace("/numpy", "")
-#         break
 
 #################
 # SCRIPT STARTS #
@@ -66,7 +70,26 @@ else:
                       libraries=['gsl', 'gslcblas'],
                       extra_compile_args=["-Wno-deprecated", "-O3"])
 
+fh = open("README.md","r")
+long_description = fh.read()
+fh.close()
+
 setup(
+    name="NordicARC",
+    version="3.0.5",
+    author="Ivan Marti-Vidal",
+    author_email="i.marti-vidal@uv.es",
+    description="Fit models directly to visibility data.",
+    long_description=long_description,
+    packages=find_packages(include=["NordicARC"]),
+    url="https://github.com/onsala-space-observatory/UVMultiFit.git",
     ext_modules=[c_ext],
-    include_dirs=[include_gsl_dir] + np_include
+    include_dirs=[include_gsl_dir] + np_include,
+    classifiers=[
+        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Scientific/Engineering',
+    ],
 )

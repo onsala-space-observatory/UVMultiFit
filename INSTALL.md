@@ -22,34 +22,45 @@ If using Homebrew:
 
 Pick a directory where you want to install `UVMultiFit`, e.g.
 
-	cd ~
-    mkdir -p .casa/Nordic_Tools
-	cd .casa/Nordic_Tools
+    cd ~
+    mkdir -p casa/NordicARC
+    cd casa/NordicARC
     git clone https://github.com/onsala-space-observatory/UVMultiFit.git
-	cd UVMultiFit
+    cd UVMultiFit
 
 If you already had a `git` based version installed, pull in the latest changes:
 
-	git pull
+    git pull
 
 ## Compile the C++ module
 
-Open the `setup.py` file and edit the line where it says
+Open the `Makefile` and edit the first line, where it says
 
-    CASA_INSTALLATION = "/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7"
+    CASADIR=/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7
 
-replace with the path of your own `casa` installation. Save and close. Then run
+and replace with the path of your own `casa` installation. If you have
+write access to the directories underneath `$CASADIR`, you may then
+run
 
-    python setup.py build_ext --inplace
+    make install
 
-After this step, the file `_uvmultimodel.so` should have been
-created. You may check that you can load the module and execute some
-of its support functions:
+This should make `uvmultifit` available also to other users, running
+from the same casa installation.
 
-    python test/test_uvmultimodel.py
+Alternatively, you can install to your local user `PYTHONPATH` by running
+
+    make user
+
+You may check that you can load the module and execute some
+of its support functions. Start up `casa` and run
+
+    CASA <1>: %run test/test_uvmultimodel.py
 
 which should produce output like this
 
+>
+> C++ shared library loaded successfully
+>
 > ....
 > ----------------------------------------------------------------------
 > Ran 4 tests in 0.000s
@@ -58,23 +69,17 @@ which should produce output like this
 
 ## Running the test suite
 
-From the `UVMultiFit` directory created above, do
+From the `UVMultiFit` directory created above, start up `casa` and run
 
-    cd test
-	python TEST_ALL.py
+    CASA <1>: execfile("TEST_ALL.py")
 
-## Use inside CASA
+## Running your own model:
 
-* Import the module into CASA. You can do it from the init.py file or
-   from inside CASA. To import the module from the init file, add the
-   following line at the end of your $HOME/.casa/init.py:
+* Start up `casa` and run
 
-        UVMULTIFIT_PATH = "$HOME/.casa/Nordic_Tools/UVMultiFit"
-        import imp
-        uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
-
-   To import the module from CASA, just execute the same line in a script,
-   or at the CASA prompt.
+    CASA <1>: from NordicARC import uvmultifit as uvm
+    CASA <2>: help(uvm.uvmultifit)                 # to get the help text
+    CASA <3>: myfit = uvm.uvmultifit(vis=..., ...) # fit your model ...
 
  * ENJOY!
 
