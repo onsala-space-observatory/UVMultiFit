@@ -71,7 +71,7 @@ support functions. Move into the `test` folder and start up `casa`
 
 and run the short unit test in folder `test`:
 
-    CASA <1>: %run test/test_uvmultimodel.py
+    CASA <1>: %run test_uvmultimodel.py
 
 which should produce output like this
 
