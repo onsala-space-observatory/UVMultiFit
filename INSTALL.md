@@ -1,8 +1,19 @@
 # Installation
 
-Steps to install the `UVMULTIFIT` package:
+Steps to install the `UVMultiFit` package:
 
 ## Install dependencies
+
+### CASA
+
+These instructions assume you have a `casa` version 5.x installed,
+either the normal release or with the ALMA and/or VLA pipeline
+included. The instructions below use an installation of
+`casa-pipeline-release-5.6.1-8.el7` (ALMA pipeline) as an
+example. Earlier versions (4.x) are neither tested nor supported.
+
+**Find out, where `casa` is installed** on your computer as you will need
+this information during the installation of `UVMultiFit`.
 
 ### For Linux (Ubuntu-like), in a terminal:
 
@@ -51,8 +62,14 @@ Alternatively, you can install to your local user `PYTHONPATH` by running
 
     make user
 
-You may check that you can load the module and execute some
-of its support functions. Start up `casa` and run
+You may check that you can load the module and execute some of its
+support functions. Move into the `test` folder and start up `casa`
+
+
+    $ cd test
+	$ <CASADIR>/bin/casa   # replace `CASADIR` with the correct path from above!
+
+and run the short unit test in folder `test`:
 
     CASA <1>: %run test/test_uvmultimodel.py
 
@@ -69,11 +86,13 @@ which should produce output like this
 
 ## Running the test suite
 
-From the `UVMultiFit` directory created above, start up `casa` and run
+Still in the `test` directory, and with `casa` running, start the test suite via
 
-    CASA <1>: execfile("TEST_ALL.py")
+    CASA <2>: execfile("TEST_ALL.py")
 
 ## Running your own model:
+
+Now, this can be done from any directory.
 
 * Start up `casa` and run
 
