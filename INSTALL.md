@@ -96,9 +96,9 @@ Now, this can be done from any directory.
 
 * Start up `casa` and run
 
-    CASA <1>: from NordicARC import uvmultifit as uvm
-    CASA <2>: help(uvm.uvmultifit)                 # to get the help text
-    CASA <3>: myfit = uvm.uvmultifit(vis=..., ...) # fit your model ...
+        CASA <1>: from NordicARC import uvmultifit as uvm
+        CASA <2>: help(uvm.uvmultifit)                 # to get the help text
+        CASA <3>: myfit = uvm.uvmultifit(vis=..., ...) # fit your model ...
 
  * ENJOY!
 
