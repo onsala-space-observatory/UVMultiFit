@@ -69,7 +69,7 @@ support functions. Move into the `test` folder and start up `casa`
     $ cd test
 	$ <CASADIR>/bin/casa   # replace `CASADIR` with the correct path from above!
 
-and run the short unit test in folder `test`:
+and run the short unit test in that folder:
 
     CASA <1>: %run test_uvmultimodel.py
 
