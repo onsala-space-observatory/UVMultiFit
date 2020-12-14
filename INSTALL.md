@@ -92,13 +92,13 @@ Still in the `test` directory, and with `casa` running, run any of the tests via
 
 where `<test>` is one of:
 
-   * `PROFILES_ELLIPTICITY.py`
-   * `MULTICOMP.py`
-   * `WIDEFIELD_MOSAIC.py`
-   * `GAINS_EXPERIMENTAL.py`
-   * `IMMULTIFIT.py`
-   * `ONLYFLUX.py`
-   * `FRINGE_FITTING.py`
+   * `PROFILES_ELLIPTICITY`
+   * `MULTICOMP`
+   * `WIDEFIELD_MOSAIC`
+   * `GAINS_EXPERIMENTAL`
+   * `IMMULTIFIT`
+   * `ONLYFLUX`
+   * `FRINGE_FITTING`
 
 ### TEST 1+2: Fitting source ellipticity with different radial intensity profiles
 
