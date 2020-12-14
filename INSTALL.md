@@ -102,11 +102,9 @@ where `<test>` is one of:
 
 ### TEST 1+2: Fitting source ellipticity with different radial intensity profiles
 
-The source appears unresolved in the image plane. The axis ratio and
+All sources appear unresolved in the image plane. The axis ratio and
 position angle are, within uncertainties, compatible with the ones
 used in the simulation.
-
-All sources appear unresolved in the image plane.
 
 The residuals are all very small, with the exception of the "power-2"
 source:
