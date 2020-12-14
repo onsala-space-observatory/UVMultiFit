@@ -1,4 +1,5 @@
 import time
+from NordicARC import uvmultifit as uvm
 
 tic = time.time()
 

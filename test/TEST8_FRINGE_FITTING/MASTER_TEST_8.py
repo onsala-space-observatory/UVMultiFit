@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pylab as pl
 from simutil import *
+from NordicARC import uvmultifit as uvm
 
 # TEST 8: DISPERSIVE FRINGE FITTING
 
