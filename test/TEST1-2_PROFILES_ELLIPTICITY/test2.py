@@ -4,10 +4,6 @@ import pylab as pl
 
 tic = time.time()
 
-rf = open('test2.%s.dat' % modshape, 'w')
-
-print >> rf, '\n\n\nTEST 2: RADIAL PROFILES. SHAPE: %s\n' % modshape
-
 myfit = uvm.uvmultifit(vis=visname, write='residuals',
                        spw='0', model=modshape, OneFitPerChannel=True,
                        var=shapevar, p_ini=pi, bounds=parbound, HankelOrder=80)
@@ -46,9 +42,11 @@ if modshape == 'GaussianRing':
     maxdev = 100. * np.max(np.abs(myfit.result['Parameters'][0][:, 2] - Sigma)/Sigma)
     msg += '\n Model %s. Maximum Sigma deviation: %.4f %%' % (modshape, maxdev)
 
-tac = time.time()
-msg += '\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n' % (tac-tic)
-print >> rf, msg
 sub.legend(numpoints=1)
 pl.savefig('TEST2.%s.modelfit.png' % modshape)
-rf.close()
+
+tac = time.time()
+with open('test2.%s.dat' % modshape, 'w') as rf:
+    print('\n\n\nTEST 2: RADIAL PROFILES. SHAPE: %s\n' % modshape, file=rf)
+    msg += '\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n' % (tac-tic)
+    print(msg, file=rf)

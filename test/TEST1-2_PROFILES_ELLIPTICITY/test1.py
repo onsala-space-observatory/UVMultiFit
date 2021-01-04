@@ -20,7 +20,6 @@ msg += "\nDisc Pos. Ang (deg.):  %.4f +/- %.4f ; True: %.3f " % \
 
 tac = time.time()
 msg += "\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n" % (tac-tic)
-resf = open('test1.dat', 'w')
-print >> resf, "\n\n\nTEST 1: ELLIPTICITY\n"
-print >> resf, msg
-resf.close()
+with open('test1.dat', 'w') as resf:
+    print("\n\n\nTEST 1: ELLIPTICITY\n", file=resf)
+    print(msg, file=resf)

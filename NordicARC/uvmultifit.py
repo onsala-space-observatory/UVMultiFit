@@ -47,16 +47,16 @@
 """A CASA-based flexible visibility-fitting engine developed at the Nordic node
 of the ALMA Regional Center.
 
-Current development is partially founded by the *European Union's Horizon 2020
-research and innovation programme* under grant agreement No **730562 [RadioNet]**,
-in the frame of the **RINGS Working Package** (*Radio Interferometry New Generation
-Software*).
+Current development is partially founded by the *European Union's
+Horizon 2020 research and innovation programme* under grant agreement
+No **730562 [RadioNet]**, in the frame of the **RINGS Working
+Package** (*Radio Interferometry New Generation Software*).
 
-This program can be used to fit multi-component models to the visibilities in one
-(or several) measurement set(s). The fits can be performed to the
-continuum or in spectral-line mode. Advanced model structures can be implemented
-easily and several different fits can be performed with no need of re-loading the
-data.
+This program can be used to fit multi-component models to the
+visibilities in one (or several) measurement set(s). The fits can be
+performed to the continuum or in spectral-line mode. Advanced model
+structures can be implemented easily and several different fits can be
+performed with no need of re-loading the data.
 
 ============
 Installation
@@ -83,17 +83,19 @@ Just follow these steps:
       export LIBRARY_PATH="/opt/local/lib"
       export LD_LIBRARY_PATH="/opt/local/lib"
 
-3. From the same terminal where you ran the previous step, go to the installation
-   directory (if you are not already there) and compile the program::
+3. From the same terminal where you ran the previous step, go to the
+   installation directory (if you are not already there) and compile
+   the program::
 
      cd ~/.casa/NORDIC_TOOLS/UVMultiFit
      python setup.py build_ext --inplace
 
    After this step, the file ``_uvmultimodel.so`` should have been created.
 
-   .. note:: Check that this file has indeed been created by you, and is not the
-      pre-compiled file coming with the package (if there is one). Executing ``ls -ltr``
-      should list it at the end and give you its exact creation date.
+   .. note:: Check that this file has indeed been created by you, and
+      is not the pre-compiled file coming with the package (if there
+      is one). Executing ``ls -ltr`` should list it at the end and
+      give you its exact creation date.
 
 4. Import the module into CASA. You can automate it by editing the file called
    ``init.py``, which resides in your ``.casa`` directory::
@@ -106,20 +108,22 @@ Just follow these steps:
       import imp
       uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
 
-   where ``YOUR_HOME_DIRECTORY`` should be (guess it!) your home directory (i.e.,
-   the directory that is printed when you execute ``cd ~ ; pwd`` in a terminal).
+   where ``YOUR_HOME_DIRECTORY`` should be (guess it!) your home
+   directory (i.e., the directory that is printed when you execute
+   ``cd ~ ; pwd`` in a terminal).
 
 5. Enjoy!
 
-Any feedback, problem with the installation/running and/or bug report should be sent
-either to the ARC Nordic Node (contact@nordic-alma.se) or to the source maintainer
-(michael.olberg@chalmers.se).
+Any feedback, problem with the installation/running and/or bug report
+should be sent either to the ARC Nordic Node (contact@nordic-alma.se)
+or to the source maintainer (michael.olberg@chalmers.se).
 
 ===========
 Basic Usage
 ===========
 
-THESE ARE ALL THE KEYWORDS (AND THEIR DEFAULTS) OF THE CURRENT UVMULTIFIT VERSION:
+THESE ARE ALL THE KEYWORDS (AND THEIR DEFAULTS) OF THE CURRENT
+UVMULTIFIT VERSION:
 
 >>> uvmultifit(vis='', spw='0', column = 'data', field = 0, scans = [],
 >>>            uniform=False, chanwidth = 1, timewidth = 1, stokes = 'I',
@@ -133,20 +137,26 @@ THESE ARE ALL THE KEYWORDS (AND THEIR DEFAULTS) OF THE CURRENT UVMULTIFIT VERSIO
 >>>            only_flux=False, proper_motion = 0.0, HankelOrder = 80,
 >>>            amp_gains = {}, phase_gains = {})
 
-Let us assume that you have imported this module with the alias ``uvm`` (which is the
-case if you followed the installation instructions). To fit the flux density of a point
-source (centered at the coordinates of the field called ``M81``), using the continuum
-emission in all the spws of a measurement set called ``myms.ms``, just do:
+Let us assume that you have imported this module with the alias
+``uvm`` (which is the case if you followed the installation
+instructions). To fit the flux density of a point source (centered at
+the coordinates of the field called ``M81``), using the continuum
+emission in all the spws of a measurement set called ``myms.ms``, just
+do:
 
->>> myfit = uvm.uvmultifit(vis="myms.ms", spw="", model="delta", var="0, 0, p[0]",
->>>                        field="M81", OneFitPerChannel=False, outfile="results.dat")
+>>> myfit = uvm.uvmultifit(vis="myms.ms", spw="", model="delta",
+>>>                        var="0, 0, p[0]", field="M81",
+>>>                        OneFitPerChannel=False,
+>>>                        outfile="results.dat")
 
-The program will write the fitting result (and other useful metadata) into the file
-called ``results.dat``. But it will also return a so-called *uvmultifit instance*
-(which, in this example, has been called ``myfit``), that can be used to do a lot of
-things with your modelling. For instance, the fitting result (together with
-uncertainties, reduced Chi Square and covariance matrix, if the fit would have more
-than one fitting parameter) is stored in a dictionary that can be accessed as:
+The program will write the fitting result (and other useful metadata)
+into the file called ``results.dat``. But it will also return a
+so-called *uvmultifit instance* (which, in this example, has been
+called ``myfit``), that can be used to do a lot of things with your
+modelling. For instance, the fitting result (together with
+uncertainties, reduced Chi Square and covariance matrix, if the fit
+would have more than one fitting parameter) is stored in a dictionary
+that can be accessed as:
 
 >>> myfit.result
 
@@ -155,47 +165,58 @@ This dictionary has several keys worth noticing:
 * ``myfit.result['Parameters']`` The fitting parameters. If the fit is done in
   spectral-line mode, these are organized per spw and channel.
 
-* ``myfit.result['Frequency']`` The frequency corresponding to each set of fitting
-  parameters (useful for cases of fits in spectral-line mode).
+* ``myfit.result['Frequency']`` The frequency corresponding to each
+  set of fitting parameters (useful for cases of fits in spectral-line
+  mode).
 
 * ``myfit.result['Uncertainties']`` The uncertainties of the fitted parameters.
 
-  .. note:: The uncertainties are estimated from the Jacobian matrix, and scaled so
-          that the reduced Chi squared equals unity. Null (or ridicously small)
-          uncertainties may indicate an unsuccessful fit. It is always a good idea
-          to take a look at the post-fit residuals to assess the quality of your fit.
-  .. note:: The Jacobian is computed using numerical approximations of the derivatives
-          of the fitting functions w.r.t. the parameters.
+  .. note:: The uncertainties are estimated from the Jacobian matrix,
+          and scaled so that the reduced Chi squared equals
+          unity. Null (or ridicously small) uncertainties may indicate
+          an unsuccessful fit. It is always a good idea to take a look
+          at the post-fit residuals to assess the quality of your fit.
+          .. note:: The Jacobian is computed using numerical
+          approximations of the derivatives of the fitting functions
+          w.r.t. the parameters.
 
-* ``myfit.result['Reduced Chi Square']`` The reduced Chi Squared, before rescaling the
-  uncertainties.
+* ``myfit.result['Reduced Chi Square']`` The reduced Chi Squared,
+  before rescaling the uncertainties.
 
-  .. note:: Notice that this is the reduced post-fit Chi squared, computed using the
-           *original* visibility uncertainties (i.e., those read from the data). In
-           other words, this is the reduced Chi Square computed *before* UVMultiFit
-           scales the uncertainties to make the reduced Chi squared equal to unity.
-           The user can check with this value whether the visibility uncertainties
-           are well scaled to the natural scatter of the data.
-  .. note:: Quite large values of the reduced Chi Squared are likely indicative of
-            too high data weights, which should be harmless to the fit, as long as
-            the *relative* weights among visibilities are OK (in other words, a fit
-            with *UVMultiFit* is insensitive to any global scaling factor of the
-            weights).
-  .. note:: Too high values of the reduced Chi Squared could also be indicative of a bad
-            fit. In such a case, though, the a-posteriori parameter uncertainties would
-            also be high. The user should check the parameter uncertainties as an extra
-            assessment of the quality of the fit.
+  .. note:: Notice that this is the reduced post-fit Chi squared,
+            computed using the *original* visibility uncertainties
+            (i.e., those read from the data). In other words, this is
+            the reduced Chi Square computed *before* UVMultiFit scales
+            the uncertainties to make the reduced Chi squared equal to
+            unity.  The user can check with this value whether the
+            visibility uncertainties are well scaled to the natural
+            scatter of the data.
 
-* ``myfit.result['covariance']`` The full covariance matrix of the parameters (in case
-  the user asked for it).
-.. note:: There are other elements in your *uvmultifit instance* that may be
-   interesting to you, if you want to do more advanced stuff. Look at the section
-   **Some Useful Methods** for details.
+  .. note:: Quite large values of the reduced Chi Squared are likely
+            indicative of too high data weights, which should be
+            harmless to the fit, as long as the *relative* weights
+            among visibilities are OK (in other words, a fit with
+            *UVMultiFit* is insensitive to any global scaling factor
+            of the weights).
 
-If you made a fit in *spectral-line mode* and want to plot the first fitted parameter
-(i.e., p[0], see below for the syntax details) against frequency, for the third
-spectral window in the measurement set, the command could be (se assume that ``pylab``
-has been imported):
+  .. note:: Too high values of the reduced Chi Squared could also be
+            indicative of a bad fit. In such a case, though, the
+            a-posteriori parameter uncertainties would also be
+            high. The user should check the parameter uncertainties as
+            an extra assessment of the quality of the fit.
+
+* ``myfit.result['covariance']`` The full covariance matrix of the
+  parameters (in case the user asked for it).
+
+.. note:: There are other elements in your *uvmultifit instance* that
+   may be interesting to you, if you want to do more advanced
+   stuff. Look at the section **Some Useful Methods** for details.
+
+If you made a fit in *spectral-line mode* and want to plot the first
+fitted parameter (i.e., p[0], see below for the syntax details)
+against frequency, for the third spectral window in the measurement
+set, the command could be (se assume that ``pylab`` has been
+imported):
 
 >>> pylab.plot(myfit.result['Frequency'][3], myfit.result['Parameters'][3][:, 0])
 
@@ -207,36 +228,39 @@ and so on. If there is only 1 fitting parameter:
 
 >>> pylab.plot(myfit.result['Frequency'][3], myfit.result['Parameters'][3])
 
-.. note:: The fitted parameters are ordered by spectral window *in the order given
-     by the 'spw' parameter*. Hence, if spw='2, 3', then the first element of the
-     list of parameters (i.e., ``myfit.result['Parameters'][0]``) will be the
-     parameters fitted for the spw number 2.
+.. note:: The fitted parameters are ordered by spectral window *in the
+     order given by the 'spw' parameter*. Hence, if spw='2, 3', then
+     the first element of the list of parameters (i.e.,
+     ``myfit.result['Parameters'][0]``) will be the parameters fitted
+     for the spw number 2.
 
-.. note:: For fits to the continuum (i.e., all channels together, see below),
-     ``myfit.result['Parameters']`` will only have *one entry* (i.e., the parameter
-     values fitted to all channels at once)
+.. note:: For fits to the continuum (i.e., all channels together, see
+     below), ``myfit.result['Parameters']`` will only have *one entry*
+     (i.e., the parameter values fitted to all channels at once)
 
 ==============
 Model Examples
 ==============
 
-In the following examples, we only give the most important keywords to setup the fit.
-The rest of keywords (e.g., the name of the measurement set, the fields, the
-range of spectral windows, etc.) are not important to understand the model setup and
-are thus avoided for clarity.
+In the following examples, we only give the most important keywords to
+setup the fit.  The rest of keywords (e.g., the name of the
+measurement set, the fields, the range of spectral windows, etc.) are
+not important to understand the model setup and are thus avoided for
+clarity.
 
-Details about the variables of the models and how to set fitting parameters are given
-in the sections below.
+Details about the variables of the models and how to set fitting
+parameters are given in the sections below.
 
 - **EXAMPLE 0**:  A point source with free position and free flux density:
 
   >>> model = ['delta']
   >>> var = ['p[0], p[1], p[2]']
 
-  In this case, the RA shift w.r.t. the image center is ``p[0]`` (in arcsec), the Dec shift
-  is ``p[1]`` (also in arcsec), and the flux density is ``p[2]`` (in Jy).
-  If we know that the source has to be located within 1 arcsec of the phase center, we can
-  add this information as a set of bounds, i.e.:
+  In this case, the RA shift w.r.t. the image center is ``p[0]`` (in
+  arcsec), the Dec shift is ``p[1]`` (also in arcsec), and the flux
+  density is ``p[2]`` (in Jy).  If we know that the source has to be
+  located within 1 arcsec of the phase center, we can add this
+  information as a set of bounds, i.e.:
 
   >>> bounds = [[-1, 1], [-1, 1], None]
 
@@ -244,100 +268,110 @@ in the sections below.
 
   >>> bounds = [[-1, 1], [-1, 1], [0, None]]
 
-- **EXAMPLE 1**: Two deltas, being the position of the second one fixed w.r.t. the position
-  of the first one. Let's say that the second delta is shifted at 0.5 and 0.6 arcsec, in
-  RA and Dec (respectively), from the first delta, and we want the position of the first
-  delta to be free in our fit. Then:
+- **EXAMPLE 1**: Two deltas, being the position of the second one
+  fixed w.r.t. the position of the first one. Let's say that the
+  second delta is shifted at 0.5 and 0.6 arcsec, in RA and Dec
+  (respectively), from the first delta, and we want the position of
+  the first delta to be free in our fit. Then:
 
   >>> model = ['delta', 'delta']
   >>> var = ['p[0], p[1], p[2]', 'p[0]+0.5, p[1]+0.6, p[3]']
 
-  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec of the first delta; p[2] is the flux
-  density of the first delta; and ``p[3]`` is the flux density of the second delta. Notice
-  that the RA and Dec position of the second delta is equal to that of the first delta
+  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec of the first
+  delta; p[2] is the flux density of the first delta; and ``p[3]`` is
+  the flux density of the second delta. Notice that the RA and Dec
+  position of the second delta is equal to that of the first delta
   plus a fixed shift.
 
-- **EXAMPLE 2**: A ring plus a delta at its center. The absolute position of the compound
-  source is free, and the ring is circular.
+- **EXAMPLE 2**: A ring plus a delta at its center. The absolute
+  position of the compound source is free, and the ring is circular.
 
   >>> model = ['ring', 'delta']
   >>> var = ['p[0], p[1], p[2], p[3], 1.0, 0.0', 'p[0], p[1], p[4]']
 
-  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec of both components (i.e., the ring and
-  the delta); ``p[2]`` is the total flux density of the ring and ``p[3]`` is its diameter;
-  ``p[4]`` is the flux density of the delta. Notice that the axes Ratio of the ring is set
-  constant (and unity) and the position angle is also set constant (although it's
-  meaningless for ``Ratio=1``).
-  For extended models, it is a good idea to bound the size to have positive values.
+  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec of both
+  components (i.e., the ring and the delta); ``p[2]`` is the total
+  flux density of the ring and ``p[3]`` is its diameter; ``p[4]`` is
+  the flux density of the delta. Notice that the axes Ratio of the
+  ring is set constant (and unity) and the position angle is also set
+  constant (although it's meaningless for ``Ratio=1``).  For extended
+  models, it is a good idea to bound the size to have positive values.
   Hence, in this case:
 
   >>> bounds = [None, None, None, [0, None]]
 
-  In case we also want to bound the fitted fluxes to be positive, we would have:
+  In case we also want to bound the fitted fluxes to be positive, we
+  would have:
 
   >>> bounds = [None, None, [0, None], [0, None], [0, None]]
 
-- **EXAMPLE 3**: Like Example 1, but fixing also the flux-density of the second delta
-  to be 2.5 times that of the first delta:
+- **EXAMPLE 3**: Like Example 1, but fixing also the flux-density of
+  the second delta to be 2.5 times that of the first delta:
 
   >>> model = ['delta', 'delta']
   >>> var = ['p[0], p[1], p[2]', 'p[0]+0.5, p[3]+0.6, p[2]*2.5']
 
-- **EXAMPLE 4**: A circularly-symmetric disc with a hole (i.e., with its inner half
-  subtracted):
+- **EXAMPLE 4**: A circularly-symmetric disc with a hole (i.e., with
+  its inner half subtracted):
 
   >>> model = ['disc', 'disc']
   >>> var = ['p[0], p[1], 4/3*p[2], p[3], 1, 0',
   >>>        'p[0], p[1], -p[2]/3, p[3]/2, 1, 0']
 
-  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec shifts, respectively; ``p[2]`` is
-  the flux density of the disc with the hole (i.e., with its inner half subtracted), and
-  ``p[3]`` is the disc diameter. Notice that the hole in the disc has been created by adding
-  a *negative* disc of size equals to 1/2 of the size of the larger disc, and flux density
-  equals to -1/4 of that of the larger disc. The overall effect of both discs is that of
-  one single disc with a hole (i.e., with no emission at radii < 1/2 of the outer
+  In this case, ``p[0]`` and ``p[1]`` are the RA and Dec shifts,
+  respectively; ``p[2]`` is the flux density of the disc with the hole
+  (i.e., with its inner half subtracted), and ``p[3]`` is the disc
+  diameter. Notice that the hole in the disc has been created by
+  adding a *negative* disc of size equals to 1/2 of the size of the
+  larger disc, and flux density equals to -1/4 of that of the larger
+  disc. The overall effect of both discs is that of one single disc
+  with a hole (i.e., with no emission at radii < 1/2 of the outer
   radius).
 
-- **EXAMPLE 5**: A delta component with a spectral index, fitted to the whole dataset
-  (i.e., setting ``OneFitPerChannel=False``):
+- **EXAMPLE 5**: A delta component with a spectral index, fitted to
+  the whole dataset (i.e., setting ``OneFitPerChannel=False``):
 
   >>> model = ['delta']
   >>> var = ['p[0], p[1], p[2]*(nu/1.e9)**p[3]']
 
-  In this case, the fitted spectral index will be ``p[3]``, and ``p[2]`` will be the flux
-  density at 1 GHz. Notice that p_ini (the list of initial values for the parameters)
-  must also have the a priori value of the spectral index. For this example, p_ini
-  could be (for a source close to the center, with an approximate flux of 2.3 Jy at
-  1 GHz and an a priori spectral index of -0.7):
+  In this case, the fitted spectral index will be ``p[3]``, and
+  ``p[2]`` will be the flux density at 1 GHz. Notice that p_ini (the
+  list of initial values for the parameters) must also have the a
+  priori value of the spectral index. For this example, p_ini could be
+  (for a source close to the center, with an approximate flux of 2.3
+  Jy at 1 GHz and an a priori spectral index of -0.7):
 
   >>> p_ini = [0.0, 0.0, 2.3, -0.7]
 
-  If the spectral index is well known, it can of course be fixed in the fit. In such
-  a case:
+  If the spectral index is well known, it can of course be fixed in
+  the fit. In such a case:
 
   >>> model = ['delta']
   >>> var = ['p[0], p[1], p[2]*(nu/1.e9)**(-0.7)']
   >>> p_ini = [0.0, 0.0, 2.3]
 
-  .. note:: Fitting sizes *and* spectral indices at the same time may produce crazy
-      results, since both quantities are quite coupled in Fourier space. Hence, some
-      care should be taken when fitting to all frequencies together. Notice also
-      that, unless your bandwidth is quite wide and/or your SNR is quite high, any
-      fit to the spectral index may not be reliable.
+  .. note:: Fitting sizes *and* spectral indices at the same time may
+      produce crazy results, since both quantities are quite coupled
+      in Fourier space. Hence, some care should be taken when fitting
+      to all frequencies together. Notice also that, unless your
+      bandwidth is quite wide and/or your SNR is quite high, any fit
+      to the spectral index may not be reliable.
 
-- **EXAMPLE 6**: A filled sphere with its inner half (i.e., the core) removed. The sphere
-  is fixed at the image center:
+- **EXAMPLE 6**: A filled sphere with its inner half (i.e., the core)
+  removed. The sphere is fixed at the image center:
 
   >>> model = ['sphere', 'sphere']
   >>> var = ['0, 0, 9/8*p[0], p[1], 1, 0', '0, 0, -p[0]/8, p[1]/2, 1, 0']
 
-  In this case, ``p[0]`` is the total flux density and ``p[1]`` is the outer diameter. This
-  example is similar to that of the disc with a hole, but in this case the model is a
-  sphere, where we have removed all the emission at radii < 0.5 times the outer radius.
+  In this case, ``p[0]`` is the total flux density and ``p[1]`` is the
+  outer diameter. This example is similar to that of the disc with a
+  hole, but in this case the model is a sphere, where we have removed
+  all the emission at radii < 0.5 times the outer radius.
 
-- **EXAMPLE 7**: A disc with a hole of variable size. In this case, the smaller disc with
-  negative flux density (which is used to generate the hole) must *always* have the same
-  surface brightness (in absolute value) that the larger positive disc. Hence, and if we
+- **EXAMPLE 7**: A disc with a hole of variable size. In this case,
+  the smaller disc with negative flux density (which is used to
+  generate the hole) must *always* have the same surface brightness
+  (in absolute value) that the larger positive disc. Hence, and if we
   fix the disc position at the image center (for simplicity), we have:
 
   >>> model = ['disc', 'disc']
@@ -348,10 +382,10 @@ in the sections below.
   the outer dimaeter is ``p[2]``, and ``p[1]`` is the ratio of the outer
   size to the inner size.
 
-- **EXAMPLE 8**: Simultaneous self-calibration and source fitting. We fit a source flux
-  density and perform Global Fringe Fitting (i.e., we fit for phases, delays, and delay
-  rates) in one shot. Let's fit stokes RR and assume that there are 3 antennas (for
-  simplicity):
+- **EXAMPLE 8**: Simultaneous self-calibration and source fitting. We
+  fit a source flux density and perform Global Fringe Fitting (i.e.,
+  we fit for phases, delays, and delay rates) in one shot. Let's fit
+  stokes RR and assume that there are 3 antennas (for simplicity):
 
   >>> stokes = 'RR'
   >>> model = ['delta']
@@ -359,17 +393,18 @@ in the sections below.
   >>>                2:'p[3] + 6.2832*(p[4]*(nu-nu0) + p[5]*t)'}
   >>> var = '0, 0, p[6]'
 
-  Good initial estimates for the phase gains can be obtained using the "QuinnFF" method.
+  Good initial estimates for the phase gains can be obtained using the
+  "QuinnFF" method.
 
 
 =============
 Model Details
 =============
 
-Each model depends on a list of variables that can be written as *any* algebraic
-combination of fitting parameters. Some explanatory examples are given in the
-section **Model Examples** (see also ``help(uvm)``, if you imported the module
-with the ``uvm`` alias).
+Each model depends on a list of variables that can be written as *any*
+algebraic combination of fitting parameters. Some explanatory examples
+are given in the section **Model Examples** (see also ``help(uvm)``,
+if you imported the module with the ``uvm`` alias).
 
 Here is the list of currently-supported models, and their variables:
 
@@ -401,18 +436,19 @@ These models have the following meaning:
 
 * ``expo`` stands for an exponential radial flux decay.
 
-* ``power-2`` stands for a decay as :math:`1/(r^2 + r_0^2)` (notice that in this case,
-  the flux is the integral from ``r=0`` to ``r=r0``)
+* ``power-2`` stands for a decay as :math:`1/(r^2 + r_0^2)` (notice
+  that in this case, the flux is the integral from ``r=0`` to ``r=r0``)
 
 * ``power-3`` stands for a decay as :math:`1/(1 + (2^{2/3} - 1)(r/r_0)^2)^{3/2}`.
 
 * ``GaussianRing`` stands for a radial profile following the expression:
   :math:`F*exp(-(Q - R)^2/(2*Sigma^2))`
 
-  .. note:: The GaussianRing is built by a series expansion of the Bessel function in the
-    computation of the Hankel transform. The order of the expansion (default is 80) can be
-    set in the new HankelOrder keyword. The larger the source (in beam units) the higher
-    HankelOrder should be, to keep the numerical precision.
+  .. note:: The GaussianRing is built by a series expansion of the
+    Bessel function in the computation of the Hankel transform. The
+    order of the expansion (default is 80) can be set in the new
+    HankelOrder keyword. The larger the source (in beam units) the
+    higher HankelOrder should be, to keep the numerical precision.
 
 The meaning of the model variables is:
 
@@ -422,43 +458,50 @@ The meaning of the model variables is:
 
 - *Major* is the diameter along the major axis
 
-- *Ratio* is the size ratio between the reference axis and the other axes (i.e., it is
-  set to 1.0 for circularly-symmetric sources).
+- *Ratio* is the size ratio between the reference axis and the other
+  axes (i.e., it is set to 1.0 for circularly-symmetric sources).
 
-  .. warning:: If *Ratio* is forced to be higher than 1.0, then *Major* (see above)
-     will indeed become the **minor** axis! If you want to avoid this issue, you should
-     bound *Ratio* to be lower than (or equal to) 1.0. Otherwise, you will have to remember this issue when you interprete your fitted parameters.
+  .. warning:: If *Ratio* is forced to be higher than 1.0, then
+     *Major* (see above) will indeed become the **minor** axis! If you
+     want to avoid this issue, you should bound *Ratio* to be lower
+     than (or equal to) 1.0. Otherwise, you will have to remember this
+     issue when you interprete your fitted parameters.
 
 - *PositionAngle* is the angle of the reference axis, from North to East (in deg.)
 
-- *Sigma* (whenever it is used) is an auxiliary variable for models that need more than
-  one 'size-like' parameter to be defined (e.g., the 'GaussianRing', where we have the
-  size of the ring and its width).
+- *Sigma* (whenever it is used) is an auxiliary variable for models
+  that need more than one 'size-like' parameter to be defined (e.g.,
+  the 'GaussianRing', where we have the size of the ring and its
+  width).
 
 ==========================
 UVMultiFit Data Properties
 ==========================
 
-*UVMultiFit* will return an instance with many properties and methods. Some examples
-are listed below.
+*UVMultiFit* will return an instance with many properties and
+methods. Some examples are listed below.
 
 
-- ``averdata``: A set of arrays (one per spectral window) with the visibilities, averaged
-  in time and/or frequency (according to the ``chanwidth`` and ``timewidth`` parameters).
+- ``averdata``: A set of arrays (one per spectral window) with the
+  visibilities, averaged in time and/or frequency (according to the
+  ``chanwidth`` and ``timewidth`` parameters).
 
 - ``averweights``: The (square root of the) weights used in the fit.
 
-- ``u``, ``v``, and ``w``: the coordinates in Fourier space of the visibilities (one array
-  per spectral window).
+- ``u``, ``v``, and ``w``: the coordinates in Fourier space of the
+  visibilities (one array per spectral window).
 
 - ``t``: the observing times (Modified Julian Dates). One array per spw.
 
-.. note:: A UVMultiFit instance can occupy quite a bit of physical memory. It may be a
-     good idea to delete the instance from memory (i.e., using ``del myfit`` and
-     ``gc.collect()``) or restart CASA once the user has got the desired results from
-     the fit (this is the recommended approach).
+.. note:: A UVMultiFit instance can occupy quite a bit of physical
+     memory. It may be a good idea to delete the instance from memory
+     (i.e., using ``del myfit`` and ``gc.collect()``) or restart CASA
+     once the user has got the desired results from the fit (this is
+     the recommended approach).
 
-The most important methods of *UVMultiFit* are described below."""
+The most important methods of *UVMultiFit* are described below.
+
+"""
 
 __license__ = 'GPL-v3'
 __revision__ = " $Id: 3.0.0-p2 2019-03-28 15:00:00 marti-vidal $ "
@@ -470,52 +513,33 @@ import re
 import gc
 import os
 import scipy.special as spec
-import scipy.optimize as spopt
-import scipy as sp
 import numpy as np
 import time
 import sys
-
-global goodclib, ms, tb
+import uvmultimodel as uvmod
+# global ms, tb
 
 __version__ = "3.0-p2"
-date = 'MAR 2019'
+date = 'JAN 2021'
 
 ################
 # Import all necessary modules.
 
-mypath = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(mypath)
-########
-# Execute twice, to avoid the silly (and harmless)
-# error regarding the different API versions of
-# numpy between the local system and CASA:
-try:
-    import _uvmultimodel as uvmod
-    goodclib = True
-    print("\nC++ shared library loaded successfully\n")
-except:
-    goodclib = False
-    print("\n There has been an error related to the numpy")
-    print(" API version used by CASA. This is related to uvmultifit")
-    print(" (which uses the API version of your system) and should")
-    print(" be *harmless*.\n")
+print("\nC++ shared library loaded successfully\n")
 
-if not goodclib:
-    try:
-        import _uvmultimodel as uvmod
-        goodclib = True
-        print("\nC++ shared library loaded successfully\n")
-    except:
-        goodclib = False
+from casatools import table
+from casatools import ms
 
-if True:
-    from taskinit import gentools
-    from clearcal_cli import clearcal_cli as clearcal
-    ms = gentools(['ms'])[0]
-    tb = gentools(['tb'])[0]
-    ia = gentools(['ia'])[0]
-    cs = gentools(['cs'])[0]
+tb = table()
+ms = ms()
+
+# if True:
+#     from taskinit import gentools
+#     from clearcal_cli import clearcal_cli as clearcal
+#     ms = gentools(['ms'])[0]
+#     tb = gentools(['tb'])[0]
+#     ia = gentools(['ia'])[0]
+#     cs = gentools(['cs'])[0]
 
 greetings = '\n ##########################################################################\n'
 greetings += ' # UVMULTIFIT --  ' + date + '. EUROPEAN ALMA REGIONAL CENTER (NORDIC NODE).  #\n'
@@ -774,7 +798,7 @@ class uvmultifit(object):
 
     """
 
-    global sys, goodlib, ms, uvmod, goodclib, time, np, sp, spopt, spec, os, gc, gentools, re, clearcal, ms, tb, cs
+    # global sys, ms, uvmod, goodclib, time, np, sp, spopt, spec, os, gc, gentools, re, clearcal, ms, tb, cs
 
     ############################################
     #
@@ -936,9 +960,9 @@ class uvmultifit(object):
     # This method will be overriden in the GUI, to avoid execution of CheckInputs() and the fit:
     def _startUp(self):
         """ This is run each time the class is instantiated."""
-        if not goodclib:
-            self._printError("ERROR: C++ library cannot be loaded! Please, contact the Nordic ARC node.")
-            return False
+#         if not goodclib:
+#             self._printError("ERROR: C++ library cannot be loaded! Please, contact the Nordic ARC node.")
+#             return False
 
         self._printInfo(greetings)
 
@@ -1067,7 +1091,7 @@ class uvmultifit(object):
                 self._printError("ERROR! %s cannot be openned in write mode" % (v))
                 return False
 
-            spws = map(int, self.iscan[v].keys())
+            spws = list(map(int, self.iscan[v].keys()))
 
             ms.selectinit(datadescid=spws[0])
             polprods = [x[0] for x in list(ms.range(['corr_names'])['corr_names'])]
@@ -1223,8 +1247,9 @@ class uvmultifit(object):
             if type(key) is not int:
                 self._printError("\n The keys of 'amp_gains[tG]' must be integers!")
 
-        self.useGains = list(set(self.phase_gainsNuT.keys() + self.amp_gainsNuT.keys() + self.phase_gainsNu.keys(
-        ) + self.amp_gainsNu.keys() + self.phase_gainsT.keys() + self.amp_gainsT.keys()))
+        self.useGains = set(list(self.phase_gainsNuT) + list(self.amp_gainsNuT) +
+                            list(self.phase_gainsNu) + list(self.amp_gainsNu) +
+                            list(self.phase_gainsT) + list(self.amp_gainsT))
 
         # Check phase center:
 
@@ -1263,9 +1288,9 @@ class uvmultifit(object):
         for i, component in enumerate(self.model):
             vic = self.var[i].count
             checkpars = self.var[i].split(',')
-            nfuncs = sum(map(vic, lf))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
+            nfuncs = sum(list(map(vic, lf)))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
             paridx = zip([m.start() + 1 for m in re.finditer('\[', self.var[i])], [m.start() for m in re.finditer('\]', self.var[i])])
-            maxpar = max([maxpar] + map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx])))
             if component not in self.implemented:
                 msg = "\nModel component '" + str(component) + "' is not known!\n"
                 fmt = "Supported models are:" + " '%s' " * len(self.implemented)
@@ -1283,7 +1308,7 @@ class uvmultifit(object):
 
         # Get the overal number of parameters (i.e., from the variables AND the scalefix string):
         paridx = zip([m.start() + 1 for m in re.finditer('\[', self.scalefix)],[m.start() for m in re.finditer('\]', self.scalefix)])
-        maxpar = max([maxpar] + map(float, [self.scalefix[ss[0]:ss[1]] for ss in paridx]))
+        maxpar = max([maxpar] + list(map(float, [self.scalefix[ss[0]:ss[1]] for ss in paridx])))
 
         # Get the model parameters for the gains:
         #  self.maxGainTerm = 0
@@ -1291,32 +1316,32 @@ class uvmultifit(object):
         for key in self.phase_gainsNuT:
             term = self.phase_gainsNuT[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNuT:
             term = self.amp_gainsNuT[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsNu:
             term = self.phase_gainsNu[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNu:
             term = self.amp_gainsNu[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsT:
             term = self.phase_gainsT[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsT:
             term = self.amp_gainsT[key]
             paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
-            maxpar = max([maxpar] + map(float, [term[ss[0]:ss[1]] for ss in paridx]))
+            maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         # The fixed model should contain CONSTANT variables:
         for fcomp in self.fixedvar:
@@ -1459,7 +1484,7 @@ class uvmultifit(object):
 
             for si, sc in enumerate(self.scans):
                 if type(sc) is str:
-                    self.scans[si] = map(int, sc.split(','))
+                    self.scans[si] = list(map(int, sc.split(',')))
         except:
             self._printError("\n\n 'scans' should be a list of integers (or a list of lists of integers,\nif there are several measurement sets).\n ABORTING!")
             return False
@@ -1514,6 +1539,8 @@ class uvmultifit(object):
         self.field_id = []
 
         # Get number of antennas:
+        print(os.path.join(self.vis[0], 'ANTENNA'))
+        print(tb)
         tb.open(os.path.join(self.vis[0], 'ANTENNA'))
         self.Nants = len(tb.getcol('NAME'))
         tb.close()
@@ -2029,7 +2056,7 @@ from the pointing direction.\n\n""")
                                                 #   weightmask[flagmask] = 0.0
 
                                     # Free some memory:
-                                    for key in datascan.keys():
+                                    for key in list(datascan):
                                         del datascan[key]
                                     del datascan, origmasked, origweight
                                     del copyweight, totalmask, flagmask
@@ -2815,7 +2842,7 @@ from the pointing direction.\n\n""")
                 outf.write("\n# THE MODEL COLUMN FOUND IN THE DATA")
             else:
                 for m, mod in enumerate(self.fixed):
-                    var2print = map(float, self.fixedvar[m].split(','))
+                    var2print = list(map(float, self.fixedvar[m].split(',')))
                     outf.write("\n# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
                 outf.write("\n#\n#  - AND SCALING FACTOR: %s" % self.scalefix)
 
@@ -3278,9 +3305,9 @@ class modeler(object):
                 try:
                     tempstr2 = tempstr.split(',')
                     if len(tempstr2) > 3:
-                        self.strucvar.append(map(float, tempstr2[:2] + tempstr2[3:]))
+                        self.strucvar.append(list(map(float, tempstr2[:2] + tempstr2[3:])))
                     else:
-                        self.strucvar.append(map(float, tempstr2[:2]))
+                        self.strucvar.append(list(map(float, tempstr2[:2])))
                 except:
                     print(tempstr.split(','))
                     self.resultstring = '\n If only_flux=True, all variables but the flux must be constants! Aborting!'
@@ -3837,7 +3864,7 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
     It follows the CASA syntax."""
 
     if spw == '':
-        spw = ','.join(map(str, range(len(maxchans))))
+        spw = ','.join(list(map(str, range(len(maxchans)))))
 
     entries = spw.split(',')
     output = [[] for i in maxchans]
@@ -3845,7 +3872,7 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
     for entry in entries:
         check = entry.split(':')
 
-        spws = map(int, check[0].split('~'))
+        spws = list(map(int, check[0].split('~')))
         if len(spws) == 1:
             selspw = [spws[0]]
         else:
@@ -3864,7 +3891,7 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
                 chranges = chans.split(';')
             ranges = []
             for chran in chranges:
-                ch1, ch2 = map(int, chran.split('~'))
+                ch1, ch2 = list(map(int, chran.split('~')))
                 if ch1 > ch2:
                     errstr = '%i is larger than %i. Revise channels for spw %i' % (ch1, ch2, sp)
                     return [False, errstr]

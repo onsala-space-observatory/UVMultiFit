@@ -59,7 +59,7 @@
 #include <complex>
 
 #if QUINN_FITTER == 0
-#include "_QuinnFringe.h"
+#include "QuinnFringe.h"
 #endif
 
 /* Docstrings */
@@ -171,11 +171,24 @@ static SHARED_DATA *worker;
 static DATA vis;
 static MODEL mod;
 
+static struct PyModuleDef moduledef {
+    PyModuleDef_HEAD_INIT,
+    "uvmultimodel",
+    module_docstring,
+    -1,
+    module_methods,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+};
+
 /* Initialize the module */
-PyMODINIT_FUNC init_uvmultimodel(void)
+PyMODINIT_FUNC PyInit_uvmultimodel(void)
 {
-    PyObject *m = Py_InitModule3("_uvmultimodel", module_methods, module_docstring);
-    if (m == NULL) return;
+    // PyObject *m = Py_InitModule3("uvmultimodel", module_methods, module_docstring);
+    PyObject *m = PyModule_Create(&moduledef);
+    if (m == NULL) return NULL;
 
     // Initiate variables with dummy values:
     NCPU = 0;
@@ -188,6 +201,7 @@ PyMODINIT_FUNC init_uvmultimodel(void)
 
     /* Load `numpy` functionality. */
     import_array();
+    return m;
 }
 
 void clearData()

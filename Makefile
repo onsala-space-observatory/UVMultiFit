@@ -1,11 +1,11 @@
-CASADIR=/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7
-PYTHON=$(CASADIR)/bin/python
+CASADIR=/home/michael/Python/casa-6.1.2-7-pipeline-2020.1.0.36/lib/py
+PYTHON=$(CASADIR)/bin/python3
 
 install:
 	$(PYTHON) setup.py install --prefix=$(CASADIR)
 
 user:
-	export CASA_INSTALLATION=$(CASADIR); $(PYTHON) setup.py install --user
+	$(PYTHON) setup.py install --user
 
-clean:
-	rm -fvR $(CASADIR)/lib/python2.7/site-packages/NordicARC*.egg-info
+#clean:
+#	rm -fvR $(CASADIR)/lib/python2.7/site-packages/NordicARC*.egg-info

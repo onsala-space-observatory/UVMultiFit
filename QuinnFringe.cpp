@@ -27,7 +27,7 @@
 #include <complex>
 #include <fftw3.h>
 #include <gsl/gsl_linalg.h>
-#include "_QuinnFringe.h"
+#include "QuinnFringe.h"
 
 typedef std::complex<double> cplx64f;
 
