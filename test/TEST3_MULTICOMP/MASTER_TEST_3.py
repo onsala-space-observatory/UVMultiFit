@@ -41,7 +41,7 @@ doff = -2.  # Dec offset of Gaussian (arcsec.)
 config = '.'.join(arrayconfig.split('.')[:-1])
 if DoSimObs:
     # TEST 1: MULTI-COMPONENT CORRELATED MODEL.
-    print 'Generating %s' % imname
+    print('Generating %s' % imname)
     cl.done()
 
     for si in s:
@@ -71,7 +71,6 @@ if DoFit:
     print("---------------------------------------------")
     print("TEST 3")
     print("---------------------------------------------")
-    tempfile = open('STEP3_FIT.py', 'w')
 
     # p[0] -> flux of outer disc
     # p[1] -> Major axis of outer disc
@@ -99,36 +98,36 @@ if DoFit:
     Trues[0] *= 0.2477
 
     string = 'S = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(Pars)
-    print >> tempfile, string
+    with open('STEP3_FIT.py', 'w') as tempfile:
+        print(string, file=tempfile)
 
-    string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
-    print >> tempfile, string
+        string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
+        print(string, file=tempfile)
 
-    for idx, shape in enumerate(shapes):
-        if shape == 'disk':
-            shapes[idx] = 'disc'
-        if shape == 'gaussian':
-            shapes[idx] = 'Gaussian'
+        for idx, shape in enumerate(shapes):
+            if shape == 'disk':
+                shapes[idx] = 'disc'
+            if shape == 'gaussian':
+                shapes[idx] = 'Gaussian'
 
-    string = 'modelshape = [%s]' % (','.join(["'" + shi + "'" for shi in shapes]))
-    print >> tempfile, string
+        string = 'modelshape = [%s]' % (','.join(["'" + shi + "'" for shi in shapes]))
+        print(string, file=tempfile)
 
-    NuF = float(Nu.split('G')[0])*1.e9
-    string = "modvars = ['%s','%s','%s']" % (D1var, D2var, Gvar)
-    print >> tempfile, string
+        NuF = float(Nu.split('G')[0])*1.e9
+        string = "modvars = ['%s','%s','%s']" % (D1var, D2var, Gvar)
+        print(string, file=tempfile)
 
-    string = 'pini = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(
-        [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
-    print >> tempfile, string
+        string = 'pini = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(
+            [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
+        print(string, file=tempfile)
 
-    string = 'parbound = [[0.,None], [0.,None], [0.,None], [-15,15], [0.,None], [0.,None]]'
-    print >> tempfile, string
+        string = 'parbound = [[0.,None], [0.,None], [0.,None], [-15,15], [0.,None], [0.,None]]'
+        print(string, file=tempfile)
 
-    lines = open('test3.py')
-    for l in lines.readlines():
-        print >> tempfile, l[:-1]
-    lines.close()
-    tempfile.close()
+        lines = open('test3.py')
+        for l in lines.readlines():
+            print(l[:-1], file=tempfile)
+        lines.close()
 
     pl.ioff()
     Cfile = 'TEST3.CLEAN'
@@ -157,7 +156,8 @@ if DoFit:
     pl.savefig('%s.png' % Cfile)
     impeak = np.max(resdat)
 
-    os.system('%s -c STEP3_FIT.py' % casaexe)
+    # os.system('%s -c STEP3_FIT.py' % casaexe)
+    exec(open("STEP3_FIT.py").read())
 
     # ms.open('%s/%s.%s.noisy.ms'%(imname,imname,config),nomodify=False)
     # ms.selectinit(datadescid=0)

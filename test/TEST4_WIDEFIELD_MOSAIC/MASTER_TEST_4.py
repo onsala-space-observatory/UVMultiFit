@@ -52,7 +52,7 @@ if DoSimObs:
         for j in range(N):
             ipix = int(Npix/2 + (-float(N-1)/2. + i)*incr*3600./cellN)
             jpix = int(Npix/2 + (-float(N-1)/2. + j)*incr*3600./cellN)
-            print i, j, ipix, jpix
+            print(i, j, ipix, jpix)
             data[ipix, jpix, :, :] = Fi[i+j]
 
     ia.putchunk(data)
@@ -62,7 +62,7 @@ if DoSimObs:
                indirection='phref',
                totaltime='1200s', antennalist=arrayconfig)
 
-    print "Done"
+    print("Done")
 
 if DoFit:
     print("---------------------------------------------")
@@ -71,8 +71,6 @@ if DoFit:
     pl.ioff()
     Cfile = 'TEST4.CLEAN'
     Rfile = 'TEST4.RESIDUALS'
-
-    tempfile = open('STEP4_FIT.py', 'w')
 
     field = ''
 
@@ -123,22 +121,23 @@ if DoFit:
             S += [0., 0., 1.]
             i += 1
 
-    print >> tempfile, "field = '%s'" % field
-    print >> tempfile, "msout = '%s'" % visname
-    print >> tempfile, "model = [%s]" % (','.join(["'%s'" % s for s in model]))
-    print >> tempfile, "modvars = [%s]" % (','.join(["'%s'" % s for s in modvars]))
-    print >> tempfile, "pini = [%s]" % (','.join(map(str, pini)))
-    print >> tempfile, "phref = '%s'" % phref
-    print >> tempfile, "S = [%s]" % (','.join(map(str, S)))
-    print >> tempfile, "bounds = [%s]" % (','.join(['[-5.,5], [-5.,5.], [0.,None]' for pi in range(N*N)]))
+    with open('STEP4_FIT.py', 'w') as tempfile:
+        print("field = '%s'" % field, file=tempfile)
+        print("msout = '%s'" % visname, file=tempfile)
+        print("model = [%s]" % (','.join(["'%s'" % s for s in model])), file=tempfile)
+        print("modvars = [%s]" % (','.join(["'%s'" % s for s in modvars])), file=tempfile)
+        print("pini = [%s]" % (','.join(map(str, pini))), file=tempfile)
+        print("phref = '%s'" % phref, file=tempfile)
+        print("S = [%s]" % (','.join(map(str, S))), file=tempfile)
+        print("bounds = [%s]" % (','.join(['[-5.,5], [-5.,5.], [0.,None]' for pi in range(N*N)])), file=tempfile)
 
-    iff = open('test4.py')
-    for line in iff.readlines():
-        print >> tempfile, line[:-1]
-    iff.close()
-    tempfile.close()
+        iff = open('test4.py')
+        for line in iff.readlines():
+            print >> tempfile, line[:-1]
+        iff.close()
 
-    os.system('%s -c STEP4_FIT.py' % casaexe)
+    # os.system('%s -c STEP4_FIT.py' % casaexe)
+    exec(open("STEP4_FIT.py").read())
     if True:
         os.system('rm -rf %s.*' % Rfile)
 

@@ -96,7 +96,6 @@ if DoFit:
     pl.savefig('%s.png' % Cfile)
 
     impeak = np.max(resdat)
-    tempfile = open('STEP6_FIT.py', 'w')
 
     # p[0] -> flux of first Gaussian
     # p[1] -> Major axis of first Gaussian
@@ -116,39 +115,39 @@ if DoFit:
     BiasFac = [0.7, 1.3, 0.75, 1.2, 1.3]
     Trues = Pars
 
-    string = 'S = [%.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(Pars)
-    print >> tempfile, string
+    with open('STEP6_FIT.py', 'w') as tempfile:
+        string = 'S = [%.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(Pars)
+        print(string, file=tempfile)
 
-    string = "immname = '%s'" % ('%s.residual' % Cfile)
-    print >> tempfile, string
+        string = "immname = '%s'" % ('%s.residual' % Cfile)
+        print(string, file=tempfile)
 
-    string = "psfname = '%s'" % ('%s.psf' % Cfile)
-    print >> tempfile, string
+        string = "psfname = '%s'" % ('%s.psf' % Cfile)
+        print(string, file=tempfile)
 
-    for i in range(len(shapes)):
-        if shapes[i] == 'disk':
-            shapes[i] = 'disc'
-        if shapes[i] == 'gaussian':
-            shapes[i] = 'Gaussian'
+        for i in range(len(shapes)):
+            if shapes[i] == 'disk':
+                shapes[i] = 'disc'
+            if shapes[i] == 'gaussian':
+                shapes[i] = 'Gaussian'
 
-    string = 'modelshape = [%s]' % (','.join(["'" + shi +"'" for shi in shapes]))
-    print >> tempfile, string
+        string = 'modelshape = [%s]' % (','.join(["'" + shi +"'" for shi in shapes]))
+        print(string, file=tempfile)
 
-    NuF = float(Nu.split('G')[0])*1.e9
-    string = "modvars = ['%s','%s']" % (D1var, Gvar)
-    print >> tempfile, string
+        NuF = float(Nu.split('G')[0])*1.e9
+        string = "modvars = ['%s','%s']" % (D1var, Gvar)
+        print(string, file=tempfile)
 
-    string = "pini = [%.3e, %.3e, %.3e, %.3e, %.3e]" % tuple(
-        [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
-    print >> tempfile, string
+        string = "pini = [%.3e, %.3e, %.3e, %.3e, %.3e]" % tuple(
+            [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
+        print(string, file=tempfile)
 
-    string = "parbound = [[0.,None], [0.,None], [-15,15], [0.,None], [0.,None]]"
-    print >> tempfile, string
+        string = "parbound = [[0.,None], [0.,None], [-15,15], [0.,None], [0.,None]]"
+        print(string, file=tempfile)
 
-    lines = open('test6.py')
-    for l in lines.readlines():
-        print >> tempfile, l[:-1]
-    lines.close()
-    tempfile.close()
+        lines = open('test6.py')
+        for l in lines.readlines():
+            print(l[:-1], file=tempfile)
+        lines.close()
 
-    os.system('%s -c STEP6_FIT.py' % casaexe)
+    exec(open("STEP6_FIT.py").read())

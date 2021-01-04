@@ -86,9 +86,8 @@ r2d = 180./np.pi
 twopi = 2.*np.pi
 
 # Write the array file:
-arf = open('VLBA.array', 'w')
-print >> arf, VLBAarr
-arf.close()
+with open('VLBA.array', 'w') as arf:
+    print(VLBAarr, file=arf)
 
 # Compute gains with their right units:
 for ant in GAINS.keys():
@@ -98,21 +97,21 @@ for ant in GAINS.keys():
     GAINS[ant][3] *= TECFAC
 
 if DoSimObs:
-    print 'Generating %s' % imname
+    print('Generating %s' % imname)
 
-    print ' SETTING ANTENNA PARAMETERS'
+    print(' SETTING ANTENNA PARAMETERS')
     util = simutil('')
     stnx, stny, stnz, stnd, padnames, arrname, arrpos = util.readantenna(Array)
     eta_p, eta_s, eta_b, eta_t, eta_q, t_rx = util.noisetemp(telescope='VLBA', freq=NU)
     eta_a = eta_p * eta_s * eta_b * eta_t
 
-    print '\n\n RESETTING THE TSYS TO %.1f K.\n\n' % TSYS
+    print('\n\n RESETTING THE TSYS TO %.1f K.\n\n' % TSYS)
     t_rx = TSYS
     t_sky = 260.
     t_ground = 260.
 
     # Prepare template measurement set:
-    print '\n\n PREPARING MS TEMPLATE\n\n'
+    print('\n\n PREPARING MS TEMPLATE\n\n')
 
     VLBA = me.observatory('VLBA')
     mount = 'alt-az'
@@ -137,7 +136,7 @@ if DoSimObs:
 
     mereftime = me.epoch('TAI', refdate)
 
-    print ' Will shift the date of observation to match the Hour Angle range\n'
+    print(' Will shift the date of observation to match the Hour Angle range\n')
 
     sm.settimes(integrationtime=Tint, usehourangle=usehourangle,
                 referencetime=mereftime)
@@ -166,7 +165,7 @@ if DoSimObs:
     sm.close()
 
     # Apply the gains to the data:
-    print '\n\n WRITING VISIBILITIES \n\n'
+    print('\n\n WRITING VISIBILITIES \n\n')
 
     tb.open(imname+'.ms/ANTENNA')
     ANTNAMES = tb.getcol('NAME')
@@ -202,7 +201,7 @@ if DoSimObs:
     tb.close()
 
     # Add noise:
-    print '\n\n Corrupting data...\n'
+    print('\n\n Corrupting data...\n')
 
     os.system('rm -rf %s.noisy.ms' % imname)
     os.system('cp -r %s.ms %s.noisy.ms' % (imname, imname))
@@ -220,7 +219,7 @@ if DoSimObs:
     clearcal('%s.noisy.ms' % imname, addmodel=True)
 
     # DISPERSIVE CASE:
-    print '\n\n NOW FOR THE DISPERSIVE CASE!\n\n'
+    print('\n\n NOW FOR THE DISPERSIVE CASE!\n\n')
 
     os.system('rm -rf %s.dispersive.noisy.ms' % imname)
     os.system('cp -r %s.noisy.ms %s.dispersive.noisy.ms' % (imname, imname))
@@ -263,7 +262,7 @@ if DoSimObs:
     tb.close()
 
     # ADD NOISE TO THE DISPERSIVE CASE:
-    print '\n\n Corrupting data...\n'
+    print('\n\n Corrupting data...\n')
 
     sm.openfromms('%s.dispersive.noisy.ms' % imname)
     sm.setdata(fieldid=0, spwid=0)
@@ -279,11 +278,11 @@ if DoFit:
     print("---------------------------------------------")
     print("TEST 8")
     print("---------------------------------------------")
-    tempfile = open('STEP8_FIT.py', 'w')
-    print '\n\n\n   NON-DISPERSIVE FIT \n\n\n'
+    # tempfile = open('STEP8_FIT.py', 'w')
+    print('\n\n\n   NON-DISPERSIVE FIT \n\n\n')
     import time
 
-    tempfile.close()
+    # tempfile.close()
 
     # Names of the antennas:
     ANTS = GAINS.keys()
@@ -366,7 +365,7 @@ if DoFit:
                 de = (GAINS[an][0] - GAINS[REFANT][0])
                 rt = (GAINS[an][1] - GAINS[REFANT][1])
                 pini += [de*1.e9, rt, fph]
-        print message
+        print(message)
 
         # Set a-prioris and parameter bounds:
         myfit.p_ini = pini
@@ -423,10 +422,10 @@ if DoFit:
         fitTime += tac-tic
 
         message += '\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n' % (tac-tic)
-        print message
+        print(message)
 
         # Divide data by model visibilities:
-        print '\n NOW, CALIBRATING SCAN'
+        print('\n NOW, CALIBRATING SCAN')
 
         ms.open('%s.dispersive.noisy.ms' % imname, nomodify=False)
         ms.selectinit(datadescid=0)
@@ -438,7 +437,7 @@ if DoFit:
         ms.close()
 
         # Plot the calibrated (i.e., data/model) visibilities:
-        print '\n PLOTTING...'
+        print('\n PLOTTING...')
 
         tb.open('%s.dispersive.noisy.ms' % imname)
         SCAN = tb.getcol('SCAN_NUMBER') == DOSCAN
@@ -508,12 +507,11 @@ if DoFit:
         #  del myfit
 
         # Write results:
-        resf = open('test8.dat', 'w')
-        print >> resf, '\n\n\nTEST 8: GLOBAL FRINGE FITTING\n'
-        print >> resf, message
+        with open('test8.dat', 'w') as tempfile:
+            print('\n\n\nTEST 8: GLOBAL FRINGE FITTING\n', file=tempfile)
+            print(message, file=tempfile)
 
-        #  print >> resf, '  TOTAL FRINGING TIME:  %.2f SECONDS '%fitTime
-        #  resf.close()
+            print('  TOTAL FRINGING TIME:  %.2f SECONDS '%fitTime, file=tempfile)
 
         # NOW FIT WITH THE DISPERSIVE-DELAY MODEL!!!!!
         print '\n\n\n   DISPERSIVE CASE \n\n\n'
@@ -748,9 +746,8 @@ if DoFit:
         del myfit
 
         # Write results:
-        #  resf = open('test8_disp.dat','w')
-        print >> resf, '\n\n\nTEST 8: GLOBAL FRINGE FITTING\n'
-        print >> resf, message
-
-    print >> resf, '  TOTAL FRINGING TIME:  %.2f SECONDS ' % fitTime
-    resf.close()
+        #  tempfile = open('test8_disp.dat','w')
+    with open('test8.dat', 'a') as tempfile:
+        print('\n\n\nTEST 8: GLOBAL FRINGE FITTING\n', file=tempfile)
+        print(message, file=tempfile)
+        print('  TOTAL FRINGING TIME:  %.2f SECONDS ' % fitTime, file=tempfile)

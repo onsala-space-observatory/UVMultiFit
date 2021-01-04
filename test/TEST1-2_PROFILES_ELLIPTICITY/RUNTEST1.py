@@ -2,28 +2,32 @@ import os
 import numpy as np
 import pylab as pl
 
-DoSimObs = False
+DoSimObs = True
 DoFit = True
-casaexe = 'casa --nologger'
 
 arrayconfig = 'alma.out10.cfg'
 
 # Center Freq:
 Nu = '50.0GHz'
+
 # Image size (pixels)
 Npix = 1000
+
 # Pixel size:
 cell = '0.01arcsec'
 cellN = 0.01
+
 # Number of frequency channels:
 Nnu = 100
+
 # Channel width:
 ChW = '0.01GHz'
 
 # For test 1:
 imname = 'Disc'
 # type   flux    major       minor       PA  freq   spec.ind.    Direction
-si = ['disk', 1.0, '0.2arcsec', '0.1arcsec', '60.0deg', Nu, 1.0, "J2000 10h00m00.0s -30d00m00.0s"]
+si = ['disk', 1.0, '0.2arcsec', '0.1arcsec', '60.0deg',
+      Nu, 1.0, "J2000 10h00m00.0s -30d00m00.0s"]
 
 # For test 2:
 Diameter = 1.0
@@ -136,7 +140,6 @@ if DoFit:
     pl.savefig('%s.png' % Cfile)
     impeak = np.max(resdat)
 
-    # os.system('%s -c STEP1_FIT.py' % casaexe)
     exec(open("STEP1_FIT.py").read())
 
     os.system('rm -rf %s.*' % Rfile)

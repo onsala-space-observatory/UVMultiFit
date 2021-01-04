@@ -14,7 +14,6 @@ for pi in range(len(pini)):
 
 tac = time.time()
 msg += '\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n' % (tac-tic)
-resf = open('test3.dat', 'w')
-print >> resf, '\n\n\nTEST 3: MULTI-COMPONENT WITH CORRELATED VARIABLES\n'
-print >> resf, msg
-resf.close()
+with open('test3.dat', 'w') as resf:
+    print('\n\n\nTEST 3: MULTI-COMPONENT WITH CORRELATED VARIABLES\n', file=resf)
+    print(msg, file=resf)

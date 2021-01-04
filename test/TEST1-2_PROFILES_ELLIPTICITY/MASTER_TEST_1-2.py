@@ -43,7 +43,7 @@ imname2 = ['GaussianRing', 'Gaussian', 'ring', 'sphere', 'bubble', 'expo', 'powe
 config = '.'.join(arrayconfig.split('.')[:-1])
 if DoSimObs:
     # TEST 1: ELLIPTICITY AND CONTINUUM FIT:
-    print 'Generating %s' % imname
+    print('Generating %s' % imname)
     cl.done()
     cl.addcomponent(dir=si[7], flux=si[1], fluxunit='Jy', freq=si[5], shape=si[0],
                     majoraxis=si[2], minoraxis=si[3], positionangle=si[4],
@@ -79,7 +79,7 @@ if DoSimObs:
     R = np.sqrt(RSq)
 
     for j, modnam in enumerate(imname2):
-        print 'Generating %s' % modnam
+        print('Generating %s' % modnam)
         os.system('rm -rf %s.model' % modnam)
         os.system('cp -r %s.model  %s.model' % (imname, modnam))
 
@@ -137,37 +137,37 @@ if DoFit:
     # the cl CASA tool doesn't put the right flux density of the disc component (you can
     # check it with plotms and/or adding up the flux density from the pixels of the image model).
     os.system('rm -rf *.png')
-    tempfile = open('STEP1_FIT.py', 'w')
+    with open('STEP1_FIT.py', 'w') as tempfile:
+        print("from NordicARC import uvmultifit as uvm", file=tempfile)
 
-    size = float(si[2].split('a')[0])
-    minor = float(si[3].split('a')[0])
-    PA = float(si[4].split('d')[0])
-    string = "S = [%.3e, %.3e, %.3e, %.3e, %.3e]" % (0.2435, si[6], size, minor/size, PA)
-    print >> tempfile, string
+        size = float(si[2].split('a')[0])
+        minor = float(si[3].split('a')[0])
+        PA = float(si[4].split('d')[0])
+        string = "S = [%.3e, %.3e, %.3e, %.3e, %.3e]" % (0.2435, si[6], size, minor/size, PA)
+        print(string, file=tempfile)
 
-    string = "visname = '%s'" % ("%s/%s.%s.noisy.ms" % (imname, imname, config))
-    print >> tempfile, string
+        string = "visname = '%s'" % ("%s/%s.%s.noisy.ms" % (imname, imname, config))
+        print(string, file=tempfile)
 
-    if si[0] == 'disk':
-        si[0] = 'disc'
-    string = "modelshape = '%s'" % (si[0])
-    print >> tempfile, string
+        if si[0] == 'disk':
+            si[0] = 'disc'
+        string = "modelshape = '%s'" % (si[0])
+        print(string, file=tempfile)
 
-    NuF = float(Nu.split('G')[0])*1.e9
-    string = "modvars = '0,0, p[0]*(nu/%.4e)**p[1], p[2], p[3], p[4]'" % NuF
-    print >> tempfile, string
+        NuF = float(Nu.split('G')[0])*1.e9
+        string = "modvars = '0,0, p[0]*(nu/%.4e)**p[1], p[2], p[3], p[4]'" % NuF
+        print(string, file=tempfile)
 
-    string = "pini = [%.3e, %.3e, %.3e, %.3e, %.3e]" % (0.8, 0., size*1.2, minor/size*0.8, 45.)
-    print >> tempfile, string
+        string = "pini = [%.3e, %.3e, %.3e, %.3e, %.3e]" % (0.8, 0., size*1.2, minor/size*0.8, 45.)
+        print(string, file=tempfile)
 
-    string = "parbound = [[0., None], [-2.,2.], [0.,None], [0.1,0.9], [0.,180.]]"
-    print >> tempfile, string
+        string = "parbound = [[0., None], [-2.,2.], [0.,None], [0.1,0.9], [0.,180.]]"
+        print(string, file=tempfile)
 
-    lines = open('test1.py')
-    for l in lines.readlines():
-        print >> tempfile, l[:-1]
-    lines.close()
-    tempfile.close()
+        lines = open('test1.py')
+        for l in lines.readlines():
+            print(l[:-1], file=tempfile)
+        lines.close()
 
     pl.ioff()
     Cfile = 'TEST1.CLEAN'
@@ -196,7 +196,7 @@ if DoFit:
     pl.savefig('%s.png' % Cfile)
     impeak = np.max(resdat)
 
-    os.system('%s -c STEP1_FIT.py' % casaexe)
+    exec(open("STEP1_FIT.py").read())
 
     os.system('rm -rf %s.*' % Rfile)
     tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),
@@ -224,38 +224,37 @@ if DoFit:
         print("---------------------------------------------")
         print("TEST2: %s" % (modnam))
         print("---------------------------------------------")
-        tempfile = open('STEP2_FIT_%s.py' % modnam, 'w')
-        if modnam == 'GaussianRing':
-            var = 'shapevar = \'p[3],p[4],p[0],p[1],1.0,0.0,p[2]\''
-            pi = 'pi = [0.8, %.3e,%.3e,0.,0.]' % (Diameter*0.8, Sigma*1.2)
-            bb = 'parbound = [[0.,None],[0.,%.3e],[%.3e,%.3e],[-1.,1.],[-1.,1.]]' % (
-                Diameter*1.5, Sigma*0.8, Sigma*1.5)
-        else:
-            var = 'shapevar = \'p[2],p[3],p[0],p[1],1.0,0.0\''
-            pi = 'pi = [0.8, %.3e,0.,0.]' % (Diameter*1.2)
-            bb = 'parbound = [[0.,None],[0.,%.3e],[-1.,1.],[-1.,1.]]' % (
-                Diameter*1.5)
+        with open('STEP2_FIT_%s.py' % modnam, 'w') as tempfile:
+            if modnam == 'GaussianRing':
+                var = 'shapevar = \'p[3],p[4],p[0],p[1],1.0,0.0,p[2]\''
+                pi = 'pi = [0.8, %.3e,%.3e,0.,0.]' % (Diameter*0.8, Sigma*1.2)
+                bb = 'parbound = [[0.,None],[0.,%.3e],[%.3e,%.3e],[-1.,1.],[-1.,1.]]' % (
+                    Diameter*1.5, Sigma*0.8, Sigma*1.5)
+            else:
+                var = 'shapevar = \'p[2],p[3],p[0],p[1],1.0,0.0\''
+                pi = 'pi = [0.8, %.3e,0.,0.]' % (Diameter*1.2)
+                bb = 'parbound = [[0.,None],[0.,%.3e],[-1.,1.],[-1.,1.]]' % (
+                    Diameter*1.5)
 
-        string = 'Diameter = %.4e' % Diameter
-        print >> tempfile, string
-        string = 'DiamDelta = %.4e' % DiamDelta
-        print >> tempfile, string
-        string = 'Sigma = %.4e' % Sigma
-        print >> tempfile, string
+            string = 'Diameter = %.4e' % Diameter
+            print(string, file=tempfile)
+            string = 'DiamDelta = %.4e' % DiamDelta
+            print(string, file=tempfile)
+            string = 'Sigma = %.4e' % Sigma
+            print(string, file=tempfile)
 
-        string = 'visname = \'%s/%s.%s.noisy.ms\'' % (modnam, modnam, config)
-        print >> tempfile, string
-        string = 'modshape = \'%s\'' % modnam
-        print >> tempfile, string
-        print >> tempfile, var
-        print >> tempfile, pi
-        print >> tempfile, bb
+            string = 'visname = \'%s/%s.%s.noisy.ms\'' % (modnam, modnam, config)
+            print(string, file=tempfile)
+            string = 'modshape = \'%s\'' % modnam
+            print(string, file=tempfile)
+            print(var, file=tempfile)
+            print(pi, file=tempfile)
+            print(bb, file=tempfile)
 
-        lines = open('test2.py')
-        for l in lines.readlines():
-            print >> tempfile, l[:-1]
-        lines.close()
-        tempfile.close()
+            lines = open('test2.py')
+            for l in lines.readlines():
+                print(l[:-1], file=tempfile)
+            lines.close()
 
         Cfile = 'TEST2.%s.CLEAN' % modnam
         Rfile = 'TEST2.%s.RESIDUALS' % modnam
@@ -283,7 +282,8 @@ if DoFit:
         pl.savefig('%s.png' % Cfile)
 
         impeak = np.max(resdat)
-        os.system('%s -c STEP2_FIT_%s.py' % (casaexe, modnam))
+        # os.system('%s -c STEP2_FIT_%s.py' % (casaexe, modnam))
+        exec(open("STEP2_FIT_%s.py" % (modnam)).read())
         os.system('rm -rf %s.*' % Rfile)
         tclean('%s/%s.%s.noisy.ms' % (modnam, modnam, config),
                imagename=Rfile, cell=cell,

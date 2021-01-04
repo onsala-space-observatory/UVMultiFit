@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 import glob
 import time
@@ -24,13 +22,13 @@ src = open(glob.glob("MASTER*.py")[0])
 aux = open("aux.py", 'w')
 print("DoSimObs = %s" % str(DoSimObs), file=aux)
 print("DoFit = %s" % str(DoFit), file=aux)
-print("casaexe = '%s'" % str(casaexe), file=aux)
+# print("casaexe = '%s'" % str(casaexe), file=aux)
 for line in src.readlines():
     print(line[:-1], file=aux)
 aux.close()
 src.close()
 os.system("%s -c aux.py" % casaexe)
-os.system("rm *.log *.last aux.py")
+# os.system("rm *.log *.last aux.py")
 
 tac = time.time()
 print("\n THE TEST LASTED %.1f SECONDS.\n\n" % (tac-tic))

@@ -14,7 +14,6 @@ for pi in range(len(pini)):
 
 tac = time.time()
 msg += '\n\n DATA READ AND FIT LASTED %.2f SECONDS.\n' % (tac-tic)
-resf = open('test5.dat', 'w')
-print >> resf, '\n\n\nTEST 5: SIMULTANEOUS GAIN CALIBRATION \n(TIME-VARYING AMP. GAIN, USING A PIECE-WISE TIME FUNCTION)\n'
-print >> resf, msg
-resf.close()
+with open('test5.dat', 'w') as resf:
+    print('\n\n\nTEST 5: SIMULTANEOUS GAIN CALIBRATION \n(TIME-VARYING AMP. GAIN, USING A PIECE-WISE TIME FUNCTION)\n', file=resf)
+    print(msg, file=resf)

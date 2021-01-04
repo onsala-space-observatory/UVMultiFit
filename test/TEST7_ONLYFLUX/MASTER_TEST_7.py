@@ -76,7 +76,6 @@ if DoFit:
     print("---------------------------------------------")
     print("TEST 7")
     print("---------------------------------------------")
-    tempfile = open('STEP7_FIT.py', 'w')
 
     # p[0] -> Flux of first disc
     # p[1] -> Flux of second disc
@@ -103,37 +102,37 @@ if DoFit:
 
     Trues = Pars
 
-    string = ('S = [%.3e' + ',%.3e'*(len(Pars)-1) + ']') % tuple(Pars)
-    print >> tempfile, string
+    with open('STEP7_FIT.py', 'w') as tempfile:
+        string = ('S = [%.3e' + ',%.3e'*(len(Pars)-1) + ']') % tuple(Pars)
+        print(string, file=tempfile)
 
-    string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
-    print >> tempfile, string
+        string = "visname = '%s'" % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
+        print(string, file=tempfile)
 
-    for idx, shape in enumerate(shapes):
-        if shape == 'disk':
-            shapes[idx] = 'disc'
-        if shape == 'gaussian':
-            shapes[idx] = 'Gaussian'
+        for idx, shape in enumerate(shapes):
+            if shape == 'disk':
+                shapes[idx] = 'disc'
+            if shape == 'gaussian':
+                shapes[idx] = 'Gaussian'
 
-    string = "modelshape = [%s]" % (','.join(["'" + shi +"'" for shi in shapes]))
-    print >> tempfile, string
+        string = "modelshape = [%s]" % (','.join(["'" + shi +"'" for shi in shapes]))
+        print(string, file=tempfile)
 
-    NuF = float(Nu.split('G')[0])*1.e9
-    string = ("modvars = ['%s'" + ",'%s'" * (len(Pars)-1) + ']') % tuple(Pvars)
-    print >> tempfile, string
+        NuF = float(Nu.split('G')[0])*1.e9
+        string = ("modvars = ['%s'" + ",'%s'" * (len(Pars)-1) + ']') % tuple(Pvars)
+        print(string, file=tempfile)
 
-    string = ("pini = [%.3e" + ",%.3e"*(len(Pars)-1) + "]") % \
-                      tuple([Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
-    print >> tempfile, string
+        string = ("pini = [%.3e" + ",%.3e"*(len(Pars)-1) + "]") % \
+                          tuple([Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
+        print(string, file=tempfile)
 
-    string = 'parbound = None'
-    print >> tempfile, string
+        string = 'parbound = None'
+        print(string, file=tempfile)
 
-    lines = open('test7.py')
-    for l in lines.readlines():
-        print >> tempfile, l[:-1]
-    lines.close()
-    tempfile.close()
+        lines = open('test7.py')
+        for l in lines.readlines():
+            print(l[:-1], file=tempfile)
+        lines.close()
 
     pl.ioff()
     Cfile = 'TEST7.CLEAN'
@@ -162,7 +161,7 @@ if DoFit:
 
     impeak = np.max(resdat)
 
-    os.system('%s -c STEP7_FIT.py' % casaexe)
+    exec(open("STEP7_FIT.py").read())
 
     os.system('rm -rf %s.*' % Rfile)
     tclean('%s/%s.%s.noisy.ms' % (imname, imname, config),

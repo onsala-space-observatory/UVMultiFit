@@ -182,8 +182,6 @@ if DoFit:
 
     tmed = np.average(trange)
 
-    tempfile = open('STEP5_FIT.py', 'w')
-
     # Source parameters:
     Gvar = '0.,0.,p[0],p[1],p[2],p[3]'
 
@@ -201,51 +199,52 @@ if DoFit:
 
     Trues = Pars
 
-    string = 'LMtune = [1.e-5,10.,1.e-5,10]'
-    print >> tempfile, string
+    with open('STEP5_FIT.py', 'w') as tempfile:
 
-    string = 'S = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(Pars)
-    print >> tempfile, string
+        string = 'LMtune = [1.e-5,10.,1.e-5,10]'
+        print(string, file=tempfile)
 
-    string = "visname = '%s'" % ('%s.noisy' % vis)
-    print >> tempfile, string
+        string = 'S = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e]' % tuple(Pars)
+        print(string, file=tempfile)
 
-    # Define the gain function for antenna #2:
-    gainFunc = 'pieceWise(p[4],p[5],%.8e,%.8e)' % (0., (tmed-trange[0])*86400.)
-    string = "amp_gains = {2:'%s'}" % gainFunc
-    print >> tempfile, string
+        string = "visname = '%s'" % ('%s.noisy' % vis)
+        print(string, file=tempfile)
 
-    if s[0] == 'disk':
-        s[0] = 'disc'
-    if s[0] == 'gaussian':
-        s[0] = 'Gaussian'
+        # Define the gain function for antenna #2:
+        gainFunc = 'pieceWise(p[4],p[5],%.8e,%.8e)' % (0., (tmed-trange[0])*86400.)
+        string = "amp_gains = {2:'%s'}" % gainFunc
+        print(string, file=tempfile)
 
-    string = "modelshape = ['%s']" % s[0]
-    print >> tempfile, string
+        if s[0] == 'disk':
+            s[0] = 'disc'
+        if s[0] == 'gaussian':
+            s[0] = 'Gaussian'
 
-    NuF = float(Nu.split('G')[0])*1.e9
-    string = "modvars = ['%s']" % Gvar
-    print >> tempfile, string
+        string = "modelshape = ['%s']" % s[0]
+        print(string, file=tempfile)
 
-    string = 'pini = [%.6e, %.6e, %.6e, %.6e, %.6e, %.6e]' % tuple(
-        [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
-    print >> tempfile, string
+        NuF = float(Nu.split('G')[0])*1.e9
+        string = "modvars = ['%s']" % Gvar
+        print(string, file=tempfile)
 
-    string = 'parbound = [[0.,None],[0.,None],[0.,None],[0.,90.],[0.75,1.25],[1.1,1.9]]'
-    # ll = []
-    # for pi in range(len(Pars)):
-    #   ll += [Pars[pi]*(1. - BiasFac[pi]),Pars[pi]*(1. + BiasFac[pi])]
-    # string = 'parbound = [[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e]]'%tuple(ll)
-    print >> tempfile, string
+        string = 'pini = [%.6e, %.6e, %.6e, %.6e, %.6e, %.6e]' % tuple(
+            [Pars[pi]*BiasFac[pi] for pi in range(len(Pars))])
+        print(string, file=tempfile)
 
-    string = "STK = 'RR'"
-    print >> tempfile, string
+        string = 'parbound = [[0.,None],[0.,None],[0.,None],[0.,90.],[0.75,1.25],[1.1,1.9]]'
+        # ll = []
+        # for pi in range(len(Pars)):
+        #   ll += [Pars[pi]*(1. - BiasFac[pi]),Pars[pi]*(1. + BiasFac[pi])]
+        # string = 'parbound = [[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e],[%.6e,%.6e]]'%tuple(ll)
+        print(string, file=tempfile)
 
-    lines = open('test5.py')
-    for l in lines.readlines():
-        print >> tempfile, l[:-1]
-    lines.close()
-    tempfile.close()
+        string = "STK = 'RR'"
+        print(string, file=tempfile)
+
+        lines = open('test5.py')
+        for l in lines.readlines():
+            print(l[:-1], file=tempfile)
+        lines.close()
 
     pl.ioff()
     Cfile = 'TEST5.CLEAN'
@@ -275,7 +274,7 @@ if DoFit:
 
     impeak = np.max(resdat)
 
-    os.system('%s -c STEP5_FIT.py' % casaexe)
+    exec(open("STEP5_FIT.py").read())
 
     os.system('rm -rf %s.*' % Rfile)
     tclean('%s.noisy' % vis,
