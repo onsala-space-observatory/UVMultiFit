@@ -425,9 +425,11 @@ The meaning of the model variables is:
 - *Ratio* is the size ratio between the reference axis and the other axes (i.e., it is
   set to 1.0 for circularly-symmetric sources).
 
-  .. warning:: If *Ratio* is forced to be higher than 1.0, then *Major* (see above)
-     will indeed become the **minor** axis! If you want to avoid this issue, you should
-     bound *Ratio* to be lower than (or equal to) 1.0. Otherwise, you will have to remember this issue when you interprete your fitted parameters.
+  .. warning:: If *Ratio* is forced to be higher than 1.0, then
+     *Major* (see above) will indeed become the **minor** axis! If you
+     want to avoid this issue, you should bound *Ratio* to be lower
+     than (or equal to) 1.0. Otherwise, you will have to remember this
+     issue when you interprete your fitted parameters.
 
 - *PositionAngle* is the angle of the reference axis, from North to East (in deg.)
 
@@ -458,7 +460,9 @@ are listed below.
      ``gc.collect()``) or restart CASA once the user has got the desired results from
      the fit (this is the recommended approach).
 
-The most important methods of *UVMultiFit* are described below."""
+The most important methods of *UVMultiFit* are described below.
+
+"""
 
 __license__ = 'GPL-v3'
 __revision__ = " $Id: 3.0.0-p2 2019-03-28 15:00:00 marti-vidal $ "
