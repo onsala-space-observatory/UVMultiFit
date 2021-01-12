@@ -1,4 +1,10 @@
-CASADIR=/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7
+CASADIR=/Applications/CASA.app
+#/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	CASADIR := $(CASADIR)/Contents/Frameworks/Python.framework/Versions/2.7
+endif
 PYTHON=$(CASADIR)/bin/python
 
 install:
