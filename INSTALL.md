@@ -6,11 +6,11 @@ Steps to install the `UVMultiFit` package:
 
 ### CASA
 
-These instructions assume you have a `casa` version 5.x installed,
+These instructions assume you have a `casa` version 6.x installed,
 either the normal release or with the ALMA and/or VLA pipeline
 included. The instructions below use an installation of
-`casa-pipeline-release-5.6.1-8.el7` (ALMA pipeline) as an
-example. Earlier versions (4.x) are neither tested nor supported.
+`casa-pipeline-release-6.1.2-7-pipeline-2020.1.0.36` (ALMA pipeline) as an
+example.
 
 **Find out, where `casa` is installed** on your computer as you will need
 this information during the installation of `UVMultiFit`.
