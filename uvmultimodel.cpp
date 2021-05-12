@@ -171,7 +171,7 @@ static SHARED_DATA *worker;
 static DATA vis;
 static MODEL mod;
 
-static struct PyModuleDef moduledef {
+static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
     "uvmultimodel",
     module_docstring,

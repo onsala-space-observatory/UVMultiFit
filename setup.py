@@ -47,9 +47,9 @@ else:
 
 # "-export-dynamic" doesn't work on Mac
 if platform.system() == "Linux":
-    _extra_link_args=["-Xlinker", "-export-dynamic"]
+    _extra_link_args = ["-Xlinker", "-export-dynamic"]
 elif platform.system() == "Darwin":
-    _extra_link_args=["-Xlinker", "-L/opt/local/lib"]
+    _extra_link_args = ["-Xlinker", "-L/opt/local/lib"]
 #####################################
 
 
@@ -59,18 +59,20 @@ elif platform.system() == "Darwin":
 if BUILD_QUINN_FITTER:
     c_ext = Extension("uvmultimodel",
                       ["uvmultimodel.cpp", "QuinnFringe.cpp"],
-                      define_macros = [('QUINN_FITTER', '0')],
+                      define_macros=[('QUINN_FITTER', '0')],
                       libraries=['gsl', 'gslcblas', 'fftw3'],
                       extra_compile_args=["-Wno-deprecated", "-O3"],
+                      include_dirs=[np.get_include()],
                       extra_link_args=_extra_link_args)
 else:
     c_ext = Extension("uvmultimodel",
                       ["uvmultimodel.cpp"],
-                      define_macros = [('QUINN_FITTER', '1')],
+                      define_macros=[('QUINN_FITTER', '1')],
                       libraries=['gsl', 'gslcblas'],
-                      extra_compile_args=["-Wno-deprecated", "-O3"])
+                      extra_compile_args=["-Wno-deprecated", "-O3"],
+                      include_dirs=[np.get_include()])
 
-fh = open("README.md","r")
+fh = open("README.md", "r")
 long_description = fh.read()
 fh.close()
 
