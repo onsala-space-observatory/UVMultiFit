@@ -58,66 +58,6 @@ performed to the continuum or in spectral-line mode. Advanced model
 structures can be implemented easily and several different fits can be
 performed with no need of re-loading the data.
 
-============
-Installation
-============
-
-Just follow these steps:
-
-1. Download the latest version from `GitHub`_ i.no a directory of your choice:
-   For example::
-
-    $ mkdir -p ~/.casa/NORDIC_TOOLS
-    $ cd ~/.casa/NORDIC_TOOLS
-    $ git clone https://github.com/onsala-space-observatory/UVMultiFit.git
-
-2. Install the dependencies (i.e., GNU Scientific Library, so far).
-
-  - In GNU/Linux, execute the following command:
-
-      sudo apt-get install libgsl-dev libfftw3-dev
-
-  - In MacOS, execute **all** these commands::
-
-      sudo port install gsl fftw
-      export LIBRARY_PATH="/opt/local/lib"
-      export LD_LIBRARY_PATH="/opt/local/lib"
-
-3. From the same terminal where you ran the previous step, go to the
-   installation directory (if you are not already there) and compile
-   the program::
-
-     cd ~/.casa/NORDIC_TOOLS/UVMultiFit
-     python setup.py build_ext --inplace
-
-   After this step, the file ``_uvmultimodel.so`` should have been created.
-
-   .. note:: Check that this file has indeed been created by you, and
-      is not the pre-compiled file coming with the package (if there
-      is one). Executing ``ls -ltr`` should list it at the end and
-      give you its exact creation date.
-
-4. Import the module into CASA. You can automate it by editing the file called
-   ``init.py``, which resides in your ``.casa`` directory::
-
-      gedit ~/.casa/init.py
-
-   Add these two lines in your ``init.py``::
-
-      UVMULTIFIT_PATH = "<YOUR_HOME_DIRECTORY>/.casa/NORDIC_TOOLS/UVMultiFit"
-      import imp
-      uvm = imp.load_source('uvmultifit', UVMULTIFIT_PATH+'/uvmultifit.py')
-
-   where ``YOUR_HOME_DIRECTORY`` should be (guess it!) your home
-   directory (i.e., the directory that is printed when you execute
-   ``cd ~ ; pwd`` in a terminal).
-
-5. Enjoy!
-
-Any feedback, problem with the installation/running and/or bug report
-should be sent either to the ARC Nordic Node (contact@nordic-alma.se)
-or to the source maintainer (michael.olberg@chalmers.se).
-
 ===========
 Basic Usage
 ===========
