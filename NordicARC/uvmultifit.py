@@ -447,15 +447,21 @@ __license__ = 'GPL-v3'
 __revision__ = " $Id: 3.0.0-p2 2019-03-28 15:00:00 marti-vidal $ "
 __docformat__ = 'reStructuredText'
 
-from numpy import asfarray
 import shutil
 import re
 import gc
 import os
-import scipy.special as spec
-import numpy as np
 import time
 import sys
+
+import numpy as np
+import scipy.special as spec
+
+from casatools import ms
+from casatools import table
+from casatools import coordsys as cs
+from casatools import image as ia
+
 import uvmultimodel as uvmod
 # global ms, tb
 
@@ -467,8 +473,6 @@ date = 'JAN 2021'
 
 print("\nC++ shared library loaded successfully\n")
 
-from casatools import table
-from casatools import ms
 
 tb = table()
 ms = ms()
@@ -490,7 +494,7 @@ greetings += ' #                                                                
 greetings += ' ##########################################################################\n\n'
 
 
-class uvmultifit(object):
+class uvmultifit():
     """This is the main UVMultiFit class.
 
    It includes pointers to the data and many different methods
@@ -880,9 +884,8 @@ class uvmultifit(object):
 
         try:
             self.write_model = {'': 0, 'model': 1, 'residuals': 2, 'calibrated': 3}[write]
-        except:
+        except IndexError:
             self._printError("ERROR: keyword 'write' should be set to either '', 'model', 'residuals' or 'calibrated'")
-            return False
 
         #######################
         # TIMEWIDTH IS NOT CURRENTLY USED (ISSUES WITH NEW MS TOOL):
@@ -924,7 +927,7 @@ class uvmultifit(object):
 
         # Fit if finetune == False:
         if goodread:
-            if self.finetune == False:
+            if not self.finetune:
                 goodfit = self.fit()
                 if not goodfit:
                     self._printError("\n FAILED FIT!\n")
@@ -1085,12 +1088,12 @@ class uvmultifit(object):
         """ Performs some sanity checks on the input parameters.
       This function should not be called directly by the user."""
 
-        if type(self.model) is str:
+        if isinstance(self.model, str):
             self.model = list([self.model])
         else:
             self.model = list(self.model)
 
-        if type(self.var) is str:
+        if isinstance(self.var, str):
             self.var = list([self.var])
         else:
             self.var = list(self.var)
@@ -1100,12 +1103,12 @@ class uvmultifit(object):
         else:
             self.fixedvar = list(self.fixedvar)
 
-        if type(self.fixed) is str:
+        if isinstance(self.fixed, str):
             self.fixed = list([self.fixed])
         else:
             self.fixed = list(self.fixed)
 
-        if type(self.p_ini) is [float, str]:
+        if type(self.p_ini) in [float, str]:
             self.p_ini = list([self.p_ini])
         else:
             self.p_ini = list(self.p_ini)
@@ -1128,19 +1131,19 @@ class uvmultifit(object):
         self.phase_gainsNuT = {}
         self.amp_gainsNuT = {}
 
-        if type(self.phase_gains) is not dict:
+        if not isinstance(self.phase_gains, dict):
             self._printError("\n 'phase_gains' must be a dictionary!")
 
-        if type(self.amp_gains) is not dict:
+        if not isinstance(self.amp_gains, dict):
             self._printError("\n 'amp_gains' must be a dictionary!")
 
         for key in self.phase_gains.keys():
-            if type(key) is int:
+            if isinstance(key, int):
                 self.isMixed = True
                 break
 
         for key in self.amp_gains.keys():
-            if type(key) is int:
+            if isinstance(key, int):
                 self.isMixed = True
                 # self._printError("\n Inconsistent 'amp_gains' and 'phase_gains'!")
                 break
@@ -1148,43 +1151,47 @@ class uvmultifit(object):
         for key in self.phase_gains.keys():
             if key == 'nuG':
                 if self.isMixed:
-                    self._printError("You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                    self._printError(
+                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
                 self.phase_gainsNu = self.phase_gains['nuG']
             elif key == 'tG':
                 if self.isMixed:
-                    self._printError("You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                    self._printError(
+                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
                 self.phase_gainsT = self.phase_gains['tG']
-            elif type(key) is not int:
+            elif not isinstance(key, int):
                 self._printError("\n The keys of 'phase_gains' must be integers or 'nuG/tG'!")
             else:
                 self.phase_gainsNuT[key] = self.phase_gains[key]
 
         for key in self.phase_gainsNu.keys():
-            if type(key) is not int:
+            if not isinstance(key, int):
                 self._printError("\n The keys of 'phase_gains[nuG]' must be integers!")
         for key in self.phase_gainsT.keys():
-            if type(key) is not int:
+            if not isinstance(key, int):
                 self._printError("\n The keys of 'phase_gains[tG]' must be integers!")
 
         for key in self.amp_gains.keys():
             if key == 'nuG':
                 if self.isMixed:
-                    self._printError("You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                    self._printError(
+                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
                 self.amp_gainsNu = self.amp_gains['nuG']
             elif key == 'tG':
                 if self.isMixed:
-                    self._printError("You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                    self._printError(
+                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
                 self.amp_gainsT = self.amp_gains['tG']
-            elif type(key) is not int:
+            elif not isinstance(key, int):
                 self._printError("\n The keys of 'amp_gains' must be integers or 'nuG/tG'!")
             else:
                 self.amp_gainsNuT[key] = self.amp_gains[key]
 
         for key in self.amp_gainsNu.keys():
-            if type(key) is not int:
+            if not isinstance(key, int):
                 self._printError("\n The keys of 'amp_gains[nuG]' must be integers!")
         for key in self.amp_gainsT.keys():
-            if type(key) is not int:
+            if not isinstance(key, int):
                 self._printError("\n The keys of 'amp_gains[tG]' must be integers!")
 
         self.useGains = set(list(self.phase_gainsNuT) + list(self.amp_gainsNuT) +
@@ -1193,7 +1200,7 @@ class uvmultifit(object):
 
         # Check phase center:
 
-        if type(self.phase_center) is not str:
+        if not isinstance(self.phase_center, str):
             self._printError("\n 'phase_center' must be a string!")
         else:
             if len(self.phase_center) == 0:
@@ -1216,7 +1223,7 @@ class uvmultifit(object):
 
         # Did the user forget how does this task work? :D
         for param in self.var:
-            if type(param) is not str:
+            if not isinstance(param, str):
                 self._printError("\n 'var' must be a list of strings!")
                 return False
 
@@ -1229,7 +1236,8 @@ class uvmultifit(object):
             vic = self.var[i].count
             checkpars = self.var[i].split(',')
             nfuncs = sum(list(map(vic, lf)))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', self.var[i])], [m.start() for m in re.finditer('\]', self.var[i])])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', self.var[i])],
+                         [m.start() for m in re.finditer('\]', self.var[i])])
             maxpar = max([maxpar] + list(map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx])))
             if component not in self.implemented:
                 msg = "\nModel component '" + str(component) + "' is not known!\n"
@@ -1242,12 +1250,13 @@ class uvmultifit(object):
                 return False
 
         # Scalefix must be a string representing a function:
-        if not (type(self.scalefix) is str):
+        if not isinstance(self.scalefix, str):
             self._printError("'scalefix' should be a string!")
             return False
 
         # Get the overal number of parameters (i.e., from the variables AND the scalefix string):
-        paridx = zip([m.start() + 1 for m in re.finditer('\[', self.scalefix)],[m.start() for m in re.finditer('\]', self.scalefix)])
+        paridx = zip([m.start() + 1 for m in re.finditer('\[', self.scalefix)],
+                     [m.start() for m in re.finditer('\]', self.scalefix)])
         maxpar = max([maxpar] + list(map(float, [self.scalefix[ss[0]:ss[1]] for ss in paridx])))
 
         # Get the model parameters for the gains:
@@ -1255,32 +1264,38 @@ class uvmultifit(object):
         #  self.NgainAnts = {}
         for key in self.phase_gainsNuT:
             term = self.phase_gainsNuT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNuT:
             term = self.amp_gainsNuT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsNu:
             term = self.phase_gainsNu[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNu:
             term = self.amp_gainsNu[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsT:
             term = self.phase_gainsT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsT:
             term = self.amp_gainsT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)], [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
+                         [m.start() for m in re.finditer('\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         # The fixed model should contain CONSTANT variables:
@@ -1288,13 +1303,14 @@ class uvmultifit(object):
             for pi, param in enumerate(fcomp.split(',')):
                 try:
                     temp = float(param)
-                except:
+                except ValueError:
                     self._printError("\n Fixed variables must be a list of floats (or strings\n representing floats)!")
                     return False
 
         # There should be as many p_inis as parameters!
         if len(self.p_ini) != maxpar + 1:
-            self._printError("\n 'p_ini' is of length %i, but there are %i parameters used!\n ABORT!" % (len(self.p_ini), maxpar + 1))
+            self._printError("\n 'p_ini' is of length %i, but there are %i parameters used!\n ABORT!" %
+                             (len(self.p_ini), maxpar + 1))
             return False
 
         # Check for consistency in the fixed model:
@@ -1304,7 +1320,8 @@ class uvmultifit(object):
             self.takeModel = False
 
         if self.takeModel:
-            self._printInfo("MODEL COLUMN will be taken as fixed model.\n Skipping the 'fixedvar' column and all other fixed components")
+            self._printInfo("MODEL COLUMN will be taken as fixed model.\n" +
+                            "Skipping the 'fixedvar' column and all other fixed components")
             self.fixed = ['model_column']
             self.fixedvar = []
         else:
@@ -1317,7 +1334,8 @@ class uvmultifit(object):
                     self._printError(msg)
                     return False
                 if (component in self.implemented and self.numvar[component] != len(checkpars) != 6):
-                    self._printError("Wrong number of variables (%i) in '%s' fixed model." % (len(checkpars), component))
+                    self._printError("Wrong number of variables (%i) in '%s' fixed model." %
+                                     (len(checkpars), component))
                     return False
 
         # Set outfile name:
@@ -1330,17 +1348,24 @@ class uvmultifit(object):
             self.bounds = None
         else:
             for b, bound in enumerate(self.bounds):
-                if bound == None:
+                if bound is None:
                     self.bounds[b] = [None, None]
-                if self.bounds[b][0] != None and self.p_ini[b] <= self.bounds[b][0]:
-                    self._printError("Initial value (%.2e) of parameter %i is lower (or equal) than its lower boundary (%.2e)!" % (self.p_ini[b], b, self.bounds[b][0]))
+                if self.bounds[b][0] is not None and self.p_ini[b] <= self.bounds[b][0]:
+                    self._printError(
+                        "Initial value (%.2e) of parameter %i is lower (or equal) than its lower boundary (%.2e)!" %
+                        (self.p_ini[b],
+                         b, self.bounds[b][0]))
                     return False
-                if self.bounds[b][1] != None and self.p_ini[b] >= self.bounds[b][1]:
-                    self._printError("Initial value (%.2e) of parameter %i is larger (or equal) than its upper boundary (%.2e)!" % (self.p_ini[b], b, self.bounds[b][1]))
+                if self.bounds[b][1] is not None and self.p_ini[b] >= self.bounds[b][1]:
+                    self._printError(
+                        "Initial value (%.2e) of parameter %i is larger (or equal) than its upper boundary (%.2e)!" %
+                        (self.p_ini[b],
+                         b, self.bounds[b][1]))
                     return False
 
         if (self.bounds is not None) and (len(self.bounds) != len(self.p_ini)):
-            self._printError("Length of 'bounds' list (%i) is not equal to number of parameters (%i)!" % (len(self.bounds), len(self.p_ini)))
+            self._printError("Length of 'bounds' list (%i) is not equal to number of parameters (%i)!" %
+                             (len(self.bounds), len(self.p_ini)))
             return False
         return True
 
@@ -1377,8 +1402,6 @@ class uvmultifit(object):
         the model to repeat the fit.
       """
 
-        import re
-
         # Some preliminary (self-consistency) checks of the parameters:
         self.savemodel = True
 
@@ -1388,18 +1411,19 @@ class uvmultifit(object):
             return False
 
         # We always work with lists here:
-        if type(self.vis) is str:
+        if isinstance(self.vis, str):
             self.vis = list([self.vis])
         else:
             self.vis = list([str(ss) for ss in self.vis])
 
         # Set the right format for the spectral window(s):
-        if type(self.spw) is str:
+        if isinstance(self.spw, str):
             self.spw = list([self.spw])
         elif len(self.spw) > 1:
             self.spw = list([str(ss) for ss in self.spw])
             if self.OneFitPerChannel:
-                self._printInfo("\n\n SPW is a LIST! User BEWARE! Any fit in *spectral mode* \n WILL fit the model to each MS separately!\n\n")
+                self._printInfo("\n\n SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n" +
+                                "WILL fit the model to each MS separately!\n\n")
         elif len(self.spw) > 0:
             self.spw = list([self.spw[0]])
         else:
@@ -1408,25 +1432,28 @@ class uvmultifit(object):
 
         # Set list of scans:
         try:
-            if type(self.scans) is list and len(self.scans) == 0:
+            if isinstance(self.scans, list) and len(self.scans) == 0:
                 self.scans = [[] for v in self.vis]
             # We work with lists of nvis elements:
             self.scans = list(self.scans)
-            if type(self.scans[0]) is int:
+            if isinstance(self.scans[0], int):
                 if len(self.vis) == 1:
                     self.scans = [self.scans]
                 else:
-                    self._printError("\n\n 'scans' should be a list of integers (or a list of lists of integers,\nif there are several measurement sets).\n ABORTING!")
+                    self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n" +
+                                     "if there are several measurement sets).\n ABORTING!")
                     return False
             if len(self.scans) != len(self.vis):
-                self._printError("\n\n List of (lists of) scans does not have the same length as the list of measurement sets!\n ABORTING!")
+                self._printError("\n List of (lists of) scans does not have the same length " +
+                                 "as the list of measurement sets!\n ABORTING!")
                 return False
 
             for si, sc in enumerate(self.scans):
-                if type(sc) is str:
+                if isinstance(sc, str):
                     self.scans[si] = list(map(int, sc.split(',')))
         except:
-            self._printError("\n\n 'scans' should be a list of integers (or a list of lists of integers,\nif there are several measurement sets).\n ABORTING!")
+            self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n" +
+                             "if there are several measurement sets).\n ABORTING!")
             return False
 
         # Check dimensions of vis, spw, model, etc.:
@@ -1434,30 +1461,31 @@ class uvmultifit(object):
             self._printError("\n\nThe length of 'spw' is not equal to the length of 'vis'!\n Aborting!\n")
             return False
 
-        if not (type(self.stokes) is str):
+        if not isinstance(self.stokes, str):
             self._printError("'stokes' must be a string!")
             return False
 
-        if type(self.only_flux) is not bool:
+        if not isinstance(self.only_flux, bool):
             self._printError("'only_flux' must be a boolean!")
 
         if self.only_flux:
             if len(self.p_ini) != len(self.model):
-                self._printError("If only_flux=True, number of parameters must be equal to number of model components!\n Aborting!\n")
+                self._printError("If only_flux=True, number of parameters must be equal to " +
+                                 "number of model components!\n Aborting!\n")
 
         if self.proper_motion == 0.0:
             self.proper_motion = [[0., 0.] for i in self.model]
-        elif type(self.proper_motion) is not list:
+        elif not isinstance(self.proper_motion, list):
             self._printError("'proper_motion' must be a list!")
         else:
             if len(self.proper_motion) != len(self.model):
                 self._printError("The length of 'proper_motion' must be equal to the number of model components!")
             for pi in self.proper_motion:
-                if type(pi) is not list:
+                if not isinstance(pi, list):
                     self._printError("The elements of 'proper_motion' must be lists of two floats!")
                 elif len(pi) != 2:
                     self._printError("The elements of 'proper_motion' must be lists of two floats!")
-                elif type(pi[0]) is not float or type(pi[1]) is not float:
+                elif not isinstance(pi[0], float) or not isinstance(pi[1], float):
                     self._printError("The elements of 'proper_motion' must be lists of two floats!")
 
         # Do the mss exist?
@@ -1503,8 +1531,7 @@ class uvmultifit(object):
                 phasedirs[vi][fitest] = ms.range('phase_dir')['phase_dir']['direction'][:, fitest]
                 self.field_id[-1].append(fitest)
             except:
-
-                if type(self.field) is str:
+                if isinstance(self.field, str):
                     aux = str(self.field)
                     self.field = [aux for v in self.vis]
 
@@ -1724,10 +1751,10 @@ class uvmultifit(object):
 
         tempfloat = 0.0
 
-        if type(self.dish_diameter) is not dict:
+        if not isinstance(self.dish_diameter, dict):
             try:
                 self.dish_diameter = float(self.dish_diameter)
-            except:
+            except ValueError:
                 self._printError("\n The dish diameter must be a number! (in meters)\n")
                 return False
 
@@ -1740,7 +1767,7 @@ You selected to apply primary-beam correction.
 PLEASE, remember that the beam is being approximated
 with a Gaussian, so it may not be very accuracte far
 from the pointing direction.\n\n""")
-            if type(self.dish_diameter) is float:
+            if isinstance(self.dish_diameter, float):
                 if self.dish_diameter == 0.0:
                     try:
                         tempfloat = np.copy(tb.getcol('DISH_DIAMETER'))
@@ -1751,7 +1778,7 @@ from the pointing direction.\n\n""")
                     self._printInfo("\n\n An antenna diameter of %.3f m will be applied\n" % self.dish_diameter)
                     tempfloat = np.array([self.dish_diameter for a in self.antnames])
 
-            elif type(self.dish_diameter) is dict:
+            elif isinstance(self.dish_diameter, dict):
                 tempfloat = np.array([0.0 for a in self.antnames])
                 for anam in self.dish_diameter.keys():
                     for anid in range(len(self.antnames)):
@@ -1766,7 +1793,8 @@ from the pointing direction.\n\n""")
                 self._printError("\n\n BAD dish_diameter! Should be a float or a dict!\n")
 
             if np.max(tempfloat) == 0.0:
-                self._printError("\nThe antenna diameters are not set in the ms. \n Please, set it manually or turn off primary-beam correction.\n")
+                self._printError("\nThe antenna diameters are not set in the ms.\n" +
+                                 "Please, set it manually or turn off primary-beam correction.\n")
                 return False
             else:
                 # Negative means not to apply PB corr for that antenna
@@ -1911,7 +1939,8 @@ from the pointing direction.\n\n""")
                             tb.close()
 
                             for fieldid in fieldids:
-                                self._printInfo("\r Reading scan #%i (%i of %i). Field: %i" % (scan, sc + 1, len(self.sourscans[vis[1]]), fieldid))
+                                self._printInfo("\r Reading scan #%i (%i of %i). Field: %i" %
+                                                (scan, sc + 1, len(self.sourscans[vis[1]]), fieldid))
                                 tb.open(msname)
                                 maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
 
@@ -1923,9 +1952,12 @@ from the pointing direction.\n\n""")
                                               'antenna2': tb2.getcol('ANTENNA2'), 'time': tb2.getcol('TIME')}
                                     times = np.unique(uvscan['time'])
                                     if self.takeModel:
-                                        # datascan = ms.getdata([self.column, 'model_data', 'weight', 'flag'], ifraxis=True)
-                                        datascan = {self.column: tb2.getcol((self.column).upper()), 'model_data': tb2.getcol('MODEL_DATA'),
-                                                    'weight': tb2.getcol('WEIGHT'), 'flag': tb2.getcol('FLAG')}
+                                        # datascan = ms.getdata([self.column, 'model_data', 'weight', 'flag'],
+                                        #                       ifraxis=True)
+                                        datascan = {self.column: tb2.getcol((self.column).upper()),
+                                                    'model_data': tb2.getcol('MODEL_DATA'),
+                                                    'weight': tb2.getcol('WEIGHT'),
+                                                    'flag': tb2.getcol('FLAG')}
                                     else:
                                         # datascan = ms.getdata([self.column, 'weight', 'flag'], ifraxis=True)
                                         datascan = {self.column: tb2.getcol((self.column).upper()),
@@ -1953,9 +1985,12 @@ from the pointing direction.\n\n""")
                                     origmasked = np.ma.array(datascan[self.column], mask=totalmask, dtype=np.complex128)
 
                                     if self.takeModel:
-                                        origmodmasked = np.ma.array(datascan['model_data'], mask=totalmask, dtype=np.complex128)
+                                        origmodmasked = np.ma.array(
+                                            datascan['model_data'],
+                                            mask=totalmask, dtype=np.complex128)
 
-                                    # The weights are weighting the RESIDUALS, and not the ChiSq terms. Hence, we divide wgt_power by 2.:
+                                    # The weights are weighting the RESIDUALS, and not the ChiSq terms.
+                                    # Hence, we divide wgt_power by 2.:
                                     origweight = np.power(copyweight, self.wgt_power / 2.)
 
                                     # Completely flagged times/baselines:
@@ -1970,18 +2005,23 @@ from the pointing direction.\n\n""")
                                     polavg = [pol != 0.0 for pol in self.pol2aver[vis[1]]]
 
                                     if self.polmod[vis[1]] == 2:
-                                        flagmask = np.ma.logical_and(totalmask[self.polii[vis[1]][0], :, :], totalmask[self.polii[vis[1]][1], :, :])
-                                        datamask = np.ma.average(origmasked[polavg, :].real, axis=0) + 1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
+                                        flagmask = np.ma.logical_and(
+                                            totalmask[self.polii[vis[1]][0], :, :],
+                                            totalmask[self.polii[vis[1]][1], :, :])
+                                        datamask = np.ma.average(origmasked[polavg, :].real, axis=0) + \
+                                            1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
 
                                         if self.takeModel:
-                                            modelmask = np.ma.average(origmodmasked[polavg, :].real, axis=0) + 1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
+                                            modelmask = np.ma.average(origmodmasked[polavg, :].real, axis=0) + \
+                                                1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
 
                                         weightmask = np.sum(origweight[polavg, :], axis=0)
                                     else:
                                         if self.polmod[vis[1]] == 3:
                                             flagmask = totalmask[self.polii[vis[1]][0], :, :]
                                         else:
-                                            flagmask = np.ma.logical_or(totalmask[self.polii[vis[1]][0], :, :], totalmask[self.polii[vis[1]][1], :, :])
+                                            flagmask = np.ma.logical_or(totalmask[self.polii[vis[1]][0], :, :],
+                                                                        totalmask[self.polii[vis[1]][1], :, :])
 
                                         for pol in self.polii[vis[1]]:
                                             datamask += origmasked[pol, :] * self.pol2aver[vis[1]][pol]
@@ -2008,7 +2048,9 @@ from the pointing direction.\n\n""")
                                     strcos = np.cos(self.phasedirs[vis[1]][fieldid][1])
 
                                     if phshift[0] != 0.0 or phshift[1] != 0.0:
-                                        self._printInfo("\r\t\t\t\t Offset: %.2e RA (tsec) %.2e Dec (asec)." % (phshift[0] / 15., phshift[1]))
+                                        self._printInfo(
+                                            "\r\t\t\t\t Offset: %.2e RA (tsec) %.2e Dec (asec)." %
+                                            (phshift[0] / 15., phshift[1]))
 
                                     # Average spectral channels:
                                     nchannel, ndata = np.shape(datamask)
@@ -2027,9 +2069,13 @@ from the pointing direction.\n\n""")
                                         weighttemp[:, :] = weightmask[np.newaxis, :]
                                     else:
                                         for nu in range(nfreq):
-                                            datatemp[nu, :] = np.ma.average(datamask[rang[nu], :].real, axis=0) + 1.j * np.ma.average(datamask[rang[nu], :].imag, axis=0)
+                                            datatemp[nu, :] = np.ma.average(
+                                                datamask[rang[nu], :].real, axis=0) + \
+                                                1.j * np.ma.average(datamask[rang[nu], :].imag, axis=0)
                                             if self.takeModel:
-                                                modeltemp[nu, :] = np.ma.average(modelmask[rang[nu], :].real, axis=0) + 1.j * np.ma.average(modelmask[rang[nu], :].imag, axis=0)
+                                                modeltemp[nu, :] = np.ma.average(
+                                                    modelmask[rang[nu], :].real, axis=0) + \
+                                                    1.j * np.ma.average(modelmask[rang[nu], :].imag, axis=0)
                                             weighttemp[nu, :] = weightmask
 
                                     # Average in time and apply uvtaper:
@@ -2084,12 +2130,14 @@ from the pointing direction.\n\n""")
                 #           GaussFact = np.exp(-(uu*uu + vv*vv)/GaussWidth)
                 #         else:
                 #           GaussFact = np.ones(np.shape(uu))
-
+                #
                 #       broadwgt = weighttemp[:, :, t0:t1]
-                #       avercompl[:, :, nt] = np.ma.average(datatemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+1.j*np.ma.average(datatemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
+                #       avercompl[:, :, nt] = np.ma.average(datatemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
+                #                             1.j*np.ma.average(datatemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
                 #       if self.takeModel:
-                #         avermodl[:, :, nt] = np.ma.average(modeltemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+1.j*np.ma.average(modeltemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
-
+                #         avermodl[:, :, nt] = np.ma.average(modeltemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
+                #                              1.j*np.ma.average(modeltemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
+                #
                 #       if self.uniform:
                 #         averwgt[:, :, nt] = np.ma.sum(np.ones(np.shape(broadwgt))*GaussFact[np.newaxis, :, :], axis=2)
                 #       else:
@@ -2128,14 +2176,16 @@ from the pointing direction.\n\n""")
                                     if scan not in self.iscan[msname][sp].keys():
                                         self.iscan[msname][sp][scan] = []
 
-                                    self.iscan[msname][sp][scan].append([int(si), int(i0scan), int(ndata), list(rang), np.copy(maskfld)])
+                                    self.iscan[msname][sp][scan].append(
+                                        [int(si), int(i0scan), int(ndata), list(rang), np.copy(maskfld)])
                                     self.iscancoords[si].append([i0scan, i0scan + ndata, phshift[0], phshift[1]])
 
                                     i0scan += ndata
 
             # Concatenate all the scans in one single array. Notice that we separate real and imag and save them
             # as floats. This is because ctypes doesn' t handle complex128.
-            self.averdata[si] = np.require(np.concatenate(datascanAv, axis=0), requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
+            self.averdata[si] = np.require(np.concatenate(datascanAv, axis=0),
+                                           requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
 
             if self.takeModel:
                 self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0), requirements=['C', 'A'])
@@ -2215,7 +2265,8 @@ from the pointing direction.\n\n""")
         self.Nspw = NIFs
 
         for i in range(self.Nspw):
-            self._printInfo("There are %i integrations (%i visibs.) in spw %i\n" % (len(self.tArr[i]), len(self.t[i]), i))
+            self._printInfo("There are %i integrations (%i visibs.) in spw %i\n" %
+                            (len(self.tArr[i]), len(self.t[i]), i))
 
         #  import pickle as pk
         #  kk = open('DEBUG.dat', 'w')
@@ -2242,7 +2293,8 @@ from the pointing direction.\n\n""")
         OneFitPerChannel=True), and is computed only once if OneFitPerChannel==False."""
 
         if self.takeModel:
-            self._printInfo("\nFixed model was taken from model column.\nNotice that if you are RE-FITTING, you'll need to RELOAD the model column!\n\n")
+            self._printInfo("\nFixed model was taken from model column.\n" +
+                            "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n\n")
         else:
             self._printInfo("\nGoing to compute fixed model (may need quite a bit of time)\n")
             self.mymodel.residuals([0], mode=0)
@@ -2346,7 +2398,8 @@ from the pointing direction.\n\n""")
             self.mymodel.dtIdx[-1] = np.require(self.tIdx[spidx], requirements=['C', 'A'])
 
             # Array to save the residuals (or model, or any output from the C++ library):
-            self.mymodel.output[-1] = np.require(np.zeros(np.shape(self.averdata[spidx]), dtype=np.complex128), requirements=['C', 'A'])
+            self.mymodel.output[-1] = np.require(np.zeros(np.shape(self.averdata[spidx]),
+                                                          dtype=np.complex128), requirements=['C', 'A'])
             if self.takeModel:
                 try:
                     self.mymodel.output[-1][:] = self.avermod[spidx]
@@ -2356,12 +2409,14 @@ from the pointing direction.\n\n""")
             ########
             # Array of booleans, to determine if a datum enters the fit:
             self.mymodel.fittable[-1] = self.mymodel.wgt[-1][:, 0] > 0.0
-            #    self.mymodel.wgtcorr[-1] = np.require(np.copy(np.tile(PBFactor,(len(self.model), 1))), requirements=['C', 'A'])
+            # self.mymodel.wgtcorr[-1] = np.require(np.copy(np.tile(PBFactor,(len(self.model), 1))),
+            #                                       requirements=['C', 'A'])
             self.mymodel.wgtcorr[-1] = np.require(np.copy(PBFactor), requirements=['C', 'A'])
 
             del PBFactor
 
-            self.mymodel.fittablebool[-1] = np.require(np.copy(self.mymodel.fittable[-1]).astype(np.bool), requirements=['C', 'A'])
+            self.mymodel.fittablebool[-1] = np.require(np.copy(self.mymodel.fittable[-1]
+                                                               ).astype(np.bool), requirements=['C', 'A'])
 
             gooduvm = uvmod.setData(spidx, self.mymodel.uv[-1][0], self.mymodel.uv[-1][1], self.mymodel.uv[-1][2],
                                     self.mymodel.wgt[-1], self.mymodel.data[-1],
@@ -2428,7 +2483,9 @@ from the pointing direction.\n\n""")
         # all of them as a function of frequency. The C++ library will read the variables from here
         # at each iteration and for each model component:
         self.mymodel.initiated = True
-        self.mymodel.varbuffer = [np.zeros((len(self.model), self.maxNvar + self.applyHankel, self.maxnfreq)) for i in range(len(self.p_ini) + 1)]
+        self.mymodel.varbuffer = [np.zeros((len(self.model),
+                                            self.maxNvar + self.applyHankel, self.maxnfreq))
+                                  for i in range(len(self.p_ini) + 1)]
         self.mymodel.varfixed = [np.zeros(self.maxnfreq) for i in range(len(self.p_ini) + 1)]
         self.mymodel.dpar = np.zeros(len(self.p_ini), dtype=np.float64)
         self.mymodel.par2 = np.zeros((3, len(self.p_ini)), dtype=np.float64)
@@ -2446,9 +2503,14 @@ from the pointing direction.\n\n""")
         for spidx in range(self.Nspw):
             for AI in range(self.Nants):
                 if self.isMixed:
-                    self.mymodel.GainBuffer[spidx][AI] = [np.ones((len(self.tArr[spidx]), len(self.averfreqs[spidx])), dtype=np.complex128) for i in range(len(self.mymodel.parDependence[AI]))]
+                    self.mymodel.GainBuffer[spidx][AI] = [np.ones(
+                        (len(self.tArr[spidx]),
+                         len(self.averfreqs[spidx])),
+                        dtype=np.complex128) for i in range(len(self.mymodel.parDependence[AI]))]
                 else:
-                    self.mymodel.GainBuffer[spidx][AI] = [np.ones(len(self.tArr[spidx]) + len(self.averfreqs[spidx]), dtype=np.complex128) for i in range(len(self.mymodel.parDependence[AI]))]
+                    self.mymodel.GainBuffer[spidx][AI] = [np.ones(
+                        len(self.tArr[spidx]) + len(self.averfreqs[spidx]),
+                        dtype=np.complex128) for i in range(len(self.mymodel.parDependence[AI]))]
 
         compFixed = len(self.fixed) > 0
 
@@ -2534,7 +2596,9 @@ from the pointing direction.\n\n""")
                 self.mymodel.fittablebool[si][:] = True
             if self.MJDrange[0] > 0.0 and self.MJDrange[1] > 0.0:
                 self._printInfo("\nSelecting data by Modified Julian Date\n")
-                timeWindow = np.logical_and(np.logical_and(self.t[si] >= self.MJDrange[0], self.t[si] <= self.MJDrange[1]))
+                timeWindow = np.logical_and(np.logical_and(
+                    self.t[si] >= self.MJDrange[0],
+                    self.t[si] <= self.MJDrange[1]))
                 self.mymodel.fittablebool[si][:] = np.logical_and(timeWindow, self.mymodel.fittablebool[si])
                 del timeWindow
 
@@ -2550,7 +2614,9 @@ from the pointing direction.\n\n""")
             ntot = np.sum(self.mymodel.fittablebool[si])
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
-                    self._printInfo("ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE! \n CHANNELS: " + str(list(np.where(unflagged == 0.0))))
+                    self._printInfo(
+                        "ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE! \n CHANNELS: " +
+                        str(list(np.where(unflagged == 0.0))))
                     self.allflagged = True
                     notfit[si] = list(np.where(unflagged == 0.0)[0])
                     #  return False
@@ -2571,7 +2637,7 @@ from the pointing direction.\n\n""")
         if reinit_model:
             if self.mymodel.initiated:
                 goodinit = self.initModel()
-            if self.mymodel.failed or goodinit == False:
+            if self.mymodel.failed or goodinit is False:
                 self._printError("ERROR: Bad model (re)initialization! \n%s" % self.mymodel.resultstring)
                 return False
 
@@ -2756,18 +2822,20 @@ from the pointing direction.\n\n""")
         outf.write("# *BEFORE* THE RE-SCALING OF THE VISIBILITY WEIGHTS.\n")
         outf.write("# HOWEVER, THE PARAMETER UNCERTAINTIES ARE *ALREADY* GIVEN\n")
         outf.write("# FOR A REDUCED CHI SQUARE OF 1.\n")
-        if type(Nvis) is list:
+        if isinstance(Nvis, list):
             DOG = int(np.average(Nvis))
         else:
             DOG = Nvis
         outf.write("# AVG. NUMBER OF DEGREES OF FREEDOM: %i" % DOG)
         if self.pbeam:
-            if type(self.dish_diameter) is float:
-                outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING A DISH DIAMETER OF: %.3f METERS" % self.dish_diameter)
+            if isinstance(self.dish_diameter, float):
+                outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING A DISH DIAMETER OF: %.3f METERS" %
+                           self.dish_diameter)
             else:
                 outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING: \n")
                 for iant in range(len(self.antnames)):
-                    outf.write("#    FOR ANTENNA %s A DIAMETER OF %.2fm \n" % (self.antnames[iant], self.userDiameters[iant]))
+                    outf.write("#    FOR ANTENNA %s A DIAMETER OF %.2fm \n" %
+                               (self.antnames[iant], self.userDiameters[iant]))
 
         else:
             outf.write("# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.")
@@ -2783,7 +2851,8 @@ from the pointing direction.\n\n""")
             else:
                 for m, mod in enumerate(self.fixed):
                     var2print = list(map(float, self.fixedvar[m].split(',')))
-                    outf.write("\n# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
+                    outf.write(
+                        "\n# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
                 outf.write("\n#\n#  - AND SCALING FACTOR: %s" % self.scalefix)
 
         outf.write("\n#\n#\n# INITIAL PARAMETER VALUES:\n#")
@@ -2800,7 +2869,8 @@ from the pointing direction.\n\n""")
             parshead.append(pp)
             parshead.append(pp)
 
-        headstr = ("# Frequency (Hz)   " + "p[%i]  error(p[%i])   " * len(self.p_ini) + "Red. Chi Sq.\n") % tuple(parshead)
+        headstr = (
+            "# Frequency (Hz)   " + "p[%i]  error(p[%i])   " * len(self.p_ini) + "Red. Chi Sq.\n") % tuple(parshead)
         outf.write(headstr)
 
         if not self.OneFitPerChannel:
@@ -2832,7 +2902,7 @@ from the pointing direction.\n\n""")
 #
 # MODELER CLASS (CALLED BY UVMULTIFIT)
 #
-class modeler(object):
+class modeler():
     """ Class to deal with model equations and fitting procedures.
 
     If convert strings representing models and parameters into compiled equations, to be used in a ChiSq
@@ -3044,7 +3114,8 @@ class modeler(object):
                            'bubble', 'expo', 'power-2', 'power-3', 'GaussianRing']
         self.resultstring = ''
 
-    def _setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder, isNumerical, useGains, gainFunction, isMixed):
+    def _setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder,
+               isNumerical, useGains, gainFunction, isMixed):
         """ Setup the model components, fitting parameters, and gain functions. Compile the equations.
 
         Not to be called by the user."""
@@ -3107,7 +3178,10 @@ class modeler(object):
 
         if self.isMixed:
             for ni in self.gainFunction[0].keys():
-                tempstr = self.gainFunction[0][ni].replace('pieceWise(', 'self.pieceWise(t, ').replace('t', 't[:,__import__(\'numpy\').newaxis]').replace('nu0', '%.12f' % self.freqs[0][0])
+                tempstr = self.gainFunction[0][ni].replace(
+                    'pieceWise(', 'self.pieceWise(t, ').replace(
+                        't', 't[:,__import__(\'numpy\').newaxis]').replace(
+                            'nu0', '%.12f' % self.freqs[0][0])
                 modstr = 'self.phaseAntsFunc[' + str(ni) + '] = lambda t, nu, p: ' + tempstr
 
                 parpos = [x.start() for x in re.finditer('p\[', tempstr)]
@@ -3123,7 +3197,10 @@ class modeler(object):
                     return
 
             for ni in self.gainFunction[1].keys():
-                tempstr = self.gainFunction[1][ni].replace('pieceWise(', 'self.pieceWise(t,').replace('t', 't[:,__import__(\'numpy\').newaxis]').replace('nu0', '%.12f' % self.freqs[0][0])
+                tempstr = self.gainFunction[1][ni].replace(
+                    'pieceWise(', 'self.pieceWise(t,').replace(
+                        't', 't[:,__import__(\'numpy\').newaxis]').replace(
+                            'nu0', '%.12f' % self.freqs[0][0])
 
                 modstr = 'self.ampAntsFunc[' + str(ni) + '] = lambda t, nu, p: ' + tempstr
 
@@ -3184,7 +3261,9 @@ class modeler(object):
                     return
 
             for ni in self.gainFunction[4].keys():
-                tempstr = self.gainFunction[4][ni].replace('pieceWise(', 'self.pieceWise(t,').replace('nu0', '%.12f' % self.freqs[0][0])
+                tempstr = self.gainFunction[4][ni].replace(
+                    'pieceWise(', 'self.pieceWise(t,').replace(
+                        'nu0', '%.12f' % self.freqs[0][0])
 
                 if "nu" in tempstr:
                     self.failed = True
@@ -3206,7 +3285,9 @@ class modeler(object):
                     return
 
             for ni in self.gainFunction[5].keys():
-                tempstr = self.gainFunction[5][ni].replace('pieceWise(', 'self.pieceWise(t,').replace('nu0', '%.12f' % self.freqs[0][0])
+                tempstr = self.gainFunction[5][ni].replace(
+                    'pieceWise(', 'self.pieceWise(t,').replace(
+                        'nu0', '%.12f' % self.freqs[0][0])
 
                 if "nu" in tempstr:
                     self.failed = True
@@ -3234,12 +3315,13 @@ class modeler(object):
         """ Compiles the variable model, according to the contents of the 'model' and 'parameters' lists."""
 
         # Define variable model:
-        import numpy as np
-
         self.varfunc = [0.0 for component in self.model]
 
         for ii, component in enumerate(self.model):
-            tempstr = self.var[ii].replace('LorentzLine(', 'self.LorentLine(nu,').replace('GaussLine(', 'self.GaussLine(nu, ').replace('nu0', '%.12f' % self.freqs[0][0])
+            tempstr = self.var[ii].replace(
+                'LorentzLine(', 'self.LorentLine(nu,').replace(
+                    'GaussLine(', 'self.GaussLine(nu, ').replace(
+                        'nu0', '%.12f' % self.freqs[0][0])
 
             if self.only_flux:
                 try:
@@ -3281,7 +3363,10 @@ class modeler(object):
         self.ifixmod = np.zeros(len(self.fixed), dtype=np.int32)  # []
 
         for ii, component in enumerate(self.fixed):
-            tempstr = self.fixedvar[ii].replace('LorentzLine(', 'self.LorentzLine(nu,').replace('GaussLine(', 'self.GaussLine(nu, ').replace('nu0', '%.12f' % self.freqs[0][0])
+            tempstr = self.fixedvar[ii].replace(
+                'LorentzLine(', 'self.LorentzLine(nu,').replace(
+                    'GaussLine(', 'self.GaussLine(nu, ').replace(
+                        'nu0', '%.12f' % self.freqs[0][0])
 
             modstr = 'self.fixedvarfunc[' + str(ii) + '] = lambda p, nu: [' + tempstr + ']'
             try:
@@ -3302,8 +3387,10 @@ class modeler(object):
     def _compileScaleFixed(self):
         """ Compiles the scaling factor for the fixed model """
 
-        import numpy as np
-        tempstr = self.scalefix.replace('LorentzLine(', 'self.LorentzLine(nu,').replace('GaussLine(', 'self.GaussLine(nu, ').replace('nu0', '%.12f' % self.freqs[0][0])
+        tempstr = self.scalefix.replace(
+            'LorentzLine(', 'self.LorentzLine(nu,').replace(
+                'GaussLine(', 'self.GaussLine(nu, ').replace(
+                    'nu0', '%.12f' % self.freqs[0][0])
 
         scalefixedstr = 'self._compiledScaleFixed = lambda p, nu: ' + tempstr + ' + 0.0'
         try:
@@ -3499,7 +3586,9 @@ class modeler(object):
                 backupP[:] = self.par2[0, :]
 
         if controlIter == NITER:
-            sys.stdout.write("\n\n REACHED MAXIMUM NUMBER OF ITERATIONS!\nThe algorithm may not have converged!\nPlease, check if the parameter values are meaningful.\n")
+            sys.stdout.write("\n REACHED MAXIMUM NUMBER OF ITERATIONS!\n" +
+                             "The algorithm may not have converged!\n" +
+                             "Please, check if the parameter values are meaningful.\n")
             sys.stdout.flush()
 
         self.getPar2(mode=1)
@@ -3541,7 +3630,7 @@ class modeler(object):
                 resaux = np.copy(res)
                 res2 = np.copy(m1)
                 for mi in range(3, m + 1):
-                    if type(res) is np.float64:
+                    if isinstance(res, np.float64):
                         res = a * res + (mi - 1) / (2 * k) * res2
                         res2 = resaux
                         resaux = res
@@ -3550,7 +3639,9 @@ class modeler(object):
                         res2[:] = resaux
                         resaux[:] = res
                     if np.mod(mi + 1, 2) == 0:  # (i.e., orders n=1, 2, 3...)
-                        tempvar.append(res / m1 * np.power(-1., (mi - 1) / 2) / np.power(np.math.factorial((mi - 1) / 2), 2.))
+                        tempvar.append(
+                            res / m1 * np.power(-1., (mi - 1) / 2) / np.power(np.math.factorial((mi - 1) / 2),
+                                                                              2.))
 
             return tempvar
 
@@ -3620,23 +3711,28 @@ class modeler(object):
                             ptemp[j2] += self.dpar[j2]
                         if nui == -1:
                             if self.isMixed:
-                                self.GainBuffer[spw][i][j][:] = self.ampAntsFunc[i](self.dtArr[spw], self.freqs[spw], ptemp) * \
-                                                                np.exp(1.j * self.phaseAntsFunc[i](self.dtArr[spw], self.freqs[spw], ptemp))
+                                self.GainBuffer[spw][i][j][:] = self.ampAntsFunc[i](self.dtArr[spw],
+                                                                                    self.freqs[spw], ptemp) * \
+                                    np.exp(1.j * self.phaseAntsFunc[i](self.dtArr[spw], self.freqs[spw], ptemp))
                             else:
                                 self.GainBuffer[spw][i][j][:Nchan] = self.ampAntsFuncNu[i](self.freqs[spw], ptemp) * \
-                                                                     np.exp(1.j * self.phaseAntsFuncNu[i](self.freqs[spw], ptemp))
-                                self.GainBuffer[spw][i][j][Nchan:Nchan + Nint] = self.ampAntsFuncT[i](self.dtArr[spw], ptemp) * \
-                                                                               np.exp(1.j * self.phaseAntsFuncT[i](self.dtArr[spw], ptemp))
+                                    np.exp(1.j * self.phaseAntsFuncNu[i](self.freqs[spw], ptemp))
+                                self.GainBuffer[spw][i][j][Nchan:Nchan + Nint] = self.ampAntsFuncT[i](
+                                    self.dtArr[spw], ptemp) * np.exp(1.j * self.phaseAntsFuncT[i](self.dtArr[spw],
+                                                                                                  ptemp))
 
                         else:
                             if self.isMixed:
-                                self.GainBuffer[spw][i][j][:, nui] = np.squeeze(self.ampAntsFunc[i](self.dtArr[spw], self.freqs[spw][nui], ptemp)) * \
-                                                                     np.exp(1.j * np.squeeze(self.phaseAntsFunc[i](self.dtArr[spw], self.freqs[spw][nui], ptemp)))
+                                self.GainBuffer[spw][i][j][:, nui] = \
+                                    np.squeeze(self.ampAntsFunc[i](self.dtArr[spw], self.freqs[spw][nui], ptemp)) * \
+                                    np.exp(1.j * np.squeeze(self.phaseAntsFunc[i](self.dtArr[spw],
+                                                                                  self.freqs[spw][nui], ptemp)))
                             else:
                                 self.GainBuffer[spw][i][j][nui] = self.ampAntsFuncNu[i](self.freqs[spw][nui], ptemp) * \
-                                                                  np.exp(1.j * self.phaseAntsFuncNu[i](self.freqs[spw][nui], ptemp))
-                                self.GainBuffer[spw][i][j][Nchan:Nchan + Nint] = self.ampAntsFuncT[i](self.dtArr[spw], ptemp) * \
-                                                                                 np.exp(1.j * self.phaseAntsFuncT[i](self.dtArr[spw], ptemp))
+                                    np.exp(1.j * self.phaseAntsFuncNu[i](self.freqs[spw][nui], ptemp))
+                                self.GainBuffer[spw][i][j][Nchan:Nchan + Nint] = \
+                                    self.ampAntsFuncT[i](self.dtArr[spw], ptemp) * \
+                                    np.exp(1.j * self.phaseAntsFuncT[i](self.dtArr[spw], ptemp))
 
         if mode == 0:  # Just compute the fixed model and return
             self.removeFixed = True
@@ -3669,7 +3765,7 @@ class modeler(object):
         for spw in spwrange:
             nt, nnu = np.shape(self.output[spw])
             if nui == -1:
-                scalefx = self._compiledScaleFixed(p, self.freqs[spw])
+                scalefx = self._compileScaleFixed(p, self.freqs[spw])
                 self.varfixed[0][:nnu] = scalefx
                 for j in range(len(p)):
                     ptemp = [pi for pi in p]
@@ -3678,13 +3774,13 @@ class modeler(object):
                     scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw])
                     self.varfixed[j + 1][:nnu] = scalefx
             else:
-                scalefx = self._compiledScaleFixed(p, self.freqs[spw][nui])
+                scalefx = self._compileScaleFixed(p, self.freqs[spw][nui])
                 self.varfixed[0][0] = scalefx
                 for j in range(len(p)):
                     ptemp = [pi for pi in p]
                     ptemp[j] += self.dpar[j]
                     # Variables of current component
-                    scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw][nui])
+                    scalefx = self._compileScaleFixed(ptemp, self.freqs[spw][nui])
                     self.varfixed[j + 1][0] = scalefx
 
             for midx, modi in enumerate(currmod):
@@ -3758,7 +3854,9 @@ class modeler(object):
                 sys.stdout.flush()
 
         if ChiSq <= 0.0:
-            raise ValueError("Invalid Chi Square! Maybe the current fitted value of flux (and/or size) is negative! Please, set BOUNDS to the fit!")
+            raise ValueError("Invalid Chi Square!" +
+                             "Maybe the current fitted value of flux (and/or size) is negative!" +
+                             "Please, set BOUNDS to the fit!")
 
         if mode in [-1, -2, -3]:
             if dof:
@@ -3775,11 +3873,11 @@ class modeler(object):
         """ Just a wrapper of the 'residuals' function, usually called by simplex."""
 
         inside = True
-        if bounds != None:
+        if bounds is not None:
             for i, bound in enumerate(bounds):
-                if type(bound) is list:
-                    vmin = bound[0] != None and p[i] <= bound[0]
-                    vmax = bound[1] != None and p[i] >= bound[1]
+                if isinstance(bound, list):
+                    vmin = bound[0] is not None and p[i] <= bound[0]
+                    vmax = bound[1] is not None and p[i] >= bound[1]
                     if vmin or vmax:
                         inside = False
 
@@ -3973,7 +4071,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
     retall = return_all
 
     fcalls, func = wrap_function(func, args)
-    x0 = asfarray(x0).flatten()
+    x0 = np.asfarray(x0).flatten()
     N = len(x0)
     rank = len(x0.shape)
     if not -1 < rank < 2:
@@ -4019,7 +4117,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
     iterations = 1
 
     minx = np.sqrt(np.finfo(np.float64).eps)
-    if type(relxtol) is float:
+    if isinstance(relxtol, float):
         relxtol = relxtol * np.ones(len(x0))
     else:
         relxtol = np.array(relxtol)
@@ -4103,7 +4201,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
 #
 class immultifit(uvmultifit):
 
-    """ Similar to uvmultifit, but the engine uses images created by the CASA task clean.
+    """Similar to uvmultifit, but the engine uses images created by the CASA task clean.
 
     All keywords are equal to those of uvmultifit, with the exception of these:
 
@@ -4117,18 +4215,21 @@ class immultifit(uvmultifit):
 
       .. note:: You should clean with ``niter=0``, to ensure that no signal is deconvolved.
 
-      .. note:: If you want primary-beam correction, you should use the ``blablabla.image``, instead of ``blablabla.residual``.
+      .. note:: If you want primary-beam correction, you should use the ``blablabla.image``,
+                instead of ``blablabla.residual``.
 
     **reinvert** : `bool`
-      If immultifit has already been run and the user wants to refit the same data, the Fourier inversion of the images (or image cubes) can be avoided if reinvert=False. Default is True
+      If immultifit has already been run and the user wants to refit the same data,
+      the Fourier inversion of the images (or image cubes) can be avoided if reinvert=False. Default is True
     **dBcut** : `double`
       Mask the uv points with a signal lower than dBCut of the peak (in dB). Use this to minimize
       convolution-like artifacts in UV space. Default: -30dB => SNR = 1000.
 
-    .. note:: The keywords ``vis``, ``spw``, ``timewidth``, ``chanwidth``, ``phase/amp_gain``, etc. are **not** used by immultifit.
+    .. note:: The keywords ``vis``, ``spw``, ``timewidth``, ``chanwidth``, ``phase/amp_gain``, etc.
+              are **not** used by immultifit.
 
-    .. note:: Instead of writing models or residuals into a measurement set, ``immultifit`` writes *images* with the same gridding as the original images used.
-
+    .. note:: Instead of writing models or residuals into a measurement set, ``immultifit``
+              writes *images* with the same gridding as the original images used.
     """
 
     def __init__(self, parent=None, reinvert=True, start=0, nchan=-1, psf='', residual='', dBcut=-30., **kwargs):
@@ -4141,7 +4242,7 @@ class immultifit(uvmultifit):
         self.start = int(start)
         self.nchan = int(nchan)
         self.reinvert = bool(reinvert)
-    #  self.scipylm = True
+        # self.scipylm = True
         self.dBcut = dBcut
         uvmultifit.__init__(self, **kwargs)
 
@@ -4151,7 +4252,8 @@ class immultifit(uvmultifit):
         Instead of writing model (or residual) visibilities into measurement sets, the task make a new image
         with the post-fit residuals, with the same gridding as the image used for the fit."""
 
-        self._printInfo("\n\n There is no measurement set (i.e., you are running 'immultifit').\n Will generate an image, instead.\n")
+        self._printInfo("\nThere is no measurement set (i.e., you are running 'immultifit').\n" +
+                        "Will generate an image, instead.\n")
         if os.path.exists(self.residual + '.immultifit'):
             shutil.rmtree(self.residual + '.immultifit')
         os.system('cp -r %s %s' % (self.residual, self.residual + '.immultifit'))
@@ -4179,8 +4281,10 @@ class immultifit(uvmultifit):
             for j in range(imdims[0]):
                 for k in range(imdims[1]):
                     cpix = imdims[1] * j + k
-                    temparr[j, k] = (self.mymodel.output[0][cpix, i - self.start]) * self.averweights[0][cpix, i - self.start]
-            #   temparr[j, k] -= 1.j*(self.mymodel.output[0][1][cpix, i-self.start])*self.averweights[0][cpix, i-self.start]
+                    temparr[j, k] = (self.mymodel.output[0][cpix, i - self.start]
+                                     ) * self.averweights[0][cpix, i - self.start]
+            # temparr[j, k] -= 1.j*(self.mymodel.output[0][1][cpix, i-self.start])*\
+            #                       self.averweights[0][cpix, i-self.start]
             resim[:, :, self.stokes, i] -= np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(temparr))).real / sq2
 
         ia.putchunk(resim)
@@ -4218,8 +4322,10 @@ class immultifit(uvmultifit):
     def checkInputs(self, data_changed=False):
         """ Function re-definition for the immultifit class."""
 
-        self._printInfo("\n\nIn image mode, the whole image is taken.\n Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n\n")
-        self._printInfo("In image mode, the channelization used is that of the image.\n Will override the 'chanwidth' and 'timewidth' parameters.\n\n")
+        self._printInfo("\nIn image mode, the whole image is taken.\n" +
+                        "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n\n")
+        self._printInfo("In image mode, the channelization used is that of the image.\n" +
+                        "Will override the 'chanwidth' and 'timewidth' parameters.\n")
 
         self.savemodel = True
         success = self._checkOrdinaryInputs()
@@ -4264,7 +4370,8 @@ class immultifit(uvmultifit):
         if imdims[2] > self.stokes:
             self._printInfo("Selecting stokes column %i" % self.stokes)
         else:
-            self._printError("\n\nThe images only have %i stokes columns, but you selected stokes=%i\n" % (imdims[2], self.stokes))
+            self._printError("\n\nThe images only have %i stokes columns, but you selected stokes=%i\n" %
+                             (imdims[2], self.stokes))
             return False
 
         self.MJDrange = [0., 0.]
@@ -4272,7 +4379,8 @@ class immultifit(uvmultifit):
 
         RAd = np.where(imsum['axisnames'] == 'Right Ascension')[0][0]
         Decd = np.where(imsum['axisnames'] == 'Declination')[0][0]
-        self.refpos = np.array([imsum['refval'][RAd], imsum['refval'][Decd]])  # np.copy(csys.torecord()['direction0']['crval'])
+        # np.copy(csys.torecord()['direction0']['crval'])
+        self.refpos = np.array([imsum['refval'][RAd], imsum['refval'][Decd]])
 
         if (self.nchan < 0):
             self.nchan = imdims[3]
@@ -4280,9 +4388,11 @@ class immultifit(uvmultifit):
         self.nchan += self.start
 
         if self.start >= imdims[3]:
-            self._printError("Starting channel (%i) must be smaller than number of channels (%i)" % (self.start, imdims[3]))
+            self._printError("Starting channel (%i) must be smaller than number of channels (%i)" %
+                             (self.start, imdims[3]))
         if self.nchan > imdims[3]:
-            self._printError("Ending channel (%i) must be smaller than number of channels (%i)" % (self.nchan, imdims[3]))
+            self._printError("Ending channel (%i) must be smaller than number of channels (%i)" %
+                             (self.nchan, imdims[3]))
 
 # Try to compile the equations for the variables:
 #     if data_changed:
@@ -4309,7 +4419,7 @@ class immultifit(uvmultifit):
 
         if self.proper_motion == 0.0:
             self.proper_motion = [[0., 0.] for i in self.model]
-        elif type(self.proper_motion) is not list:
+        elif not isinstance(self.proper_motion, list):
             self._printError("'proper_motion' must be a list!")
 
         self._setWgtEq()
@@ -4361,7 +4471,6 @@ class immultifit(uvmultifit):
         freqs = np.zeros(nnu, dtype=np.float64)
 
         zeros = []
-
         for i in range(imdims[3]):
             freqs[i] = ia.toworld([0, 0, self.stokes, i + self.start])['numeric'][3]
 
