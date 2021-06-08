@@ -1,5 +1,8 @@
-CASADIR=/Applications/CASA.app
-#/home/olberg/Python/casa-pipeline-release-5.6.1-8.el7
+# for MacOS, uncomment the following line, edit if necessary
+# CASADIR=/Applications/CASA.app
+#
+# for Linux, uncomment the following line instead, edit if necessary
+# CASADIR=$(HOME)/Python/casa-pipeline-release-5.6.1-8.el7
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
