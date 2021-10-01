@@ -3765,7 +3765,7 @@ class modeler():
         for spw in spwrange:
             nt, nnu = np.shape(self.output[spw])
             if nui == -1:
-                scalefx = self._compileScaleFixed(p, self.freqs[spw])
+                scalefx = self._compiledScaleFixed(p, self.freqs[spw])
                 self.varfixed[0][:nnu] = scalefx
                 for j in range(len(p)):
                     ptemp = [pi for pi in p]
@@ -3774,13 +3774,13 @@ class modeler():
                     scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw])
                     self.varfixed[j + 1][:nnu] = scalefx
             else:
-                scalefx = self._compileScaleFixed(p, self.freqs[spw][nui])
+                scalefx = self._compiledScaleFixed(p, self.freqs[spw][nui])
                 self.varfixed[0][0] = scalefx
                 for j in range(len(p)):
                     ptemp = [pi for pi in p]
                     ptemp[j] += self.dpar[j]
                     # Variables of current component
-                    scalefx = self._compileScaleFixed(ptemp, self.freqs[spw][nui])
+                    scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw][nui])
                     self.varfixed[j + 1][0] = scalefx
 
             for midx, modi in enumerate(currmod):
