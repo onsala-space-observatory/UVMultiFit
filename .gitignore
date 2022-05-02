@@ -2,3 +2,9 @@
 *.pyc
 build/
 TODO.txt
+casa*.log
+table*
+NordicARC.egg-info/
+casatest/
+dist/
+
