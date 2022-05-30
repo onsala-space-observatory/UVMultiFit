@@ -802,12 +802,12 @@ class uvmultifit():
     #
     #  CREATE INSTANCE
     #
-    def __init__(self, vis='', spw='0', column='data', field=0, scans=[], uniform=False,
+    def __init__(self, uniform=False,
                  chanwidth=1, timewidth=1, stokes='I', write='', MJDrange=[-1.0, -1.0], ldfac=1.22,
-                 model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0], phase_center='',
+                 phase_center='',
                  fixed=[], fixedvar=[], scalefix='1.0', outfile='modelfit.dat', NCPU=4, pbeam=False,
                  dish_diameter=0.0, gridpix=0,
-                 OneFitPerChannel=True, bounds=None, cov_return=False, finetune=False, uvtaper=0.0,
+                 cov_return=False, finetune=False, uvtaper=0.0,
                  method='levenberg', wgt_power=1.0,
                  LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200], only_flux=False,
                  proper_motion=0.0, HankelOrder=80, phase_gains={}, amp_gains={}):
@@ -822,30 +822,21 @@ class uvmultifit():
         # Models that need a series expansion for J0.
         self.isNumerical = ['GaussianRing']
         self.uniform = uniform
-        self.vis = vis
-        self.column = column
         self.averdata = []
         self.avermod = []
         self.averweights = []
         self.averfreqs = []
         self.u = []
         self.v = []
-        self.model = model
-        self.var = var
         self.fixed = fixed
         self.wgt_power = wgt_power
         self.fixedvar = fixedvar
         self.scalefix = scalefix
-        self.bounds = bounds
         self.outfile = outfile
         self.ranges = []
-        self.OneFitPerChannel = OneFitPerChannel
-        self.spw = spw
-        self.field = field
         self.chanwidth = chanwidth
         #  self.timewidth = timewidth
         self.stokes = stokes
-        self.p_ini = p_ini
         self.nspws = []
         self.cov_return = cov_return
         self.uvtaper = uvtaper
@@ -859,7 +850,6 @@ class uvmultifit():
         self.variables = []
         self.NCPU = NCPU
         self.MJDrange = MJDrange
-        self.scans = scans
         self.finetune = finetune
         self.minDp = np.sqrt(np.finfo(np.float64).eps)
         self.LMtune = LMtune
@@ -894,14 +884,31 @@ class uvmultifit():
             self._printInfo("WARNING! timewdith>1 cannot be currently set, due to issues with new MS tool")
 
         # Start instance:
-        self._startUp()
+        # self._startUp()
+
+    def select_data(self, vis, spw='0', column='data', field=0, scans=[]):
+        self.vis = vis
+        self.spw = spw
+        self.column = column
+        self.field = field
+        self.scans = scans
+        pass
+
+    def select_model(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
+                     bounds=None, OneFitPerChannel=False, write='residuals'):
+        self.model = model
+        self.var = var
+        self.p_ini = p_ini
+        self.bounds = bounds
+        self.OneFitPerChannel = OneFitPerChannel
+        pass
 
     ############################################
     #
     #  STARTERS
     #
     # This method will be overriden in the GUI, to avoid execution of CheckInputs() and the fit:
-    def _startUp(self):
+    def start_fit(self):
         """ This is run each time the class is instantiated."""
 #         if not goodclib:
 #             self._printError("ERROR: C++ library cannot be loaded! Please, contact the Nordic ARC node.")
