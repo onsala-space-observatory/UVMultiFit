@@ -757,7 +757,7 @@ class uvmultifit():
             if self.takeModel:
                 try:
                     del self.avermod[i]
-                except:
+                except Exception:
                     pass
             del self.averweights[i]
             del self.averfreqs[i]
@@ -780,7 +780,7 @@ class uvmultifit():
                     del mdi[mdp]
                 del mdi
             del self.iscancoords
-        except:
+        except Exception:
             pass
 
         del self.averdata, self.avermod, self.averweights, self.averfreqs, self.v, self.u, self.w, self.t
@@ -1194,9 +1194,9 @@ class uvmultifit():
             if not isinstance(key, int):
                 self._printError("\n The keys of 'amp_gains[tG]' must be integers!")
 
-        self.useGains = set(list(self.phase_gainsNuT) + list(self.amp_gainsNuT) +
-                            list(self.phase_gainsNu) + list(self.amp_gainsNu) +
-                            list(self.phase_gainsT) + list(self.amp_gainsT))
+        self.useGains = set(list(self.phase_gainsNuT) + list(self.amp_gainsNuT)
+                            + list(self.phase_gainsNu) + list(self.amp_gainsNu)
+                            + list(self.phase_gainsT) + list(self.amp_gainsT))
 
         # Check phase center:
 
@@ -1236,8 +1236,8 @@ class uvmultifit():
             vic = self.var[i].count
             checkpars = self.var[i].split(',')
             nfuncs = sum(list(map(vic, lf)))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', self.var[i])],
-                         [m.start() for m in re.finditer('\]', self.var[i])])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', self.var[i])],
+                         [m.start() for m in re.finditer(r'\]', self.var[i])])
             maxpar = max([maxpar] + list(map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx])))
             if component not in self.implemented:
                 msg = "\nModel component '" + str(component) + "' is not known!\n"
@@ -1255,8 +1255,8 @@ class uvmultifit():
             return False
 
         # Get the overal number of parameters (i.e., from the variables AND the scalefix string):
-        paridx = zip([m.start() + 1 for m in re.finditer('\[', self.scalefix)],
-                     [m.start() for m in re.finditer('\]', self.scalefix)])
+        paridx = zip([m.start() + 1 for m in re.finditer(r'\[', self.scalefix)],
+                     [m.start() for m in re.finditer(r'\]', self.scalefix)])
         maxpar = max([maxpar] + list(map(float, [self.scalefix[ss[0]:ss[1]] for ss in paridx])))
 
         # Get the model parameters for the gains:
@@ -1264,38 +1264,38 @@ class uvmultifit():
         #  self.NgainAnts = {}
         for key in self.phase_gainsNuT:
             term = self.phase_gainsNuT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNuT:
             term = self.amp_gainsNuT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsNu:
             term = self.phase_gainsNu[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsNu:
             term = self.amp_gainsNu[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.phase_gainsT:
             term = self.phase_gainsT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         for key in self.amp_gainsT:
             term = self.amp_gainsT[key]
-            paridx = zip([m.start() + 1 for m in re.finditer('\[', term)],
-                         [m.start() for m in re.finditer('\]', term)])
+            paridx = zip([m.start() + 1 for m in re.finditer(r'\[', term)],
+                         [m.start() for m in re.finditer(r'\]', term)])
             maxpar = max([maxpar] + list(map(float, [term[ss[0]:ss[1]] for ss in paridx])))
 
         # The fixed model should contain CONSTANT variables:
@@ -1320,8 +1320,8 @@ class uvmultifit():
             self.takeModel = False
 
         if self.takeModel:
-            self._printInfo("MODEL COLUMN will be taken as fixed model.\n" +
-                            "Skipping the 'fixedvar' column and all other fixed components")
+            self._printInfo("MODEL COLUMN will be taken as fixed model.\n"
+                            + "Skipping the 'fixedvar' column and all other fixed components")
             self.fixed = ['model_column']
             self.fixedvar = []
         else:
@@ -1422,8 +1422,8 @@ class uvmultifit():
         elif len(self.spw) > 1:
             self.spw = list([str(ss) for ss in self.spw])
             if self.OneFitPerChannel:
-                self._printInfo("\n\n SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n" +
-                                "WILL fit the model to each MS separately!\n\n")
+                self._printInfo("\n\n SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n"
+                                + "WILL fit the model to each MS separately!\n\n")
         elif len(self.spw) > 0:
             self.spw = list([self.spw[0]])
         else:
@@ -1440,20 +1440,20 @@ class uvmultifit():
                 if len(self.vis) == 1:
                     self.scans = [self.scans]
                 else:
-                    self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n" +
-                                     "if there are several measurement sets).\n ABORTING!")
+                    self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n"
+                                     + "if there are several measurement sets).\n ABORTING!")
                     return False
             if len(self.scans) != len(self.vis):
-                self._printError("\n List of (lists of) scans does not have the same length " +
-                                 "as the list of measurement sets!\n ABORTING!")
+                self._printError("\n List of (lists of) scans does not have the same length "
+                                 + "as the list of measurement sets!\n ABORTING!")
                 return False
 
             for si, sc in enumerate(self.scans):
                 if isinstance(sc, str):
                     self.scans[si] = list(map(int, sc.split(',')))
-        except:
-            self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n" +
-                             "if there are several measurement sets).\n ABORTING!")
+        except Exception:
+            self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n"
+                             + "if there are several measurement sets).\n ABORTING!")
             return False
 
         # Check dimensions of vis, spw, model, etc.:
@@ -1470,8 +1470,8 @@ class uvmultifit():
 
         if self.only_flux:
             if len(self.p_ini) != len(self.model):
-                self._printError("If only_flux=True, number of parameters must be equal to " +
-                                 "number of model components!\n Aborting!\n")
+                self._printError("If only_flux=True, number of parameters must be equal to "
+                                 + "number of model components!\n Aborting!\n")
 
         if self.proper_motion == 0.0:
             self.proper_motion = [[0., 0.] for i in self.model]
@@ -1530,7 +1530,7 @@ class uvmultifit():
                     fitest = int(self.field[vi])
                 phasedirs[vi][fitest] = ms.range('phase_dir')['phase_dir']['direction'][:, fitest]
                 self.field_id[-1].append(fitest)
-            except:
+            except Exception:
                 if isinstance(self.field, str):
                     aux = str(self.field)
                     self.field = [aux for v in self.vis]
@@ -1668,7 +1668,7 @@ class uvmultifit():
                         self.polii.append([polprods.index('RR'), polprods.index('LL')])
                         self.pol2aver[-1][polprods.index('RR')] = 0.5
                         self.pol2aver[-1][polprods.index('LL')] = -0.5
-                except:
+                except Exception:
                     self._printError("Cannot convert to '+self.stokes+'!!")
                     return False
             #  CASE 2: Linear feeds.
@@ -1696,7 +1696,7 @@ class uvmultifit():
                         self.pol2aver[-1][polprods.index('YX')] = 0.5
                         self.pol2aver[-1][polprods.index('XY')] = -0.5
                         self.polmod[-1] = 1
-                except:
+                except Exception:
                     self._printError("Cannot convert to '+self.stokes+'!!")
                     return False
             else:
@@ -1771,7 +1771,7 @@ from the pointing direction.\n\n""")
                 if self.dish_diameter == 0.0:
                     try:
                         tempfloat = np.copy(tb.getcol('DISH_DIAMETER'))
-                    except:
+                    except Exception:
                         self._printInfo("\n\n Dish Diameter column NOT found in antenna tables!\n")
                     tempfloat = np.zeros(len(self.antnames))
                 else:
@@ -1793,8 +1793,8 @@ from the pointing direction.\n\n""")
                 self._printError("\n\n BAD dish_diameter! Should be a float or a dict!\n")
 
             if np.max(tempfloat) == 0.0:
-                self._printError("\nThe antenna diameters are not set in the ms.\n" +
-                                 "Please, set it manually or turn off primary-beam correction.\n")
+                self._printError("\nThe antenna diameters are not set in the ms.\n"
+                                 + "Please, set it manually or turn off primary-beam correction.\n")
                 return False
             else:
                 # Negative means not to apply PB corr for that antenna
@@ -2247,7 +2247,7 @@ from the pointing direction.\n\n""")
 
             try:
                 del GaussFact
-            except:
+            except Exception:
                 pass
             gc.collect()
 
@@ -2293,8 +2293,8 @@ from the pointing direction.\n\n""")
         OneFitPerChannel=True), and is computed only once if OneFitPerChannel==False."""
 
         if self.takeModel:
-            self._printInfo("\nFixed model was taken from model column.\n" +
-                            "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n\n")
+            self._printInfo("\nFixed model was taken from model column.\n"
+                            + "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n\n")
         else:
             self._printInfo("\nGoing to compute fixed model (may need quite a bit of time)\n")
             self.mymodel.residuals([0], mode=0)
@@ -2403,7 +2403,7 @@ from the pointing direction.\n\n""")
             if self.takeModel:
                 try:
                     self.mymodel.output[-1][:] = self.avermod[spidx]
-                except:
+                except Exception:
                     self._printError("You already used the model column! Should read it again!\n")
 
             ########
@@ -2434,7 +2434,7 @@ from the pointing direction.\n\n""")
         try:
             for spidx in range(self.Nspw - 1, -1, -1):
                 del self.avermod[spidx]
-        except:
+        except Exception:
             pass
         gc.collect()
 
@@ -2615,8 +2615,8 @@ from the pointing direction.\n\n""")
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
                     self._printInfo(
-                        "ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE! \n CHANNELS: " +
-                        str(list(np.where(unflagged == 0.0))))
+                        "ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE! \n CHANNELS: "
+                        + str(list(np.where(unflagged == 0.0))))
                     self.allflagged = True
                     notfit[si] = list(np.where(unflagged == 0.0)[0])
                     #  return False
@@ -2958,7 +2958,7 @@ class modeler():
             try:
                 del self.uv[mdi][2], self.uv[mdi][1], self.uv[mdi][0]
                 del self.uv[mdi]
-            except:
+            except Exception:
                 pass
         #    del self.uv
 
@@ -2966,7 +2966,7 @@ class modeler():
             try:
                 del self.offset[mdi][2], self.offset[mdi][1], self.offset[mdi][0]
                 del self.offset[mdi]
-            except:
+            except Exception:
                 pass
 
         #    del self.offset
@@ -2974,7 +2974,7 @@ class modeler():
             try:
                 del self.ants[mdi][1], self.ants[mdi][0]
                 del self.ants[mdi]
-            except:
+            except Exception:
                 pass
         #    del self.ants
         for mdspw in range(len(self.GainBuffer) - 1, -1, -1):  # [::-1]:
@@ -3184,14 +3184,14 @@ class modeler():
                             'nu0', '%.12f' % self.freqs[0][0])
                 modstr = 'self.phaseAntsFunc[' + str(ni) + '] = lambda t, nu, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -3204,14 +3204,14 @@ class modeler():
 
                 modstr = 'self.ampAntsFunc[' + str(ni) + '] = lambda t, nu, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -3227,14 +3227,14 @@ class modeler():
 
                 modstr = 'self.phaseAntsFuncNu[' + str(ni) + '] = lambda nu, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -3248,14 +3248,14 @@ class modeler():
 
                 modstr = 'self.ampAntsFuncNu[' + str(ni) + '] = lambda nu, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -3272,14 +3272,14 @@ class modeler():
 
                 modstr = 'self.phaseAntsFuncT[' + str(ni) + '] = lambda t, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -3296,14 +3296,14 @@ class modeler():
 
                 modstr = 'self.ampAntsFuncT[' + str(ni) + '] = lambda t, p: ' + tempstr
 
-                parpos = [x.start() for x in re.finditer('p\[', tempstr)]
+                parpos = [x.start() for x in re.finditer(r'p\[', tempstr)]
                 for p0 in parpos:
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
                 try:
                     exec(modstr, locals())
-                except:
+                except Exception:
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -3330,7 +3330,7 @@ class modeler():
                         self.strucvar.append(list(map(float, tempstr2[:2] + tempstr2[3:])))
                     else:
                         self.strucvar.append(list(map(float, tempstr2[:2])))
-                except:
+                except Exception:
                     print(tempstr.split(','))
                     self.resultstring = '\n If only_flux=True, all variables but the flux must be constants! Aborting!'
                     self.failed = True
@@ -3338,7 +3338,7 @@ class modeler():
             modstr = 'self.varfunc[' + str(ii) + '] = lambda p, nu: [' + tempstr + ']'
             try:
                 exec(modstr, locals())
-            except:
+            except Exception:
                 self.failed = True
                 self.resultstring = 'Syntax error in component number %i of the variable model' % (ii)
                 return
@@ -3372,7 +3372,7 @@ class modeler():
             try:
                 # if True:
                 exec(modstr, locals())
-            except:
+            except Exception:
                 self.resultstring = 'Syntax error in component number %i of the fixed model' % (ii)
                 self.failed = True
                 return
@@ -3395,7 +3395,7 @@ class modeler():
         scalefixedstr = 'self._compiledScaleFixed = lambda p, nu: ' + tempstr + ' + 0.0'
         try:
             exec(scalefixedstr, locals())
-        except:
+        except Exception:
             self.resultstring = 'Syntax error in the flux-scale equation'
             self.failed = True
             return
@@ -3519,7 +3519,7 @@ class modeler():
                 DirDer = sum([Hessian2[n, n] * Dpar[n] * Dpar[n] for n in range(len(p))])
                 DirDer2 = np.sum(Gradient2 * Dpar)
                 TheorImpr = DirDer - 2. * DirDer2
-            except:
+            except Exception:
                 goodsol = False
                 Dpar = 0.0
                 TheorImpr = -10.0
@@ -3586,16 +3586,16 @@ class modeler():
                 backupP[:] = self.par2[0, :]
 
         if controlIter == NITER:
-            sys.stdout.write("\n REACHED MAXIMUM NUMBER OF ITERATIONS!\n" +
-                             "The algorithm may not have converged!\n" +
-                             "Please, check if the parameter values are meaningful.\n")
+            sys.stdout.write("\n REACHED MAXIMUM NUMBER OF ITERATIONS!\n"
+                             + "The algorithm may not have converged!\n"
+                             + "Please, check if the parameter values are meaningful.\n")
             sys.stdout.flush()
 
         self.getPar2(mode=1)
 
         try:
             return [self.par2[2, :], np.linalg.pinv(self.Hessian), Chi2]
-        except:
+        except Exception:
             return False
 
     ############################################
@@ -3854,9 +3854,9 @@ class modeler():
                 sys.stdout.flush()
 
         if ChiSq <= 0.0:
-            raise ValueError("Invalid Chi Square!" +
-                             "Maybe the current fitted value of flux (and/or size) is negative!" +
-                             "Please, set BOUNDS to the fit!")
+            raise ValueError("Invalid Chi Square!"
+                             + "Maybe the current fitted value of flux (and/or size) is negative!"
+                             + "Please, set BOUNDS to the fit!")
 
         if mode in [-1, -2, -3]:
             if dof:
@@ -3988,7 +3988,7 @@ def modelFromClean(imname, ichan=0, echan=0):
         # Send results:
         ia.close()
         return [True, model, var, [cleanlocs[0], cleanlocs[1]]]
-    except:
+    except Exception:
         ia.close()
         errstr = 'Problem processing the CASA image. Are you sure this is an image (and not an image cube)?'
         return [False, errstr]
@@ -4252,8 +4252,8 @@ class immultifit(uvmultifit):
         Instead of writing model (or residual) visibilities into measurement sets, the task make a new image
         with the post-fit residuals, with the same gridding as the image used for the fit."""
 
-        self._printInfo("\nThere is no measurement set (i.e., you are running 'immultifit').\n" +
-                        "Will generate an image, instead.\n")
+        self._printInfo("\nThere is no measurement set (i.e., you are running 'immultifit').\n"
+                        + "Will generate an image, instead.\n")
         if os.path.exists(self.residual + '.immultifit'):
             shutil.rmtree(self.residual + '.immultifit')
         os.system('cp -r %s %s' % (self.residual, self.residual + '.immultifit'))
@@ -4322,10 +4322,10 @@ class immultifit(uvmultifit):
     def checkInputs(self, data_changed=False):
         """ Function re-definition for the immultifit class."""
 
-        self._printInfo("\nIn image mode, the whole image is taken.\n" +
-                        "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n\n")
-        self._printInfo("In image mode, the channelization used is that of the image.\n" +
-                        "Will override the 'chanwidth' and 'timewidth' parameters.\n")
+        self._printInfo("\nIn image mode, the whole image is taken.\n"
+                        + "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n\n")
+        self._printInfo("In image mode, the channelization used is that of the image.\n"
+                        + "Will override the 'chanwidth' and 'timewidth' parameters.\n")
 
         self.savemodel = True
         success = self._checkOrdinaryInputs()
@@ -4335,7 +4335,7 @@ class immultifit(uvmultifit):
 
         try:
             self.stokes = abs(int(self.stokes))
-        except:
+        except Exception:
             self._printInfo("\n\nIn image mode, 'stokes' must be an integer\n(i.e., the Stokes column of the image).\n")
             polimag = ['I', 'Q', 'U', 'V']
             if self.stokes in polimag:
@@ -4351,7 +4351,7 @@ class immultifit(uvmultifit):
             imdims = np.array(ia.shape())
             imsum = ia.summary()
             ia.close()
-        except:
+        except Exception:
             self._printError("The residual image is not an image (or does not exist)!\n\n")
             return False
 
@@ -4359,7 +4359,7 @@ class immultifit(uvmultifit):
             ia.open(self.psf)
             imdims2 = np.array(ia.shape())
             ia.close()
-        except:
+        except Exception:
             self._printError("The PSF image is not an image (or does not exist)!\n\n")
             return False
 
