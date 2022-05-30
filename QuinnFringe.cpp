@@ -29,64 +29,21 @@
 #include <gsl/gsl_linalg.h>
 #include "QuinnFringe.h"
 
-typedef std::complex<double> cplx64f;
+typedef std::complex<double> cplx64;
 
-QuinnFringe::~QuinnFringe() {
-    int i;
-    delete[] Rates;
-    delete[] Delays;
-    delete[] Phases;
-    delete[] NData;
-    for (i=0; i<Nant; i++) {
-        delete[] BasNum[i];
-    }
-    delete[] BasNum;
-}
+QuinnFringe::QuinnFringe(int Na, int Nt, int Nc,
+                         cplx64 *ObsV,
+                         cplx64 *ModV,
+                         int *A1,
+                         int *A2,
+                         double *tA,
+                         int8_t *dofit,
+                         double *freqs,
+                         double *wgts) :
+    Nant(Na), Ntime(Nt), Nchan(Nc), ObsVis(ObsV), ModVis(ModV), Ant1(A1), Ant2(A2),
+    Freqs(freqs), fittable(dofit), Times(tA), DataWeights(wgts)
 
-int QuinnFringe::getRates(double *OutRat) {
-    int i;
-    for (i=0; i<Nant; i++) {
-        OutRat[i] = Rates[i];
-    }
-    return 0;
-}
-
-int QuinnFringe::getDelays(double *OutDel) {
-    int i;
-    for (i=0; i<Nant; i++) {
-        OutDel[i] = Delays[i];
-    }
-    return 0;
-}
-
-int QuinnFringe::getPhases(double *OutPhs) {
-    int i;
-    for (i=0; i<Nant; i++) {
-        OutPhs[i] = Phases[i];
-    }
-    return 0;
-}
-
-int QuinnFringe::getBins(double *OutBins) {
-    OutBins[0] = 1./Dnu;
-    OutBins[1] = 1./DtMin;
-    return 0;
-}
-
-QuinnFringe::QuinnFringe(int Na, int Nt, int Nc, cplx64f *ObsV, cplx64f *ModV, int *A1, int *A2,
-                         double *tA, char *dofit, double *freqs, double *wgts) {
-    ObsVis = ObsV;
-    ModVis = ModV;
-    Ant1 = A1;
-    Ant2 = A2;
-    Nchan = Nc;
-    Nant = Na;
-    Ntime = Nt;
-    Freqs = freqs;
-    fittable = dofit;
-    Times = tA;
-    DataWeights = wgts;
-
+{
     NBas = Nant*Nant;
 
     // Allocate memory for antenna gains:
@@ -103,9 +60,9 @@ QuinnFringe::QuinnFringe(int Na, int Nt, int Nc, cplx64f *ObsV, cplx64f *ModV, i
     k = 0;
 
     BasNum = new int*[Nant];
-    for (i=0; i<Nant; i++) {
+    for (i = 0; i < Nant; i++) {
         BasNum[i] = new int[Nant];
-        for (j=0; j<Nant; j++) {
+        for (j = 0; j < Nant; j++) {
             BasNum[i][j] = k;
             k += 1;
         }
@@ -113,20 +70,62 @@ QuinnFringe::QuinnFringe(int Na, int Nt, int Nc, cplx64f *ObsV, cplx64f *ModV, i
 
 }
 
+QuinnFringe::~QuinnFringe() {
+    int i;
+    delete[] Rates;
+    delete[] Delays;
+    delete[] Phases;
+    delete[] NData;
+    for (i = 0; i < Nant; i++) {
+        delete[] BasNum[i];
+    }
+    delete[] BasNum;
+}
+
+int QuinnFringe::getRates(double *OutRat) {
+    int i;
+    for (i = 0; i < Nant; i++) {
+        OutRat[i] = Rates[i];
+    }
+    return 0;
+}
+
+int QuinnFringe::getDelays(double *OutDel) {
+    int i;
+    for (i = 0; i < Nant; i++) {
+        OutDel[i] = Delays[i];
+    }
+    return 0;
+}
+
+int QuinnFringe::getPhases(double *OutPhs) {
+    int i;
+    for (i = 0; i < Nant; i++) {
+        OutPhs[i] = Phases[i];
+    }
+    return 0;
+}
+
+int QuinnFringe::getBins(double *OutBins) {
+    OutBins[0] = 1./Dnu;
+    OutBins[1] = 1./DtMin;
+    return 0;
+}
+
 // Quinn Estimator of the FFT peak with sub-bin precision:
-double QuinnTau(double x) {
+double QuinnFringe::Tau(double x) {
     return 0.25*log(3.*x*x + 6.*x + 1.) - sqrt(6.)/24.*log((x+1.-sqrt(2./3.))/(x+1.+sqrt(2./3.)));
 }
 
-double QuinnEstimate(cplx64f *FFTVec) {
+double QuinnFringe::Estimate(cplx64 *FFTVec) {
     double Denom = FFTVec[1].real()*FFTVec[1].real() + FFTVec[1].imag()*FFTVec[1].imag();
     double AP = (FFTVec[2].real()*FFTVec[1].real() + FFTVec[2].imag()*FFTVec[1].imag())/Denom;
     double AM = (FFTVec[0].real()*FFTVec[1].real() + FFTVec[0].imag()*FFTVec[1].imag())/Denom;
 
     double DP = -AP/(1.-AP);
-    double DM = AM/(1.-AM);
+    double DM =  AM/(1.-AM);
 
-    return (DP + DM)/2. + QuinnTau(DP*DP) - QuinnTau(DM*DM);
+    return (DP + DM)/2. + Tau(DP*DP) - Tau(DM*DM);
 }
 
 int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
@@ -142,29 +141,29 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     double minSNR = 0.0;
 
     // Get The dimensions for the matrices:
-    for (i=0; i<NBas; i++) {
+    for (i = 0; i < NBas; i++) {
         NData[i] = 0;
     }
 
     int i0, i1;
     switch (DOGLOBAL) {
-    case 0:
+      case 0:
         i0 = REFANT;
         i1 = REFANT+1;
         break;
-    case 1:
+      case 1:
         i0 = 0;
         i1 = Nant;
         break;
-    default:
+      default:
         printf("\n UNRECOGNIZED GLOBAL OPTION. WILL NOT GLOBALIZE!");
         i0 = REFANT;
         i1 = REFANT+1;
     }
 
-    for (i=i0; i<i1; i++) {
-        for (j=0; j<Nant; j++) {
-            for (t=0; t<Ntime; t++) {
+    for (i = i0; i < i1; i++) {
+        for (j = 0; j < Nant; j++) {
+            for (t = 0; t < Ntime; t++) {
                 if (Ant1[t] == i && Ant2[t] == j && i != j && fittable[t]) {
                     NData[BasNum[i][j]] += 1;
                 }
@@ -172,12 +171,12 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
         }
     }
 
-    cplx64f *aroundPeak = new cplx64f[3];
+    cplx64 *aroundPeak = new cplx64[3];
 
-    double*  BLRates = new double[NBas];
-    double*  BLDelays = new double[NBas];
-    double*  BLPhases = new double[NBas];
-    double*  Weights = new double[NBas];
+    double* BLRates = new double[NBas];
+    double* BLDelays = new double[NBas];
+    double* BLPhases = new double[NBas];
+    double* Weights = new double[NBas];
 
     // FFT FOR EACH BASELINE:
     int MaxDim = Nchan*NData[0];
@@ -185,18 +184,18 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     int prevNvis = NData[0];
     double tmin,tmax;
 
-    for (j=1; j<NBas; j++) {
+    for (j = 1; j < NBas; j++) {
         if (NData[j]*Nchan>MaxDim) {
             MaxDim=NData[j]*Nchan;
         }
     }
 
     int *Tindex[NBas];
-    for (j=1; j<NBas; j++) {
+    for (j = 1; j < NBas; j++) {
         i = NData[j];
         i += i==0?1:0;
         Tindex[j] = new int[i];
-        for (k=0; k<i; k++) {
+        for (k = 0; k < i; k++) {
             Tindex[j][k] = -1;
         }
     }
@@ -206,18 +205,18 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     fftw_complex *out = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * MaxDim);
     fftw_plan p = fftw_plan_dft_2d(NData[0], Nchan, BufferVis, out, FFTW_FORWARD, FFTW_MEASURE);
 
-    cplx64f *Temp;
-    cplx64f *BufferC;
+    cplx64 *Temp;
+    cplx64 *BufferC;
 
-    Temp = reinterpret_cast<cplx64f*>(out);
-    BufferC = reinterpret_cast<cplx64f*>(BufferVis);
+    Temp = reinterpret_cast<cplx64*>(out);
+    BufferC = reinterpret_cast<cplx64*>(BufferVis);
 
     int a1, a2, a1sel, a2sel, BNum;
     a1= -1;
     a2= -1;
     DtMin = 10000.0;
 
-    for (j=0; j<NBas; j++) {
+    for (j = 0; j < NBas; j++) {
 
         BLRates[j] = 0.0;
         BLDelays[j] = 0.0;
@@ -231,7 +230,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
 
         if (NData[j] != 0) {
             // Arrange data for this baseline:
-            for (k=0; k<Ntime; k++) {
+            for (k = 0; k < Ntime; k++) {
                 a1sel = Ant1[k];
                 a2sel = Ant2[k];
 
@@ -243,15 +242,15 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                     inu = NcurrVis*Nchan;
                     knu = k*Nchan;
                     if (DOMODEL == 0) {
-                        memcpy(&BufferC[inu],&ObsVis[knu],Nchan*sizeof(cplx64f));
-                        for (i=0; i<Nchan; i++) {
+                        memcpy(&BufferC[inu],&ObsVis[knu],Nchan*sizeof(cplx64));
+                        for (i = 0; i < Nchan; i++) {
                             BasWgt += DataWeights[knu + i];
                             if (DataWeights[knu+i]<=0.0) {
                                 BufferC[inu + i] = 0.0;
                             }
                         }
                     } else {
-                        for (i=0; i<Nchan; i++) {
+                        for (i = 0; i < Nchan; i++) {
                             BufferC[inu + i] = ObsVis[knu + i]/ModVis[knu + i];
                             BasWgt += std::abs(ModVis[knu + i])*DataWeights[knu + i];
                             if (DataWeights[knu+i]<=0.0) {
@@ -321,9 +320,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                 ti[1] = 0;
 
                 // First Quadrant:
-                for (l=0; l<t0; l++) {
+                for (l = 0; l < t0; l++) {
                     row = l*Nchan;
-                    for (k=0; k<Chi; k++) {
+                    for (k = 0; k < Chi; k++) {
                         AbsP = std::abs(Temp[row + k]);
                         if (AbsP>Peak) {
                             Peak = AbsP;
@@ -335,9 +334,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                     }
                 }
                 // Second Quadrant:
-                for (l=tf; l<NcurrVis; l++) {
+                for (l = tf; l < NcurrVis; l++) {
                     row = l*Nchan;
-                    for (k=0; k<Chi; k++) {
+                    for (k = 0; k < Chi; k++) {
                         AbsP = std::abs(Temp[row + k]);
                         if (AbsP>Peak) {
                             Peak = AbsP;
@@ -349,9 +348,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                     AvgFringe += Peak;
                 }
                 // Third Quadrant:
-                for (l=0; l<t0; l++) {
+                for (l = 0; l < t0; l++) {
                     row = l*Nchan;
-                    for (k=Chf; k<Nchan; k++) {
+                    for (k = Chf; k < Nchan; k++) {
                         AbsP = std::abs(Temp[row + k]);
                         if (AbsP>Peak) {
                             Peak = AbsP;
@@ -363,9 +362,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                     }
                 }
                 // Fourth Quadrant:
-                for (l=tf; l<NcurrVis; l++) {
+                for (l = tf; l < NcurrVis; l++) {
                     row = l*Nchan;
-                    for (k=Chf; k<Nchan; k++) {
+                    for (k = Chf; k < Nchan; k++) {
                         AbsP = std::abs(Temp[row + k]);
                         if (AbsP>Peak) {
                             Peak = AbsP;
@@ -436,7 +435,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                 aroundPeak[2] = Temp[nu[1] + Nchan*(ti[2])];
 
                 BLRates[BasNum[a1][a2]] = ((double) ti[1]);
-                BLRates[BasNum[a1][a2]] += QuinnEstimate(aroundPeak);
+                BLRates[BasNum[a1][a2]] += Estimate(aroundPeak);
 
                 if (BLRates[BasNum[a1][a2]] > ((double) NcurrVis)/2.) {
                     BLRates[BasNum[a1][a2]] = BLRates[BasNum[a1][a2]] - (double) NcurrVis;
@@ -450,7 +449,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                 aroundPeak[2] = Temp[nu[2] + Nchan*(ti[1])];
 
                 BLDelays[BasNum[a1][a2]] = ((double) nu[1]);
-                BLDelays[BasNum[a1][a2]] += QuinnEstimate(aroundPeak);
+                BLDelays[BasNum[a1][a2]] += Estimate(aroundPeak);
 
                 if (BLDelays[BasNum[a1][a2]] > ((double) Nchan)/2.) {
                     BLDelays[BasNum[a1][a2]] = BLDelays[BasNum[a1][a2]] - (double) Nchan;
@@ -472,9 +471,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     }
 
     // Tell UVMULTIFIT about the bad data (i.e., low-SNR fringes):
-    for (i=0; i<NBas; i++) {
+    for (i = 0; i < NBas; i++) {
         if (Weights[i] == 0.0) {
-            for (j=0; j<NData[i]; j++) {
+            for (j = 0; j < NData[i]; j++) {
                 if (Tindex[i][j]>=0) {
                     fittable[Tindex[i][j]]=false;
                 }
@@ -487,8 +486,8 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     calAnt = new int[Nant];
     bool GoodRef = false;
 
-    for (i=0; i<Nant; i++) {
-        for (j=0; j<Nant; j++) {
+    for (i = 0; i < Nant; i++) {
+        for (j = 0; j < Nant; j++) {
             if ((NData[BasNum[i][j]]>0 || NData[BasNum[j][i]]>0)
                 && i!=j && (Weights[BasNum[i][j]]>0. ||  Weights[BasNum[j][i]]>0.)) {
                 if (i==REFANT || j==REFANT) {
@@ -516,12 +515,12 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     double *DelResVec = new double[NcalAnt];
     double *CovMat = new double[NBasFit];
 
-    for (i=0; i<NBasFit; i++) {
+    for (i = 0; i < NBasFit; i++) {
         Hessian[i] = 0.0;
         CovMat[i] = 0.0;
     }
 
-    for (i=0; i<NcalAnt; i++) {
+    for (i = 0; i < NcalAnt; i++) {
         RateResVec[i] = 0.0;
         DelResVec[i] = 0.0;
     }
@@ -531,14 +530,14 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     ca2 = -1;
 
     if (Nant>2) {
-        for (i=i0; i<i1; i++) {
-            for (j=0; j<Nant; j++) {
+        for (i = i0; i < i1; i++) {
+            for (j = 0; j < Nant; j++) {
                 if (NData[BasNum[i][j]]>0 && i != j) {
                     a1=i;
                     a2=j;
                     BNum = BasNum[i][j];
                     if (a1 != REFANT) {
-                        for (ca1=0; ca1<NcalAnt; ca1++) {
+                        for (ca1 = 0; ca1 < NcalAnt; ca1++) {
                             if (calAnt[ca1]==a1) {
                                 break;
                             }
@@ -548,7 +547,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
                         Hessian[ca1*NcalAnt + ca1] += Weights[BNum];
                     }
                     if (a2 != REFANT) {
-                        for (ca2=0; ca2<NcalAnt; ca2++) {
+                        for (ca2 = 0; ca2 < NcalAnt; ca2++) {
                             if (calAnt[ca2]==a2) {
                                 break;
                             }
@@ -573,9 +572,9 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
 
     /*
     printf("\n\n GLOBALIZATION HESSIAN:\n");
-    for (i=0;i<NcalAnt;i++){
+    for (i = 0;i < NcalAnt;i++){
       printf("\n");
-      for (j=0;j<NcalAnt;j++){
+      for (j = 0;j < NcalAnt;j++){
         printf("%.2e ",Hessian[i*NcalAnt + j]);
       }
     }
@@ -597,40 +596,40 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
 
 
     // Derive the rates as CovMat*RateVec and delays as CovMat*DelVec:
-    for (i=0; i<Nant; i++) {
+    for (i = 0; i < Nant; i++) {
         Phases[i] = 0.0;
         Rates[i] = 0.0;
         Delays[i] = 0.0;
     }
 
     if (Nant>2) {
-        for (i=0; i<NcalAnt; i++) {
-            for (j=0; j<NcalAnt; j++) {
+        for (i = 0; i < NcalAnt; i++) {
+            for (j = 0; j < NcalAnt; j++) {
                 Rates[calAnt[i]] += RateResVec[j]*gsl_matrix_get(&inv.matrix,i,j);
                 Delays[calAnt[i]] += DelResVec[j]*gsl_matrix_get(&inv.matrix,i,j);
             }
         }
     }
 
-    for (i=0; i<Nant; i++) {
+    for (i = 0; i < Nant; i++) {
         printf("Antenna %i -> Rate: %+.3e Hz; Delay: %+.3e s.\n",i,Rates[i],Delays[i]);
     }
 
     printf("Estimating phases (not globalized)...\n");
 
     double Phase, DTau, DRate;
-    cplx64f CalPhase;
+    cplx64 CalPhase;
 
     DTau = Dnu/((double) Nchan);
     DRate = DtMin/((double) (MaxDim/Nchan));
 
-    for (i=0; i<NcalAnt; i++) {
-        CalPhase = cplx64f(0.0);
+    for (i = 0; i < NcalAnt; i++) {
+        CalPhase = cplx64(0.0);
 
         j = BasNum[REFANT][calAnt[i]];
         if (NData[j] > 0) {
-            for (t=0; t<NData[j]; t++) {
-                for (k=0; k<Nchan; k++) {
+            for (t = 0; t < NData[j]; t++) {
+                for (k = 0; k < Nchan; k++) {
                     Phase = + Rates[calAnt[i]]*((double) t)*DRate + Delays[calAnt[i]]*((double) k)*DTau;
                     CalPhase += ObsVis[Tindex[j][t]*Nchan + k] * std::polar(1., 6.283185*Phase);
                 }
@@ -638,8 +637,8 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
             Phases[calAnt[i]] = -std::arg(CalPhase);
         } else {
             j = BasNum[calAnt[i]][REFANT];
-            for (t=0; t<NData[j]; t++) {
-                for (k=0; k<Nchan; k++) {
+            for (t = 0; t < NData[j]; t++) {
+                for (k = 0; k < Nchan; k++) {
                     Phase = - Rates[calAnt[i]]*((double) t)*DRate - Delays[calAnt[i]]*((double) k)*DTau;
                     CalPhase += ObsVis[Tindex[j][t]*Nchan + k] * std::polar(1.,6.283185*Phase);
                 }
@@ -655,7 +654,7 @@ int QuinnFringe::GFF(int REFANT, int DOGLOBAL, int DOMODEL) {
     delete[] BLPhases;
     delete[] Weights;
 
-    for (j=1; j<NBas; j++) {
+    for (j = 1; j < NBas; j++) {
         delete[] Tindex[j];
     }
 
