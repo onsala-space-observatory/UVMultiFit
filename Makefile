@@ -1,5 +1,6 @@
-CASADIR=/home/michael/Python/casa-6.1.2-7-pipeline-2020.1.0.36/lib/py
-PYTHON=$(CASADIR)/bin/python3
+CASADIR=/home/data/casa-6.4.0-16/lib/py
+# PYTHON=$(CASADIR)/bin/python3
+PYTHON=/usr/bin/python3
 
 install:
 	$(PYTHON) setup.py install --prefix=$(CASADIR)
