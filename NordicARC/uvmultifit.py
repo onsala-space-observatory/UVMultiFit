@@ -468,11 +468,7 @@ import uvmultimodel as uvmod
 __version__ = "3.0-p2"
 date = 'JAN 2021'
 
-################
-# Import all necessary modules.
-
 print("\nC++ shared library loaded successfully\n")
-
 
 tb = table()
 ms = ms()
@@ -812,6 +808,7 @@ class uvmultifit():
                  LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200], only_flux=False,
                  proper_motion=0.0, HankelOrder=80, phase_gains={}, amp_gains={}):
         """ Just the constructor method, for class instantiation."""
+        print("uvmultifit::__init__")
         self.first_time = True
         uvmod.clearPointers(2)
 
@@ -886,6 +883,47 @@ class uvmultifit():
         # Start instance:
         # self._startUp()
 
+    def __repr__(self):
+        str = "uvmultifit("
+        str += f"vis = '{self.vis}', "
+        str += f"spw = {self.spw}, "
+        str += f"column = '{self.column}', "
+        str += f"field = {self.field}, "
+        str += f"scans = {self.scans}, "
+        str += f"uniform = {self.uniform}, "
+        str += f"chanwidth = {self.chanwidth}, "
+        str += f"timewidth = {self.timewidth}, "
+        str += f"stokes = '{self.stokes}', "
+        str += f"write_model = {self.write_model}, "
+        str += f"MJDrange = {self.MJDrange}, "
+        str += f"ldfac = {self.ldfac}, "
+        str += f"model = {self.model}, "
+        str += f"var = {self.var}, "
+        str += f"p_ini = {self.p_ini}, "
+        str += f"phase_center = '{self.phase_center}', "
+        str += f"fixed = {self.fixed}, "
+        str += f"fixedvar = {self.fixedvar}, "
+        str += f"scalefix = {self.scalefix}, "
+        str += f"outfile = {self.outfile}, "
+        str += f"NCPU = {self.NCPU}, "
+        str += f"pbeam = {self.pbeam}, "
+        str += f"dish_diameter = {self.dish_diameter}, "
+        str += f"OneFitPerChannel = {self.OneFitPerChannel}, "
+        str += f"bounds = {self.bounds}, "
+        str += f"cov_return = {self.cov_return}, "
+        str += f"finetune = {self.finetune}, "
+        str += f"uvtaper = {self.uvtaper}, "
+        str += f"method = '{self.method}', "
+        str += f"wgt_power = {self.wgt_power}, "
+        str += f"LMtune = {self.LMtune}, "
+        str += f"SMPtune = {self.SMPtune}, "
+        str += f"only_flux = {self.only_flux}, "
+        str += f"proper_motion = {self.proper_motion}, "
+        str += f"HankelOrder = {self.HankelOrder}, "
+        str += f"phase_gains = {self.phase_gains}, "
+        str += f"amp_gains = {self.amp_gains})"
+        return str
+
     def select_data(self, vis, spw='0', column='data', field=0, scans=[]):
         self.vis = vis
         self.spw = spw
@@ -914,6 +952,7 @@ class uvmultifit():
 #             self._printError("ERROR: C++ library cannot be loaded! Please, contact the Nordic ARC node.")
 #             return False
 
+        print("uvmultifit::_startup")
         self._printInfo(greetings)
 
         self.mymodel = modeler()
@@ -1032,6 +1071,7 @@ class uvmultifit():
         ``chanwidth`` are set to 1). This function should be called AFTER having run ``fit()``.
         """
 
+        print("uvmultifit::writeModel")
         self._printInfo("\n\n WARNING: WRITING TO MOSAICS IS EXPERIMENTAL AND MAY NOT WORK!\n")
 
         for vi, v in enumerate(self.vis):
@@ -1087,6 +1127,8 @@ class uvmultifit():
 
             self._printInfo("\n %s written successfully!\n" % column)
 
+        return True
+
     ############################################
     #
     #  SANITY CHECKS AND DEFINING BASIC PARAMETERS
@@ -1095,6 +1137,7 @@ class uvmultifit():
         """ Performs some sanity checks on the input parameters.
       This function should not be called directly by the user."""
 
+        print("uvmultifit::_checkOrdinaryInputs")
         if isinstance(self.model, str):
             self.model = list([self.model])
         else:
@@ -1409,6 +1452,7 @@ class uvmultifit():
         the model to repeat the fit.
       """
 
+        print("uvmultifit::checkInputs")
         # Some preliminary (self-consistency) checks of the parameters:
         self.savemodel = True
 
@@ -1716,7 +1760,7 @@ class uvmultifit():
         #  if data_changed:
         #  try:
         #    del self.mymodel
-        #  except:
+        #  except Exception:
         #    self.printInfo("UVMULTIFIT model does not seem to exist yet.")
         #    pass
 
@@ -1741,6 +1785,7 @@ class uvmultifit():
         """Prepare the PB correction, the model and the number of cores for the modeler.
         Not to be called directly by the user."""
 
+        print("uvmultifit::_setEngineWgt")
         # Load the C++ library:
         # if self.mymodel.Ccompmodel is None:
         #     self.mymodel.Ccompmodel = uvmod.modelcomp
@@ -1756,6 +1801,7 @@ class uvmultifit():
     def _setWgtEq(self):
         """Depends on setEngineWgt. Not to be called by the user."""
 
+        print("uvmultifit::_setWgtEq")
         tempfloat = 0.0
 
         if not isinstance(self.dish_diameter, dict):
@@ -1836,6 +1882,7 @@ from the pointing direction.\n\n""")
         new data, avoiding some memory leakage related to potential hidden references to the
         data in the IPython's *recall* prompt."""
 
+        print("uvmultifit::readData")
         tic = time.time()
 
         if del_data:  # data_changed:
@@ -1844,6 +1891,7 @@ from the pointing direction.\n\n""")
             #    self.clearPointers(1)
 
         self.success = False
+        print("DEBUG >> inside readData")
 
         # Initiate the lists and arrays where the data will be read-in:
         ntotspw = self.spwlist[-1][3] + len(self.spwlist[-1][2])
@@ -1873,6 +1921,7 @@ from the pointing direction.\n\n""")
             self.iscan[vi] = {}
 
         for si in nsprang:
+            print(f"DEBUG >> si {si} of {nsprang}")
             # These are temporary lists of arrays that will be later concatenated:
             datascanAv = []
             modelscanAv = []
@@ -2285,6 +2334,7 @@ from the pointing direction.\n\n""")
 
         # Set pointers to data, model, etc.:
         self.initData(del_data=del_data)
+        print("DEBUG >> leaving readData")
 
         return True
 
@@ -2298,6 +2348,8 @@ from the pointing direction.\n\n""")
         It saves the results in the 'mymodel.output' property, which should have been zeroed previously.
         Notice that the fixed model is recomputed for each spectral channel (i.e., if
         OneFitPerChannel=True), and is computed only once if OneFitPerChannel==False."""
+
+        print("uvmultifit::computeFixedModel")
 
         if self.takeModel:
             self._printInfo("\nFixed model was taken from model column.\n"
@@ -2331,6 +2383,7 @@ from the pointing direction.\n\n""")
         The 'modeler' instance stores pointers to the data and metadata, the compiled model (and
         fixedmodel), the parameter values, and all the methods to compute residuals, Chi Squared, etc."""
 
+        print("uvmultifit::initData")
         # Reset pointers for the modeler:
         self.mymodel._deleteData()
 
@@ -2433,8 +2486,9 @@ from the pointing direction.\n\n""")
                                     self.mymodel.offset[-1][0], self.mymodel.offset[-1][1], self.mymodel.offset[-1][2],
                                     self.mymodel.ants[-1][0], self.mymodel.ants[-1][1],
                                     self.mymodel.isGain[-1], self.Nants)
+            print(f"DEBUG >> gooduvm = {gooduvm}")
 
-            if gooduvm != 10:
+            if not gooduvm:
                 self._printError("\nError in the C++ extension!\n")
                 return False
 
@@ -2444,6 +2498,7 @@ from the pointing direction.\n\n""")
         except Exception:
             pass
         gc.collect()
+        print("DEBUG >> leaving initData")
 
     ############################################
     #
@@ -2457,6 +2512,7 @@ from the pointing direction.\n\n""")
 
         It is indeed MANDATORY to run this function if the model to be fitted has changed."""
 
+        print("uvmultifit::initModel")
         if self.mymodel.initiated:
             #     self.clearPointers(1)
             self.mymodel._deleteModel()
@@ -2464,8 +2520,9 @@ from the pointing direction.\n\n""")
             self._printInfo("UVMULTIFIT compiled model(s) do not seem to exist yet.\n")
 
         # Set number of threads:
-        gooduvm = uvmod.setNCPU(int(self.NCPU))
-        if gooduvm != 0:
+        ncpu = int(self.NCPU)
+        gooduvm = uvmod.setNCPU(ncpu)
+        if gooduvm != ncpu:
             self._printError("\nError in the C++ extension!\n")
             return False
 
@@ -2531,7 +2588,7 @@ from the pointing direction.\n\n""")
         # Delta to estimate numerical derivatives:
         self.mymodel.minnum = self.minDp
 
-        if gooduvm != 10:
+        if not gooduvm:
             self._printError("\nError in the C++ extension!\n")
             return False
         else:
@@ -2584,6 +2641,7 @@ from the pointing direction.\n\n""")
           set by spetial routines of **UVMultiFit** (e.g., the Quinn Fringe Fitter). Default is
           to NOT reset flags (this option should be OK most of the time)."""
 
+        print("uvmultifit::fit")
         tic = time.time()
 
         self.mymodel.bounds = self.bounds
@@ -3041,6 +3099,7 @@ class modeler():
     #  CREATE INSTANCE
     #
     def __init__(self):
+        print("modeler::__init__")
         """ Just the constructor of the 'modeler' class."""
         self.initiated = False
         self.addfixed = False
@@ -3128,6 +3187,7 @@ class modeler():
         Not to be called by the user."""
 
         import numpy as np
+        print("modeler::_setup")
 
         # self.minnum = np.finfo(np.float64).eps  # Step for Jacobian computation
         self.propRA = np.zeros(len(model), dtype=np.float64)
@@ -3162,6 +3222,7 @@ class modeler():
     # Compile the functions to make p, nu -> var:
     def _compileAllModels(self):
         """ Compile all models (fixed, variable, and fixed-scale. Not to be called directly by the user. """
+        print("modeler::_compileAllModels")
         self.resultstring = ''
         self.failed = False
         self._compileModel()
@@ -3171,6 +3232,7 @@ class modeler():
 
     #  print self.gainFunction
     def _compileGains(self):
+        print("modeler::_compileGains")
         """ Compile the functions related to the antenna gains."""
         if self.isMixed:
             self.phaseAntsFunc = [lambda t, nu, p: 0. for i in range(self.Nants)]
@@ -3321,6 +3383,7 @@ class modeler():
     def _compileModel(self):
         """ Compiles the variable model, according to the contents of the 'model' and 'parameters' lists."""
 
+        print("modeler::_compileModel")
         # Define variable model:
         self.varfunc = [0.0 for component in self.model]
 
@@ -3360,6 +3423,7 @@ class modeler():
     def _compileFixedModel(self):
         """ Compiles the fixed model, according to the contents of the 'fixed' and 'fixedpars' lists."""
 
+        print("modeler::_compileFixedModels")
         if len(self.fixed) > 0 and 'model_column' in self.fixed:
             return
 
@@ -3394,6 +3458,7 @@ class modeler():
     def _compileScaleFixed(self):
         """ Compiles the scaling factor for the fixed model """
 
+        print("modeler::_compileScaleFixed")
         tempstr = self.scalefix.replace(
             'LorentzLine(', 'self.LorentzLine(nu,').replace(
                 'GaussLine(', 'self.GaussLine(nu, ').replace(
@@ -3418,6 +3483,7 @@ class modeler():
         in index 1, and bound values are in index 2. The equations for the changes of variables are taken
         from the MINUIT package."""
 
+        print("modeler::getPar2")
         if self.bounds is None:
             self.par2[1, :] = 1.0
             if mode == 0:
@@ -3470,6 +3536,7 @@ class modeler():
     def LMMin(self, p):
         """ Implementation of the Levenberg-Marquardt algorithm. Not to be called directly by the user. """
 
+        print("modeler::LMMin")
         NITER = int(self.LMtune[3] * len(p))
         self.calls = 0
 
@@ -3613,6 +3680,7 @@ class modeler():
     def gridModel(self, imod, tempvar):
         """ Compute elements of Taylor expansion of the source's Hankel transform."""
 
+        print("modeler::gridModel")
         n = self.HankelOrder - 1
 
         if imod == 'GaussianRing':   # Gaussian Ring
@@ -3681,6 +3749,7 @@ class modeler():
         The so-called 'output array' is the data that will be saved into the measurement set(s)
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
+        print("uvmultifit residuals")
         #  varsize = self.maxNvar+self.HankelOrder
         if mode in [0, -3]:
             self.calls = 0
@@ -3879,6 +3948,7 @@ class modeler():
     def ChiSquare(self, p, bounds=None, p_ini=[]):
         """ Just a wrapper of the 'residuals' function, usually called by simplex."""
 
+        print("uvmultifit ChiSquare")
         inside = True
         if bounds is not None:
             for i, bound in enumerate(bounds):
@@ -3908,6 +3978,7 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
 
     It follows the CASA syntax."""
 
+    print("channeler")
     if spw == '':
         spw = ','.join(list(map(str, range(len(maxchans)))))
 
@@ -3968,6 +4039,7 @@ def modelFromClean(imname, ichan=0, echan=0):
       The flux densities that the task will return for each pixel will be the *frequency average*
       between ichan and echan."""
 
+    print("modelFromClean")
     # Read model:
     success = ia.open(str(imname))
     if not success:
@@ -4405,7 +4477,7 @@ class immultifit(uvmultifit):
 #     if data_changed:
 #       try:
 #         del self.mymodel
-#       except:
+#       except Exception:
 #         pass
 
 #       self.mymodel = modeler(self.model, self.var, self.fixed, self.fixedvar, self.scalefix,
