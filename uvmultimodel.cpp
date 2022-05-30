@@ -55,12 +55,37 @@
 #include <gsl/gsl_sf_bessel.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <new>
+#include <iostream>
+#include <iomanip>
 #include <complex>
+#include <vector>
 
 #if QUINN_FITTER == 0
 #include "QuinnFringe.h"
 #endif
+
+void show_info(const char *var, PyObject *obj)
+{
+    if (obj == NULL) return;
+
+    int ndim = PyArray_NDIM((PyArrayObject *)obj);
+    int type = PyArray_TYPE((PyArrayObject *)obj);
+    int size = PyArray_SIZE((PyArrayObject *)obj);
+
+    std::cout << "'" << std::setw(8) << var
+              << "' " << "is an array (" << PyArray_CheckExact(obj) << "):"
+              << " of type " << std::setw(2) << type
+              << " and dimension " << ndim;
+    if (ndim > 1) {
+        std::cout << " [";
+        for (int i = 0; i < ndim; i++) {
+            std::cout << " " << PyArray_DIM((PyArrayObject *)obj, i)
+                      << (i == ndim-1 ? " ]" : " x");
+        }
+    }
+
+    std::cout << ", size " << size << std::endl;
+}
 
 /* Docstrings */
 static char module_docstring[] =
@@ -79,8 +104,6 @@ static char setNCPU_docstring[] =
     "Set up the parallelization.";
 static char setWork_docstring[] =
     "Allocate memory to compute Hessian and error vector.";
-static char unsetWork_docstring[] =
-    "Deallocate memory obtained with setWork().";
 static char QuinnFF_docstring[] =
     "Perform Fringe Fitting, based on the delay-rate fringe peaks, using the Quinn estimator for the peak.";
 
@@ -92,7 +115,6 @@ static PyObject *setNCPU(PyObject *self, PyObject *args);
 static PyObject *modelcomp(PyObject *self, PyObject *args);
 static PyObject *setModel(PyObject *self, PyObject *args);
 static PyObject *setWork(PyObject *self, PyObject *args);
-static PyObject *unsetWork(PyObject *self, PyObject *args);
 static PyObject *QuinnFF(PyObject *self, PyObject *args);
 
 void *writemod(void *work);
@@ -105,7 +127,6 @@ static PyMethodDef module_methods[] = {
     {"setNCPU", setNCPU, METH_VARARGS, setNCPU_docstring},
     {"modelcomp", modelcomp, METH_VARARGS, uvmultimodel_docstring},
     {"setWork", setWork, METH_VARARGS, setWork_docstring},
-    {"unsetWork", unsetWork, METH_VARARGS, unsetWork_docstring},
     {"QuinnFF", QuinnFF, METH_VARARGS, QuinnFF_docstring},
     {"clearPointers", clearPointers, METH_VARARGS, clearPointers_docstring},
     {NULL, NULL, 0, NULL}
@@ -121,35 +142,35 @@ static int NparMax = 7; // Degrees of freedom for components (i.e., RA, Dec, Flu
 
 // ALL POINTERS TO DATA AND METADATA:
 struct DATA {
-    int **ants[2];
-    int **dtIndex;
-    double **freqs;
-    double **uv[3];
-    double **wgt[2];
-    double **dt;
-    double **dtArray;
-    double **RAshift;
-    double **Decshift;
-    double **Stretch;
-    cplx64 **ObsVis;
-    char **fittable;
-    char **isGain;
-    int *nnu;
-    int *nt;
+    std::vector<int *> ants[2];
+    std::vector<int *> dtIndex;
+    std::vector<double *> freqs;
+    std::vector<double *> uv[3];
+    std::vector<double *> wgt[2];
+    std::vector<double *> dt;
+    std::vector<double *> dtArray;
+    std::vector<double *> RAshift;
+    std::vector<double *> Decshift;
+    std::vector<double *> Stretch;
+    std::vector<cplx64 *> ObsVis;
+    std::vector<int8_t *> fittable;
+    std::vector<int8_t *> isGain;
+    std::vector<int> nnu;
+    std::vector<int> nt;
     double *phaseCenter;
 };
 
 // ALL POINTERS TO MODEL-RELATED STUFF:
 struct MODEL {
-    cplx64 **ModVis;
-    cplx64 ****Gain;
-    double **vars;
-    double **fixp;
-    double *Chi2;
-    double **WorkHess;
-    double **WorkGrad;
-    int **parAnt;
-    int *nparAnt;
+    std::vector<cplx64 *> ModVis;
+    std::vector<std::vector<std::vector<cplx64 *>>> Gain;
+    std::vector<double *> vars;
+    std::vector<double *> fixp;
+    std::vector<double> Chi2;
+    std::vector<std::vector<double>> WorkHess;
+    std::vector<std::vector<double>> WorkGrad;
+    std::vector<int *> parAnt;
+    std::vector<int> nparAnt;
     int *models;
     double *Hessian;
     double *Gradient;
@@ -160,13 +181,13 @@ struct MODEL {
 
 /* Structure to pass, as void cast, to the workers */
 struct SHARED_DATA {
-    int *t0;
-    int *t1;
+    std::vector<int> t0;
+    std::vector<int> t1;
     int Iam;
 };
 
 static SHARED_DATA master;
-static SHARED_DATA *worker;
+std::vector<SHARED_DATA> worker;
 
 static DATA vis;
 static MODEL mod;
@@ -196,59 +217,12 @@ PyMODINIT_FUNC PyInit_uvmultimodel(void)
     npar = -1;
     Nants = 0;
     ncomp = -1;
-    master.t0 = new int[1];
-    master.t1 = new int[1];
+    master.t0.resize(1);
+    master.t1.resize(1);
 
     /* Load `numpy` functionality. */
     import_array();
     return m;
-}
-
-void clearData()
-{
-    int i,j;
-
-    delete vis.ants[0];
-    delete vis.ants[1];
-    delete vis.uv[0];
-    delete vis.uv[1];
-    delete vis.uv[2];
-    delete vis.wgt[0];
-    delete vis.wgt[1];
-    delete vis.freqs;
-    delete vis.dt;
-    delete vis.dtArray;
-    delete vis.dtIndex;
-    delete vis.RAshift;
-    delete vis.Decshift;
-    delete vis.Stretch;
-    delete vis.ObsVis;
-    delete mod.ModVis;
-    delete vis.fittable;
-    delete vis.isGain;
-
-    for (i = 0; i < Nspw; i++) {
-        for (j = 0; j < Nants; j++) {
-            delete mod.Gain[i][j];
-        }
-        delete mod.Gain[i];
-    }
-
-    if (Nspw > 0) {
-        delete vis.nnu;
-        delete vis.nt;
-    }
-}
-
-void clearModel()
-{
-    if (isModel) {
-        delete mod.vars;
-        delete mod.fixp;
-        delete mod.parAnt;
-        delete mod.nparAnt;
-        delete mod.models;
-    }
 }
 
 static PyObject *clearPointers(PyObject *self, PyObject *args)
@@ -259,26 +233,25 @@ static PyObject *clearPointers(PyObject *self, PyObject *args)
         fflush(stdout);
         return NULL;
     }
+    printf("\ninside uvmod.clearPointers: %i\n", i);
 
     switch (i) {
       case 0:
-        clearData();
         break;
       case 1:
-        clearModel();
         break;
       case 2:
-        NCPU = -1;
-        Nspw = -1;
-        npar = -1;
-        Nants = -1;
-        ncomp = -1;
-        master.t0 = new int[1];
-        master.t1 = new int[1];
+        // NCPU = -1;
+        // Nspw = -1;
+        // npar = -1;
+        // Nants = -1;
+        // ncomp = -1;
+        master.t0.resize(1);
+        master.t1.resize(1);
         isModel = false;
     }
 
-    return Py_BuildValue("i", 0);
+    return Py_BuildValue("i", i);
 }
 
 // Taylor expansion of the Hankel transform, for special models (GaussianRing):
@@ -374,9 +347,8 @@ void *writemod(void *work)
     // bool writeDer = (mode==-1);
     bool EllipChanged;
     double tempD, tempR, tempI, cosphase, sinphase, cosphase0, sinphase0, PA;
-    cplx64 *totGain;
     double wterm, rsh, dsh, wamp, tempres0, tempres1, ll, mm, PBcorr;
-    totGain = new cplx64[pmax];
+    std::vector<cplx64> totGain(pmax);
 
     int ant1, ant2, pdep, currTIdx, kT;
     cplx64 GCplx;
@@ -640,7 +612,6 @@ void *writemod(void *work)
             }
         }
     }
-    delete totGain;
 
     if (writeDer) {
         for (p = 0; p < npar; p++) {
@@ -664,48 +635,46 @@ void *writemod(void *work)
 // USAGE FROM PYTHON: setNspw(i) where i is the number of SPW
 static PyObject *setNspw(PyObject *self, PyObject *args)
 {
-    int i;
+    int i = 0;
     if (!PyArg_ParseTuple(args, "i",&i)) {
         printf("FAILED setNspw!\n");
         fflush(stdout);
         return NULL;
     }
+    printf("\ninside uvmod.setNspw: %i\n", i);
 
-    // TODO: RUN gc.collect() FROM PYTHON AFTER setNspw.
-    if (Nspw > 0) {
-        clearData();
-    }
+    vis.nnu.resize(i);
+    vis.nt.resize(i);
+    master.t0.resize(i);
+    master.t1.resize(i);
 
-    vis.nnu = new int[i];
-    vis.nt = new int[i];
-    master.t0 = new int[i];
-    master.t1 = new int[i];
+    vis.freqs.resize(i);
 
-    vis.freqs = new double*[i];
+    vis.ants[0].resize(i);
+    vis.ants[1].resize(i);
 
-    vis.ants[0] = new int*[i];
-    vis.ants[1] = new int*[i];
-    vis.dtIndex = new int*[i];
-    vis.dtArray = new double*[i];
+    vis.dtIndex.resize(i);
+    vis.dtArray.resize(i);
 
-    vis.uv[0] = new double*[i];
-    vis.uv[1] = new double*[i];
-    vis.uv[2] = new double*[i];
-    vis.ObsVis = new cplx64*[i];
-    mod.ModVis = new cplx64*[i];
-    vis.fittable = new char*[i];
-    vis.isGain = new char*[i];
-    vis.wgt[1] = new double*[i];
-    vis.wgt[0] = new double*[i];
-    vis.dt = new double*[i];
-    vis.RAshift = new double*[i];
-    vis.Stretch = new double*[i];
-    vis.Decshift = new double*[i];
-    mod.Gain = new cplx64***[i];
+    vis.uv[0].resize(i);
+    vis.uv[1].resize(i);
+    vis.uv[2].resize(i);
+    vis.ObsVis.resize(i);
+    mod.ModVis.resize(i);
+    vis.fittable.resize(i);
+    vis.isGain.resize(i);
+    vis.wgt[1].resize(i);
+    vis.wgt[0].resize(i);
+    vis.dt.resize(i);
+    vis.RAshift.resize(i);
+    vis.Decshift.resize(i);
+    vis.Stretch.resize(i);
+    mod.Gain.resize(i);
 
     Nspw = i;
+    // printf("successfully set Nspw to %i\n", Nspw);
 
-    PyObject *ret = Py_BuildValue("i", 0);
+    PyObject *ret = Py_BuildValue("i", Nspw);
     return ret;
 }
 
@@ -719,25 +688,27 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
         fflush(stdout);
         return NULL;
     }
-    //  printf("\n     setNCPU %i\n\n",i);
+    printf("\ninside uvmod.setNCPU: %i\n",i);
 
-    printf("Preparing memory for %i workers\n",i);
-    for (j = 0; j < NCPU; j++) {
-        delete[] worker[j].t0;
-        delete[] worker[j].t1;
-    }
+    // printf("Preparing memory for %i workers\n", i);
+    // for (j = 0; j < NCPU; j++) {
+    // delete[] worker[j].t0;
+    // delete[] worker[j].t1;
+    // }
 
-    if (NCPU > 0) {
-        delete[] worker;
-        delete[] mod.Chi2;
-        delete[] mod.WorkHess;
-        delete[] mod.WorkGrad;
-    }
+    // if (NCPU > 0) {
+    //     // delete[] worker;
+    //     // delete[] mod.Chi2;
+    //     // delete[] mod.WorkHess;
+    //     // delete[] mod.WorkGrad;
+    // }
 
-    worker = new SHARED_DATA[i];
+    worker.resize(i);
+    // printf("Preparing workers for %i spectral windows\n", Nspw);
     for (k = 0; k < i; k++) {
-        worker[k].t0 = new int[Nspw];
-        worker[k].t1 = new int[Nspw];
+        if (Nspw <= 0) Nspw = 1;
+        worker[k].t0.resize(Nspw);
+        worker[k].t1.resize(Nspw);
         worker[k].Iam = k;
     }
 
@@ -755,13 +726,16 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
         }
     }
 
-    mod.WorkHess = new double*[i];
-    mod.WorkGrad = new double*[i];
-    mod.Chi2 = new double[i];
-
+    mod.WorkHess.resize(i);
+    mod.WorkGrad.resize(i);
+    mod.Chi2.resize(i);
+    // for (int j = 0; j < i; j++) {
+    //     mod.WorkHess[j] = NULL;
+    //     mod.WorkGrad[j] = NULL;
+    // }
     NCPU = i;
 
-    PyObject *ret = Py_BuildValue("i", 0);
+    PyObject *ret = Py_BuildValue("i", NCPU);
     return ret;
 }
 
@@ -770,6 +744,7 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
 //                    and IF is the IF number (setNspw must be run first!)
 static PyObject *setData(PyObject *self, PyObject *args)
 {
+    // PyObject *obj;
     PyObject *pu, *pv, *pw, *pwgt, *preal, *poreal, *tArr, *tIdx;
     PyObject *pfreqs, *pfittable, *ant1l, *ant2l;
     PyObject *pwgtcorr, *dtime, *RAoffset, *Decoffset, *Stretchoff, *iG;
@@ -783,49 +758,65 @@ static PyObject *setData(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    /* Interprete the input objects as numpy arrays. */
-    //  printf("\n     setData. Ants: %i \n\n",Nants);
-    //  if (IF == 0) {clearData();}
-    vis.ants[0][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant1l, NPY_INT, NPY_IN_ARRAY));
-    vis.ants[1][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant2l, NPY_INT, NPY_IN_ARRAY));
+    printf("\ninside uvmod.setData: IF: %i, Ants: %i\n", IF, Nants);
 
-    vis.dtArray[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(tArr, NPY_DOUBLE, NPY_IN_ARRAY));
-    vis.dtIndex[IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(tIdx, NPY_INT, NPY_IN_ARRAY));
+    show_info("pu", pu);
+    show_info("pv", pv);
+    show_info("pw", pw);
 
     vis.uv[0][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pu, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.uv[1][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pv, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.uv[2][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pw, NPY_DOUBLE, NPY_IN_ARRAY));
 
+    show_info("pwgt", pwgt);
+    show_info("pwgtcorr", pwgtcorr);
     vis.wgt[0][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pwgt, NPY_DOUBLE, NPY_IN_ARRAY));
-
-    vis.ObsVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(preal, NPY_COMPLEX128, NPY_IN_ARRAY));
-
-    mod.ModVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(poreal, NPY_COMPLEX128, NPY_IN_ARRAY));
-
-    vis.freqs[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pfreqs, NPY_DOUBLE, NPY_IN_ARRAY));
-
-    vis.fittable[IF] = (char *)PyArray_DATA(PyArray_FROM_OTF(pfittable, NPY_INT8, NPY_IN_ARRAY));
     vis.wgt[1][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pwgtcorr, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    vis.isGain[IF] = (char *)PyArray_DATA(PyArray_FROM_OTF(iG, NPY_INT8, NPY_IN_ARRAY));
+    show_info("preal", preal);
+    show_info("poreal", poreal);
+    vis.ObsVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(preal, NPY_COMPLEX128, NPY_IN_ARRAY));
+    mod.ModVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(poreal, NPY_COMPLEX128, NPY_IN_ARRAY));
 
+    show_info("pfreqs", pfreqs);
+    vis.freqs[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pfreqs, NPY_DOUBLE, NPY_IN_ARRAY));
+
+    show_info("pfittable", pfittable);
+    vis.fittable[IF] = (int8_t *)PyArray_DATA(PyArray_FROM_OTF(pfittable, NPY_INT8, NPY_IN_ARRAY));
+
+    show_info("dtime", dtime);
     vis.dt[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(dtime, NPY_DOUBLE, NPY_IN_ARRAY));
 
+    show_info("tArr", tArr);
+    vis.dtArray[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(tArr, NPY_DOUBLE, NPY_IN_ARRAY));
+
+    show_info("tIdx", tIdx);
+    vis.dtIndex[IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(tIdx, NPY_INT, NPY_IN_ARRAY));
+
+    show_info("RAoffset", RAoffset);
+    show_info("Decoffset", Decoffset);
+    show_info("Stretchoff", Stretchoff);
     vis.RAshift[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(RAoffset, NPY_DOUBLE, NPY_IN_ARRAY));
-
     vis.Decshift[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(Decoffset, NPY_DOUBLE, NPY_IN_ARRAY));
-
     vis.Stretch[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(Stretchoff, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    vis.nt[IF] = PyArray_DIM(preal,0);
-    vis.nnu[IF] = PyArray_DIM(preal,1);
+    show_info("ant1l", ant1l);
+    show_info("ant2l", ant2l);
+    vis.ants[0][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant1l, NPY_INT, NPY_IN_ARRAY));
+    vis.ants[1][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant2l, NPY_INT, NPY_IN_ARRAY));
+
+    show_info("iG", iG);
+    vis.isGain[IF] = (int8_t *)PyArray_DATA(PyArray_FROM_OTF(iG, NPY_INT8, NPY_IN_ARRAY));
+
+    vis.nt[IF] = PyArray_DIM(preal, 0);
+    vis.nnu[IF] = PyArray_DIM(preal, 1);
 
     if (vis.nnu[IF] > maxnchan) {
         maxnchan = vis.nnu[IF];
     }
+    printf("inside uvmod.setData: vis.nnu[%d]: %i (maxchan = %i)\n", IF, vis.nnu[IF], maxnchan);
 
-    PyObject *ret = Py_BuildValue("i", 10);
-    return ret;
+    Py_RETURN_TRUE;
 }
 
 // Fill-in the MODEL arrays
@@ -837,25 +828,28 @@ PyObject *setModel(PyObject *self, PyObject *args)
 
     int i, j, IF,isFixed, isMixed;
 
-    if (!PyArg_ParseTuple(args, "OOOOOOOOOOOii", &modArr, &HessArr, &GradArr, &VarArr, &FixArr, &dparArr,
-                          &propRA, &propDec, &refpos, &parDep, &aG,&isFixed, &isMixed)) {
+    if (!PyArg_ParseTuple(args, "OOOOOOOOOOOii", &modArr, &HessArr, &GradArr,
+                          &VarArr, &FixArr, &dparArr,
+                          &propRA, &propDec, &refpos,
+                          &parDep, &aG,&isFixed, &isMixed)) {
         printf("FAILED setModel!\n");
         fflush(stdout);
         return NULL;
     }
+    printf("\ninside uvmod.setModel: isFixed: %i, isMixed: %i\n", isFixed, isMixed);
 
-    //  printf("\n     setModel \n\n");
-    //  delete[] Hessian;
-    //  delete[] models;
-    //  delete[] Gradient;
-    //  delete[] dpar;
-    //  delete[] muRA;
-    //  delete[] muDec;
-    clearModel();
     isModel = true;
 
-    compFixed = isFixed==1;
-    MixedG = isMixed==1;
+    compFixed = isFixed == 1;
+    MixedG = isMixed == 1;
+
+    show_info("modArr", modArr);
+    show_info("HessArr", HessArr);
+    show_info("GradArr", GradArr);
+    show_info("dparArr", dparArr);
+    show_info("propRA", propRA);
+    show_info("propDec", propDec);
+    show_info("refpos", refpos);
 
     mod.models = (int *)PyArray_DATA(PyArray_FROM_OTF(modArr, NPY_INT32, NPY_IN_ARRAY));
     mod.Hessian = (double *)PyArray_DATA(PyArray_FROM_OTF(HessArr, NPY_DOUBLE, NPY_IN_ARRAY));
@@ -863,40 +857,43 @@ PyObject *setModel(PyObject *self, PyObject *args)
     mod.dpar = (double *)PyArray_DATA(PyArray_FROM_OTF(dparArr, NPY_DOUBLE, NPY_IN_ARRAY));
     mod.muRA = (double *)PyArray_DATA(PyArray_FROM_OTF(propRA, NPY_DOUBLE, NPY_IN_ARRAY));
     mod.muDec = (double *)PyArray_DATA(PyArray_FROM_OTF(propDec, NPY_DOUBLE, NPY_IN_ARRAY));
-    vis.phaseCenter = (double *)PyArray_DATA(PyArray_FROM_OTF(refpos, NPY_DOUBLE, NPY_IN_ARRAY));
 
+    vis.phaseCenter = (double *)PyArray_DATA(PyArray_FROM_OTF(refpos, NPY_DOUBLE, NPY_IN_ARRAY));
     cosDecRef = cos(vis.phaseCenter[1]);
     sinDecRef = sin(vis.phaseCenter[1]);
 
-    ncomp = PyArray_DIM(modArr,0);
-    npar = PyArray_DIM(GradArr,0);
-    Nants = (int) PyList_Size(parDep);
+    ncomp = PyArray_DIM(modArr, 0);
+    npar = PyArray_DIM(GradArr, 0);
+    Nants = (int)PyList_Size(parDep);
+    printf("Nants = %d\n", Nants);
 
-    mod.nparAnt = new int[Nants];
-    mod.parAnt = new int*[Nants];
+    mod.nparAnt.resize(Nants);
+    mod.parAnt.resize(Nants);
 
     for (i = 0; i < Nants; i++) {
-        mod.nparAnt[i] = PyArray_DIM(PyList_GetItem(parDep,i),0);
-        mod.parAnt[i] = (int *)PyArray_DATA(PyArray_FROM_OTF(PyList_GetItem(parDep,i), NPY_INT32, NPY_IN_ARRAY));
+        mod.nparAnt[i] = PyArray_DIM(PyList_GetItem(parDep, i), 0);
+        mod.parAnt[i] = (int *)PyArray_DATA(PyArray_FROM_OTF(PyList_GetItem(parDep, i), NPY_INT32, NPY_IN_ARRAY));
     }
 
     for (IF = 0; IF < Nspw; IF++) {
-        mod.Gain[IF] = new cplx64**[Nants];
+        mod.Gain[IF].resize(Nants);
         for (j = 0; j < Nants; j++) {
-            mod.Gain[IF][j] = new cplx64*[mod.nparAnt[j]];
+            mod.Gain[IF][j].resize(mod.nparAnt[j]);
             for (i = 0; i < mod.nparAnt[j]; i++) {
                 tempArr = PyList_GetItem(PyList_GetItem(PyList_GetItem(aG, IF), j), i);
+                // vsize = PyArray_SIZE(tempArr);
                 mod.Gain[IF][j][i] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(tempArr, NPY_COMPLEX128, NPY_IN_ARRAY));
             }
         }
     }
 
-    HankelOrder = PyArray_DIM(PyList_GetItem(VarArr,0),1)-NparMax;
+    HankelOrder = PyArray_DIM(PyList_GetItem(VarArr, 0), 1) - NparMax;
+    printf("parameters: %d %d %d\n", HankelOrder, NparMax, npar);
 
     // delete[] mod.vars;
     // delete[] mod.fixp;
-    mod.vars = new double*[(npar+1)];
-    mod.fixp = new double*[(npar+1)];
+    mod.vars.resize(npar+1);
+    mod.fixp.resize(npar+1);
 
     for (i = 0; i < (npar+1); i++) {
         tempArr = PyList_GetItem(VarArr, i);
@@ -908,8 +905,7 @@ PyObject *setModel(PyObject *self, PyObject *args)
         mod.fixp[i] = (double *)PyArray_DATA(PyArray_FROM_OTF(tempArr, NPY_DOUBLE, NPY_IN_ARRAY));
     }
 
-    PyObject *ret = Py_BuildValue("i", 10);
-    return ret;
+    Py_RETURN_TRUE;
 }
 
 // Allocate memory for the workers.
@@ -919,8 +915,8 @@ static PyObject *setWork(PyObject *self, PyObject *args)
 {
     int i;
     for (i = 0; i < NCPU; i++) {
-        mod.WorkHess[i] = new double[npar*npar];
-        mod.WorkGrad[i] = new double[npar];
+        mod.WorkHess[i].resize(npar*npar);
+        mod.WorkGrad[i].resize(npar);
     }
     //   printf("\n     setWork %i\n\n",NCPU);
 
@@ -931,20 +927,20 @@ static PyObject *setWork(PyObject *self, PyObject *args)
 // Deallocate the memory allocated with setWork.
 // USAGE FROM PYTHON: unsetWork() with no arguments.
 //                    (obviously, setWork must be run first!)
-static PyObject *unsetWork(PyObject *self, PyObject *args)
-{
-    int i;
-    printf("\n UNSET WORK! %i\n", NCPU);
-    for (i = 0; i < NCPU; i++) {
-        delete mod.WorkHess[i];
-        delete mod.WorkGrad[i];
-    }
+// static PyObject *unsetWork(PyObject *self, PyObject *args)
+// {
+//     // int i;
+//     printf("\n UNSET WORK! %i\n", NCPU);
+//     // for (i = 0; i < NCPU; i++) {
+//     //     if (mod.WorkHess[i]) delete mod.WorkHess[i];
+//     //     if (mod.WorkGrad[i]) delete mod.WorkGrad[i];
+//     // }
 
-    // delete WorkHess;
-    // delete WorkGrad;
-    PyObject *ret = Py_BuildValue("i", 10);
-    return ret;
-}
+//     // delete WorkHess;
+//     // delete WorkGrad;
+//     PyObject *ret = Py_BuildValue("i", 10);
+//     return ret;
+// }
 
 /* Main Python function. It spreads the work through the workers */
 // USAGE FROM PYTHON: modelcomp(IF, nui, opts) (see Python code for info).
@@ -961,6 +957,7 @@ static PyObject *modelcomp(PyObject *self, PyObject *args)
         fflush(stdout);
         return NULL;
     }
+    printf("\ninside uvmod.modelcomp: IF: %i nui: %i mode: %i\n", cIF, nui, mode);
 
     // Zero the workers memory:
     for (i = 0; i < NCPU; i++) {
@@ -1036,8 +1033,9 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
     }
 
     QuinnFringe *FringeFit = new QuinnFringe(Nants, vis.nt[IFFit], vis.nnu[IFFit],
-                                             vis.ObsVis[IFFit], mod.ModVis[IFFit],vis.ants[0][IFFit],
-                                             vis.ants[1][IFFit], vis.dt[IFFit],vis.fittable[IFFit],
+                                             vis.ObsVis[IFFit], mod.ModVis[IFFit],
+                                             vis.ants[0][IFFit], vis.ants[1][IFFit],
+                                             vis.dt[IFFit],vis.fittable[IFFit],
                                              vis.freqs[IFFit],vis.wgt[0][IFFit]);
     int result = FringeFit->GFF(refant, doGlobal, doModel);
     if (result != 0) {
@@ -1072,7 +1070,7 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
 
     //printf("\n Ant 1: %.4e %.4e %.4e\n", Rates[0], Delays[0], Phases[0]);
     ret = Py_BuildValue("[O,O,O,d,d]", PyDelay, PyRate, PyPhase, Bins[0], Bins[1]);
-    delete FringeFit;
+    if (FringeFit) delete FringeFit;
 #else
     printf("\n QUINN FITTER NOT INSTALLED!");
     ret = Py_BuildValue("i", -1);
