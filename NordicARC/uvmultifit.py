@@ -1579,9 +1579,9 @@ class uvmultifit():
 
         for vi, v in enumerate(self.vis):
             if len(self.scans[vi]) > 0:
-                goodscid = filter(lambda x: x in self.sourscans[vi], self.scans[vi])
+                goodscid = [x for x in self.scans[vi] if x in self.sourscans[vi]]
                 if len(goodscid) != len(self.scans[vi]):
-                    badscid = filter(lambda x: x not in self.sourscans[vi], self.scans[vi])
+                    badscid = [x for x in self.scans[vi] if x not in self.sourscans[vi]]
                     msg = '\n ERROR! The following scans do NOT correspond to source %s:\n' % (str(self.field))
                     msg += str(badscid)
                     self._printError(msg)
