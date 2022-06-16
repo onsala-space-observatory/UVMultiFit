@@ -48,6 +48,12 @@ def test_uvmultifit_select_model(uwm, model):
     assert uwm.var == ['p[0], p[1], p[2]']
     assert len(uwm.model) == 1 and uwm.model[0] == model[0]
 
+def test_checkInputs(uwm, vis, model, modvars, initial, modeler):
+    uwm.select_data(vis)
+    uwm.select_model(model, modvars, initial)
+    uwm.mymodel = modeler
+    assert uwm.checkInputs() is True
+
 def test_readData(uwm, vis, model, modvars, initial, modeler):
     uwm.select_data(vis)
     uwm.select_model(model, modvars, initial)
@@ -79,8 +85,3 @@ def test_initData(uwm, vis, model, modvars, initial, modeler):
 ###                    [{}, {}, {}, {}, {}, {}], False)
 ###     modeler._compileAllModels()
 ###     assert 1 == 1
-
-#def test_check_inputs(uwf, vis):
-#    uwf.select_data(vis)
-#    uwf.select_model()
-#    assert uwf.checkInputs is True
