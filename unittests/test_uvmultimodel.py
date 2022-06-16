@@ -22,25 +22,25 @@ class TestUVMultiModel(unittest.TestCase):
     def test_clearPointers(self):
         # test clearPointers with argument 2
         result = uvmod.clearPointers(2)
-        # we expect 0 back
+        # we expect 2 back
         self.assertEqual(result, 2)
 
-    def test_clearData(self):
-        # we can clear data by calling clearPointers with argument 0
-        result = uvmod.clearPointers(0)
-        # we expect 0 back
-        self.assertEqual(result, 0)
-
-    def test_clearModel(self):
-        # we can clear model by calling clearPointers with argument 1
-        result = uvmod.clearPointers(1)
-        # we expect 0 back
-        self.assertEqual(result, 1)
+    # def test_clearData(self):
+    #     # we can clear data by calling clearPointers with argument 0
+    #     result = uvmod.clearPointers(0)
+    #     # we expect 0 back
+    #     self.assertEqual(result, 0)
+    #
+    # def test_clearModel(self):
+    #     # we can clear model by calling clearPointers with argument 1
+    #     result = uvmod.clearPointers(1)
+    #     # we expect 0 back
+    #     self.assertEqual(result, 1)
 
     def test_setNspw(self):
         # function takes one integer
         result = uvmod.setNspw(10)
-        # we expect 0 back
+        # we expect 10 back
         self.assertEqual(result, 10)
 
 #     def test_modelcomp(self):
