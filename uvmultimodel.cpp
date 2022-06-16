@@ -68,11 +68,36 @@ void show_info(const char *var, PyObject *obj)
 {
     if (obj == NULL) return;
 
+    // NPY_BOOL: 0
+    // NPY_INT16: 3
+    // NPY_INT32: 5
+    // NPY_INT64: 7
+    // NPY_UINT16: 4
+    // NPY_UINT32: 6
+    // NPY_UINT64: 8
+    // NPY_FLOAT32: 11
+    // NPY_FLOAT64: 12
+    // NPY_COMPLEX64: 14
+    // NPY_COMPLEX128: 15
+
+    // std::cout << "NPY_BOOL: " << NPY_BOOL << std::endl;
+    // std::cout << "NPY_INT: " << NPY_INT << std::endl;
+    // std::cout << "NPY_INT16: " << NPY_INT16 << std::endl;
+    // std::cout << "NPY_INT32: " << NPY_INT32 << std::endl;
+    // std::cout << "NPY_INT64: " << NPY_INT64 << std::endl;
+    // std::cout << "NPY_UINT16: " << NPY_UINT16 << std::endl;
+    // std::cout << "NPY_UINT32: " << NPY_UINT32 << std::endl;
+    // std::cout << "NPY_UINT64: " << NPY_UINT64 << std::endl;
+    // std::cout << "NPY_FLOAT32: " << NPY_FLOAT32 << std::endl;
+    // std::cout << "NPY_FLOAT64: " << NPY_FLOAT64 << std::endl;
+    // std::cout << "NPY_COMPLEX64: " << NPY_COMPLEX64 << std::endl;
+    // std::cout << "NPY_COMPLEX128: " << NPY_COMPLEX128 << std::endl;
+
     int ndim = PyArray_NDIM((PyArrayObject *)obj);
     int type = PyArray_TYPE((PyArrayObject *)obj);
     int size = PyArray_SIZE((PyArrayObject *)obj);
 
-    std::cout << "'" << std::setw(8) << var
+    std::cout << "'" << std::setw(10) << var
               << "' " << "is an array (" << PyArray_CheckExact(obj) << "):"
               << " of type " << std::setw(2) << type
               << " and dimension " << ndim;

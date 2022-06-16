@@ -787,12 +787,13 @@ class uvmultifit():
 
     def __del__(self):
         # Delete the model first, so that C++ has green light to free pointers:
-        del self.mymodel
-
-        # Clear all data and C++ pointers:
-        self._deleteData(delmodel=False)
-        uvmod.clearPointers(0)
-        uvmod.clearPointers(1)
+        ### del self.mymodel
+        ###
+        ### # Clear all data and C++ pointers:
+        ### self._deleteData(delmodel=False)
+        ### uvmod.clearPointers(0)
+        ### uvmod.clearPointers(1)
+        pass
 
     ############################################
     #
@@ -930,16 +931,18 @@ class uvmultifit():
         self.column = column
         self.field = field
         self.scans = scans
-        pass
 
     def select_model(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
-                     bounds=None, OneFitPerChannel=False, write='residuals'):
+                     bounds=None, OneFitPerChannel=False):
+        print(model)
+        print(var)
+        print(type(var))
+        print(p_ini)
         self.model = model
         self.var = var
         self.p_ini = p_ini
         self.bounds = bounds
         self.OneFitPerChannel = OneFitPerChannel
-        pass
 
     ############################################
     #
@@ -1143,6 +1146,8 @@ class uvmultifit():
         else:
             self.model = list(self.model)
 
+        print(type(self.var))
+        print(self.var)
         if isinstance(self.var, str):
             self.var = list([self.var])
         else:
@@ -2246,19 +2251,19 @@ from the pointing direction.\n\n""")
             if self.takeModel:
                 self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0), requirements=['C', 'A'])
 
-            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0), requirements=['C', 'A'])
-            self.u[si] = np.require(np.concatenate(uscan, axis=0), requirements=['C', 'A'])
-            self.v[si] = np.require(np.concatenate(vscan, axis=0), requirements=['C', 'A'])
-            self.w[si] = np.require(np.concatenate(wscan, axis=0), requirements=['C', 'A'])
-            self.t[si] = np.require(np.concatenate(tscan, axis=0), requirements=['C', 'A'])
-            self.tArr[si] = np.require(np.concatenate(tArray, axis=0), requirements=['C', 'A'])
-            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0), requirements=['C', 'A'])
+            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.u[si] = np.require(np.concatenate(uscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.v[si] = np.require(np.concatenate(vscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.w[si] = np.require(np.concatenate(wscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.t[si] = np.require(np.concatenate(tscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.tArr[si] = np.require(np.concatenate(tArray, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0), dtype=np.int32, requirements=['C', 'A'])
 
-            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0), requirements=['C', 'A'])
-            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0), requirements=['C', 'A'])
-            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0), requirements=['C', 'A'])
-            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0), requirements=['C', 'A'])
-            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0), requirements=['C', 'A'])
+            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
+            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0), dtype=np.int32, requirements=['C', 'A'])
+            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0), dtype=np.int32, requirements=['C', 'A'])
 
             # Free some memory:
             #   del uu, vv, ww, avercomplflat, weightflat
@@ -2333,7 +2338,7 @@ from the pointing direction.\n\n""")
         #  self.clearPointers(0)
 
         # Set pointers to data, model, etc.:
-        self.initData(del_data=del_data)
+        # self.initData(del_data=del_data)
         print("DEBUG >> leaving readData")
 
         return True
@@ -2392,8 +2397,9 @@ from the pointing direction.\n\n""")
 
         # Set number of spectral windows:
         gooduvm = uvmod.setNspw(int(self.Nspw))
+        print("gooduvm, Nspw:", gooduvm, self.Nspw)
 
-        if gooduvm != 0:
+        if gooduvm != self.Nspw:
             self._printError("\nError in the C++ extension!\n")
             return False
 
@@ -2478,6 +2484,27 @@ from the pointing direction.\n\n""")
             self.mymodel.fittablebool[-1] = np.require(np.copy(self.mymodel.fittable[-1]
                                                                ).astype(np.bool), requirements=['C', 'A'])
 
+            print("calling setData")
+            print(f"spidx: {spidx}")
+            print(f"self.mymodel.uv[-1][0]: {self.mymodel.uv[-1][0]}")
+            print(f"self.mymodel.uv[-1][1]: {self.mymodel.uv[-1][1]}")
+            print(f"self.mymodel.uv[-1][2]: {self.mymodel.uv[-1][2]}")
+            print(f"self.mymodel.wgt[-1]: {self.mymodel.wgt[-1]}")
+            print(f"self.mymodel.data[-1]: {self.mymodel.data[-1]}")
+            print(f"self.mymodel.output[-1]: {self.mymodel.output[-1]}")
+            print(f"self.mymodel.freqs[-1]: {self.mymodel.freqs[-1]}")
+            print(f"self.mymodel.fittable[-1]: {self.mymodel.fittable[-1]}")
+            print(f"self.mymodel.wgtcorr[-1]: {self.mymodel.wgtcorr[-1]}")
+            print(f"self.mymodel.dt[-1]: {self.mymodel.dt[-1]}")
+            print(f"self.mymodel.dtArr[-1]: {self.mymodel.dtArr[-1]}")
+            print(f"self.mymodel.dtIdx[-1]: {self.mymodel.dtIdx[-1]}")
+            print(f"self.mymodel.offset[-1][0]: {self.mymodel.offset[-1][0]}")
+            print(f"self.mymodel.offset[-1][1]: {self.mymodel.offset[-1][1]}")
+            print(f"self.mymodel.offset[-1][2]: {self.mymodel.offset[-1][2]}")
+            print(f"self.mymodel.ants[-1][0]: {self.mymodel.ants[-1][0]}")
+            print(f"self.mymodel.ants[-1][1]: {self.mymodel.ants[-1][1]}")
+            print(f"self.mymodel.isGain[-1]: {self.mymodel.isGain[-1]}")
+            print(f"self.mymodel.Nants: {self.mymodel.Nants}")
             gooduvm = uvmod.setData(spidx, self.mymodel.uv[-1][0], self.mymodel.uv[-1][1], self.mymodel.uv[-1][2],
                                     self.mymodel.wgt[-1], self.mymodel.data[-1],
                                     self.mymodel.output[-1], self.mymodel.freqs[-1],
@@ -2488,17 +2515,18 @@ from the pointing direction.\n\n""")
                                     self.mymodel.isGain[-1], self.Nants)
             print(f"DEBUG >> gooduvm = {gooduvm}")
 
-            if not gooduvm:
-                self._printError("\nError in the C++ extension!\n")
-                return False
-
-        try:
-            for spidx in range(self.Nspw - 1, -1, -1):
-                del self.avermod[spidx]
-        except Exception:
-            pass
-        gc.collect()
+###             if not gooduvm:
+###                 self._printError("\nError in the C++ extension!\n")
+###                 return False
+###
+###         try:
+###             for spidx in range(self.Nspw - 1, -1, -1):
+###                 del self.avermod[spidx]
+###         except Exception:
+###             pass
+###         gc.collect()
         print("DEBUG >> leaving initData")
+        return True
 
     ############################################
     #
@@ -3388,6 +3416,8 @@ class modeler():
         self.varfunc = [0.0 for component in self.model]
 
         for ii, component in enumerate(self.model):
+            print(ii, component, self.var[ii])
+            print(self.freqs)
             tempstr = self.var[ii].replace(
                 'LorentzLine(', 'self.LorentLine(nu,').replace(
                     'GaussLine(', 'self.GaussLine(nu, ').replace(

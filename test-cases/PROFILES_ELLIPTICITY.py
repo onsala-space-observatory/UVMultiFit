@@ -28,7 +28,7 @@ for line in src.readlines():
 aux.close()
 src.close()
 os.system("%s -c aux.py" % casaexe)
-os.system("rm *.log *.last aux.py")
+# os.system("rm *.log *.last aux.py")
 
 tac = time.time()
 print("\n THE TEST LASTED %.1f SECONDS.\n\n" % (tac-tic))
