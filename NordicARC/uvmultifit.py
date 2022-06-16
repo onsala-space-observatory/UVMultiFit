@@ -747,7 +747,7 @@ class uvmultifit():
     #
     #  FREE MEMORY
     #
-    def _deleteData(self, delmodel=True):
+    def deleteData(self, delmodel=True):
         """Delete pointers to the data.
         Hopefully, this will release memory when gc.collect() is run."""
 
@@ -786,16 +786,16 @@ class uvmultifit():
         del self.ant1, self.ant2, self.RAshift, self.Decshift, self.Stretch
 
         if delmodel:
-            self.mymodel._deleteData()
+            self.mymodel.deleteData()
 
     def __del__(self):
         # Delete the model first, so that C++ has green light to free pointers:
-        ### del self.mymodel
-        ###
-        ### # Clear all data and C++ pointers:
-        ### self._deleteData(delmodel=False)
-        ### uvmod.clearPointers(0)
-        ### uvmod.clearPointers(1)
+        # del self.mymodel
+        #
+        # # Clear all data and C++ pointers:
+        # self.deleteData(delmodel=False)
+        # uvmod.clearPointers(0)
+        # uvmod.clearPointers(1)
         pass
 
     ############################################
@@ -1095,7 +1095,7 @@ class uvmultifit():
         self.logger.debug("uvmultifit::writeModel")
         self._printWarning("writing to mosaics is experimental and may not work!\n")
 
-        for vi, v in enumerate(self.vis):
+        for v in self.vis:
             # Get the columns of parallel-hand correlations:
             success = ms.open(v)
             if not success:
@@ -1370,10 +1370,8 @@ class uvmultifit():
 
         # The fixed model should contain CONSTANT variables:
         for fcomp in self.fixedvar:
-            for pi, param in enumerate(fcomp.split(',')):
-                try:
-                    temp = float(param)
-                except ValueError:
+            for param in fcomp.split(','):
+                if not isinstance(param, float):
                     self._printError("Fixed variables must be a list of floats (or strings representing floats)!")
                     return False
 
@@ -1642,16 +1640,16 @@ class uvmultifit():
                 for fieldid in info[key].keys():
                     myfield = info[key][fieldid]['FieldId']
                     if myfield in self.field_id[vi]:
-                        fi = self.field_id[vi].index(myfield)
+                        # fi = self.field_id[vi].index(myfield)
                         self.pointing[-1].append(phasedirs[vi][myfield])
 
             self.pointing[-1] = np.array(self.pointing[-1])
 
         for vi, v in enumerate(self.vis):
             if len(self.scans[vi]) > 0:
-                goodscid = filter(lambda x: x in self.sourscans[vi], self.scans[vi])
+                goodscid = [x for x in self.scans[vi] if x in self.sourscans[vi]]
                 if len(goodscid) != len(self.scans[vi]):
-                    badscid = filter(lambda x: x not in self.sourscans[vi], self.scans[vi])
+                    badscid = [x for x in self.scans[vi] if x not in self.sourscans[vi]]
                     msg = 'the following scans do NOT correspond to source %s: ' % (str(self.field))
                     msg += str(badscid)
                     self._printError(msg)
@@ -1675,7 +1673,7 @@ class uvmultifit():
                 self._printError("Failed to open measurement set '+v+'!")
                 return False
 
-            freqdic = ms.getspectralwindowinfo()
+            # freqdic = ms.getspectralwindowinfo()
             spwchans = ms.range(['num_chan'])['num_chan']
 
             aux = channeler(self.spw[j], width=self.chanwidth, maxchans=spwchans)
@@ -1905,7 +1903,7 @@ from the pointing direction.\n""")
         tic = time.time()
 
         if del_data:  # data_changed:
-            self._deleteData()
+            self.deleteData()
             #    self.clearPointers(0)
             #    self.clearPointers(1)
 
@@ -1932,7 +1930,7 @@ from the pointing direction.\n""")
         self.averfreqs = [[] for sp in nsprang]
         self.iscancoords = [[] for sp in nsprang]
 
-        maxDist = 0.0
+        # maxDist = 0.0
 
         # Read data for each spectral window:
         self.iscan = {}
@@ -1961,8 +1959,7 @@ from the pointing direction.\n""")
             i0scan = 0
 
             # BEWARE! was sp
-            for vidx, vis in enumerate(filter(lambda x: x[3] <= si, self.spwlist)):
-
+            for vis in [x for x in self.spwlist if x[3] <= si]:
                 msname = self.vis[vis[1]]
 
                 self._printInfo("Opening measurement set " + msname + ".\n")
@@ -1996,12 +1993,12 @@ from the pointing direction.\n""")
 
                         # For the first ms in the list, read the frequencies of the spw.
                         # All the other mss will be assumed to have the same frequencies:
-                        if True:
-                            tb.open(os.path.join(msname, 'SPECTRAL_WINDOW'))
-                            origfreqs = tb.getcol('CHAN_FREQ')
-                            self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
-                            nfreq = len(rang)
-                            tb.close()
+                        # if True:
+                        tb.open(os.path.join(msname, 'SPECTRAL_WINDOW'))
+                        origfreqs = tb.getcol('CHAN_FREQ')
+                        self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
+                        nfreq = len(rang)
+                        tb.close()
                         self._printInfo("Reading scans for spw %i \n" % sp)
 
                         # Read all scans for this field id:
@@ -2128,9 +2125,9 @@ from the pointing direction.\n""")
                                             (phshift[0] / 15., phshift[1]))
 
                                     # Average spectral channels:
-                                    nchannel, ndata = np.shape(datamask)
-                                    ntimes = len(times)
-                                    ntav = int(max([1, round(float(ntimes) / self.timewidth)]))
+                                    _, ndata = np.shape(datamask)
+                                    # ntimes = len(times)
+                                    # ntav = int(max([1, round(float(ntimes) / self.timewidth)]))
                                     datatemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
                                     if self.takeModel:
                                         modeltemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
@@ -2154,7 +2151,7 @@ from the pointing direction.\n""")
                                             weighttemp[nu, :] = weightmask
 
                                     # Average in time and apply uvtaper:
-                                    GaussWidth = 2. * (self.uvtaper / 1.17741)**2.
+                                    # GaussWidth = 2. * (self.uvtaper / 1.17741)**2.
                                     RAoffi = np.zeros(np.shape(uvscan['time']))
                                     Decoffi = np.copy(RAoffi)
                                     Stretchi = np.copy(RAoffi)
@@ -2263,21 +2260,33 @@ from the pointing direction.\n""")
                                            requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
 
             if self.takeModel:
-                self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0), requirements=['C', 'A'])
+                self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0),
+                                              requirements=['C', 'A'])
 
-            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.u[si] = np.require(np.concatenate(uscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.v[si] = np.require(np.concatenate(vscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.w[si] = np.require(np.concatenate(wscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.t[si] = np.require(np.concatenate(tscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.tArr[si] = np.require(np.concatenate(tArray, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0), dtype=np.int32, requirements=['C', 'A'])
-
-            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0), dtype=np.float64, requirements=['C', 'A'])
-            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0), dtype=np.int32, requirements=['C', 'A'])
-            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0), dtype=np.int32, requirements=['C', 'A'])
+            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0),
+                                              dtype=np.float64, requirements=['C', 'A'])
+            self.u[si] = np.require(np.concatenate(uscan, axis=0),
+                                    dtype=np.float64, requirements=['C', 'A'])
+            self.v[si] = np.require(np.concatenate(vscan, axis=0),
+                                    dtype=np.float64, requirements=['C', 'A'])
+            self.w[si] = np.require(np.concatenate(wscan, axis=0),
+                                    dtype=np.float64, requirements=['C', 'A'])
+            self.t[si] = np.require(np.concatenate(tscan, axis=0),
+                                    dtype=np.float64, requirements=['C', 'A'])
+            self.tArr[si] = np.require(np.concatenate(tArray, axis=0),
+                                       dtype=np.float64, requirements=['C', 'A'])
+            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0),
+                                       dtype=np.int32, requirements=['C', 'A'])
+            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0),
+                                          dtype=np.float64, requirements=['C', 'A'])
+            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0),
+                                           dtype=np.float64, requirements=['C', 'A'])
+            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0),
+                                          dtype=np.float64, requirements=['C', 'A'])
+            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0),
+                                       dtype=np.int32, requirements=['C', 'A'])
+            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0),
+                                       dtype=np.int32, requirements=['C', 'A'])
 
             # Free some memory:
             #   del uu, vv, ww, avercomplflat, weightflat
@@ -2396,7 +2405,7 @@ from the pointing direction.\n""")
     #
     #  SET SOME DATA (AND MODEL) ARRAYS
     #
-    def initData(self, isUVfit=True, del_data=True):
+    def initData(self):
         """ Initiates the data pointers of the 'modeler' instance.
 
         The 'modeler' instance stores pointers to the data and metadata, the compiled model (and
@@ -2404,10 +2413,7 @@ from the pointing direction.\n""")
 
         self.logger.debug("uvmultifit::initData")
         # Reset pointers for the modeler:
-        self.mymodel._deleteData()
-
-        #  if del_data:  # data_changed:
-        #    self.clearPointers(0)
+        self.mymodel.deleteData()
 
         # Set number of spectral windows:
         gooduvm = uvmod.setNspw(int(self.Nspw))
@@ -2529,16 +2535,16 @@ from the pointing direction.\n""")
                                     self.mymodel.isGain[-1], self.Nants)
             print("gooduvm = ", gooduvm)
 
-###             if not gooduvm:
-###                 self._printError("Error in the C++ extension!\n")
-###                 return False
-###
-###         try:
-###             for spidx in range(self.Nspw - 1, -1, -1):
-###                 del self.avermod[spidx]
-###         except Exception:
-###             pass
-###         gc.collect()
+            # if not gooduvm:
+            #     self._printError("Error in the C++ extension!\n")
+            #     return False
+            #
+            # try:
+            #     for spidx in range(self.Nspw - 1, -1, -1):
+            #         del self.avermod[spidx]
+            # except Exception:
+            #     pass
+            # gc.collect()
         self.logger.debug("leaving initData")
         return True
 
@@ -2557,7 +2563,7 @@ from the pointing direction.\n""")
         self.logger.debug("uvmultifit::initModel")
         if self.mymodel.initiated:
             #     self.clearPointers(1)
-            self.mymodel._deleteModel()
+            self.mymodel.deleteModel()
         else:
             self._printInfo("UVMULTIFIT compiled model(s) do not seem to exist yet.\n")
 
@@ -2569,11 +2575,11 @@ from the pointing direction.\n""")
             return False
 
         # Initial setup modeler:
-        self.mymodel._setup(self.model, self.var, self.fixed, self.fixedvar, self.scalefix,
-                            self.NCPU, self.only_flux, self.applyHankel, self.isNumerical, self.useGains,
-                            [self.phase_gainsNuT, self.amp_gainsNuT, self.phase_gainsNu,
-                             self.amp_gainsNu, self.phase_gainsT, self.amp_gainsT],
-                            self.isMixed)
+        self.mymodel.setup(self.model, self.var, self.fixed, self.fixedvar, self.scalefix,
+                           self.NCPU, self.only_flux, self.applyHankel, self.isNumerical, self.useGains,
+                           [self.phase_gainsNuT, self.amp_gainsNuT, self.phase_gainsNu,
+                            self.amp_gainsNu, self.phase_gainsT, self.amp_gainsT],
+                           self.isMixed)
 
         if self.mymodel.failed:
             self._printError(self.mymodel.resultstring)
@@ -2602,7 +2608,7 @@ from the pointing direction.\n""")
 
         # Compile equations that set the model variables and gains:
         self._printInfo("Going to compile models\n")
-        self.mymodel._compileAllModels()
+        self.mymodel.compileAllModels()
 
         self.mymodel.GainBuffer = [[[] for AI in range(self.Nants)] for spidx in range(self.Nspw)]
 
@@ -2717,7 +2723,7 @@ from the pointing direction.\n""")
 
         # Check if there is data available:
             unflagged = np.sum(self.mymodel.wgt[si][self.mymodel.fittablebool[si], :] != 0.0, axis=0)
-            ntot = np.sum(self.mymodel.fittablebool[si])
+            # ntot = np.sum(self.mymodel.fittablebool[si])
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
                     self._printInfo(
@@ -2784,7 +2790,7 @@ from the pointing direction.\n""")
 
                         if self.method == 'simplex':
                             fitsimp = _mod_simplex(self.mymodel.ChiSquare, self.p_ini,
-                                                   args=(self.bounds, self.p_ini), disp=False,
+                                                   args=(self.bounds, self.p_ini),
                                                    relxtol=self.SMPtune[0], relstep=self.SMPtune[1],
                                                    maxiter=self.SMPtune[2] * len(self.p_ini))
                             fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
@@ -2795,11 +2801,11 @@ from the pointing direction.\n""")
                         # Estimate the parameter uncertainties and save the model in the output array:
                         if self.savemodel:
                             if self.write_model == 1:
-                                Chi2t = self.mymodel.residuals(fit[0], mode=-3)
+                                _ = self.mymodel.residuals(fit[0], mode=-3)
                             elif self.write_model == 2:
-                                Chi2t = self.mymodel.residuals(fit[0], mode=-4)
+                                _ = self.mymodel.residuals(fit[0], mode=-4)
                             elif self.write_model == 3:
-                                Chi2t = self.mymodel.residuals(fit[0], mode=-5)
+                                _ = self.mymodel.residuals(fit[0], mode=-5)
 
                     # DON'T FIT THIS CHANNEL (ALL DATA FLAGGED)
                     else:
@@ -2841,7 +2847,7 @@ from the pointing direction.\n""")
             # Pre-fit with simplex:
             if self.method == 'simplex':
                 fitsimp = _mod_simplex(self.mymodel.ChiSquare, self.p_ini,
-                                       args=(self.bounds, self.p_ini), disp=False, relxtol=self.SMPtune[0],
+                                       args=(self.bounds, self.p_ini), relxtol=self.SMPtune[0],
                                        relstep=self.SMPtune[1], maxiter=self.SMPtune[2] * len(self.p_ini))
                 fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
             else:
@@ -2854,11 +2860,11 @@ from the pointing direction.\n""")
             # Estimate the parameter uncertainties and save the model in the output array:
             if self.savemodel:
                 if self.write_model == 1:
-                    Chi2t = self.mymodel.residuals(fit[0], mode=-3)
+                    _ = self.mymodel.residuals(fit[0], mode=-3)
                 elif self.write_model == 2:
-                    Chi2t = self.mymodel.residuals(fit[0], mode=-4)
+                    _ = self.mymodel.residuals(fit[0], mode=-4)
                 elif self.write_model == 3:
-                    Chi2t = self.mymodel.residuals(fit[0], mode=-5)
+                    _ = self.mymodel.residuals(fit[0], mode=-5)
 
             fitparams = fit[0]
 
@@ -3021,14 +3027,14 @@ class modeler():
     #  FREE MEMORY
     #
     def __del__(self):
-        self._deleteData()
-        self._deleteModel()
+        self.deleteData()
+        self.deleteModel()
 
     ############################################
     #
     #  FREE MEMORY JUST FOR THE MODEL-RELATED DATA:
     #
-    def _deleteModel(self):
+    def deleteModel(self):
         """ Free pointers to the model-related arrays and parameters."""
 
         for mdi in range(len(self.varbuffer) - 1, -1, -1):  # [::-1]:
@@ -3049,7 +3055,7 @@ class modeler():
 
         del self.Hessian, self.Gradient, self.imod
 
-    def _deleteData(self):
+    def deleteData(self):
         """ Free pointers to the data-related arrays and gain buffers."""
 
         for mdi in range(len(self.data) - 1, -1, -1):  # [::-1]:
@@ -3140,8 +3146,8 @@ class modeler():
     #  CREATE INSTANCE
     #
     def __init__(self):
-        print("modeler::__init__")
         """ Just the constructor of the 'modeler' class."""
+        print("modeler::__init__")
         self.initiated = False
         self.addfixed = False
         self.expka = 2. * np.log(2.)
@@ -3208,6 +3214,7 @@ class modeler():
         self.strucvar = []
         KGaus = np.sqrt(1. / (4. * np.log(2.)))
         # Some useful functions:
+        self._compiledScaleFixed = lambda p, nu: 1.0 + 0.0
         self.LorentzLine = lambda nu, nu0, P, G: P * 0.25 * G * G / (np.power(nu - nu0, 2.) + (0.5 * G)**2.)
         self.GaussLine = lambda nu, nu0, P, G: P * np.exp(-np.power((nu - nu0) / (G * KGaus), 2.))
 
@@ -3221,14 +3228,13 @@ class modeler():
                            'bubble', 'expo', 'power-2', 'power-3', 'GaussianRing']
         self.resultstring = ''
 
-    def _setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder,
+    def setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder,
                isNumerical, useGains, gainFunction, isMixed):
         """ Setup the model components, fitting parameters, and gain functions. Compile the equations.
 
         Not to be called by the user."""
 
-        import numpy as np
-        print("modeler::_setup")
+        print("modeler::setup")
 
         # self.minnum = np.finfo(np.float64).eps  # Step for Jacobian computation
         self.propRA = np.zeros(len(model), dtype=np.float64)
@@ -3261,9 +3267,9 @@ class modeler():
     #  COMPILE AT RUNTIME
     #
     # Compile the functions to make p, nu -> var:
-    def _compileAllModels(self):
+    def compileAllModels(self):
         """ Compile all models (fixed, variable, and fixed-scale. Not to be called directly by the user. """
-        print("modeler::_compileAllModels")
+        print("modeler::compileAllModels")
         self.resultstring = ''
         self.failed = False
         self._compileModel()
@@ -3273,8 +3279,8 @@ class modeler():
 
     #  print self.gainFunction
     def _compileGains(self):
-        print("modeler::_compileGains")
         """ Compile the functions related to the antenna gains."""
+        print("modeler::_compileGains")
         if self.isMixed:
             self.phaseAntsFunc = [lambda t, nu, p: 0. for i in range(self.Nants)]
             self.ampAntsFunc = [lambda t, nu, p: 1. for i in range(self.Nants)]
@@ -3432,7 +3438,7 @@ class modeler():
             print(ii, component, self.var[ii])
             print(self.freqs)
             tempstr = self.var[ii].replace(
-                'LorentzLine(', 'self.LorentLine(nu,').replace(
+                'LorentzLine(', 'self.LorentLine(nu, ').replace(
                     'GaussLine(', 'self.GaussLine(nu, ').replace(
                         'nu0', '%.12f' % self.freqs[0][0])
 
@@ -3471,14 +3477,13 @@ class modeler():
             return
 
         # Define fixed model:
-        import numpy as np
         self.fixedvarfunc = [0.0 for component in self.fixed]
 
         self.ifixmod = np.zeros(len(self.fixed), dtype=np.int32)  # []
 
         for ii, component in enumerate(self.fixed):
             tempstr = self.fixedvar[ii].replace(
-                'LorentzLine(', 'self.LorentzLine(nu,').replace(
+                'LorentzLine(', 'self.LorentzLine(nu, ').replace(
                     'GaussLine(', 'self.GaussLine(nu, ').replace(
                         'nu0', '%.12f' % self.freqs[0][0])
 
@@ -3503,7 +3508,7 @@ class modeler():
 
         print("modeler::_compileScaleFixed")
         tempstr = self.scalefix.replace(
-            'LorentzLine(', 'self.LorentzLine(nu,').replace(
+            'LorentzLine(', 'self.LorentzLine(nu, ').replace(
                 'GaussLine(', 'self.GaussLine(nu, ').replace(
                     'nu0', '%.12f' % self.freqs[0][0])
 
@@ -3855,13 +3860,13 @@ class modeler():
 
         if mode == 0:  # Just compute the fixed model and return
             self.removeFixed = True
-            isfixed = True
+            # isfixed = True
             modbackup = self.imod[0]
             for spw in spwrange:
                 self.output[spw][:] = 0.0
                 for midx, mi in enumerate(self.ifixmod):
                     tempvar = self.fixedvarfunc[midx](p, self.freqs[spw])
-                    self.imod[0] = self.ifixmod[midx]
+                    self.imod[0] = mi
                     if self.imod[0] in self.isNumerical:
                         tempvar = self.gridModel(self.imod[0], tempvar)
                     for i in range(len(tempvar)):
@@ -3876,13 +3881,13 @@ class modeler():
             currmod = self.model
             currvar = self.varfunc
 
-            currimod = self.imod
-            isfixed = False
+            # currimod = self.imod
+            # isfixed = False
 
         ChiSq = 0.0
         ndata = 0
         for spw in spwrange:
-            nt, nnu = np.shape(self.output[spw])
+            _, nnu = np.shape(self.output[spw])
             if nui == -1:
                 scalefx = self._compiledScaleFixed(p, self.freqs[spw])
                 self.varfixed[0][:nnu] = scalefx
@@ -3909,7 +3914,7 @@ class modeler():
 
                     if self.only_flux:
                         currflux = p[midx]
-                        nstrucpars = len(self.strucvar[midx])
+                        # nstrucpars = len(self.strucvar[midx])
                         self.varbuffer[0][midx, 2, :nnu] = currflux
 
                     else:
@@ -4097,7 +4102,7 @@ def modelFromClean(imname, ichan=0, echan=0):
         refpix = ia.summary()['refpix']
         cleanlocs = np.where(modarray != 0.0)
         cleans = np.transpose([cleanlocs[0], cleanlocs[1]] + [modarray[cleanlocs]])
-        totflux = np.sum(cleans[:, 2])
+        # totflux = np.sum(cleans[:, 2])
 
         # Put shifts in arcseconds w.r.t. image center:
         cleans[:, 0] = (cleans[:, 0] - refpix[0]) * deltaxy[0] * 180. / np.pi * 3600.
@@ -4167,15 +4172,12 @@ def wrap_function(function, args):
 
 def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
                  relxtol=1.e-4, relftol=1.e-3, maxiter=None, maxfev=None,
-                 disp=False, return_all=False,
-                 **unknown_options):
+                 return_all=False):
     """
     Minimization of scalar function of one or more variables using the
     Nelder-Mead algorithm.
 
     Options for the Nelder-Mead algorithm are:
-        disp : bool
-            Set to True to print("onvergence messages")
        relxtol : float
             Relative error in solution `xopt` acceptable for convergence.
        relftol : float
@@ -4312,7 +4314,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
 
     x = sim[0]
     fval = np.min(fsim)
-    warnflag = 0
+    # warnflag = 0
 
     return [x, fval]
 
@@ -4354,7 +4356,7 @@ class immultifit(uvmultifit):
               writes *images* with the same gridding as the original images used.
     """
 
-    def __init__(self, parent=None, reinvert=True, start=0, nchan=-1, psf='', residual='', dBcut=-30., **kwargs):
+    def __init__(self, reinvert=True, start=0, nchan=-1, psf='', residual='', dBcut=-30., **kwargs):
         """ Constructor."""
 
         self.Nspw = 1
@@ -4391,7 +4393,7 @@ class immultifit(uvmultifit):
         ia.open(self.residual + '.immultifit')
         resim = ia.getchunk()
         imdims = np.shape(resim)
-        npix = float(imdims[0] * imdims[1])
+        # npix = float(imdims[0] * imdims[1])
         temparr = np.zeros((imdims[0], imdims[1]), dtype=np.complex128)
         for i in range(0, self.start):
             resim[:, :, :, i] = 0.0
@@ -4422,7 +4424,7 @@ class immultifit(uvmultifit):
         ia.open(modname)
         resim = ia.getchunk()
         imdims = np.shape(resim)
-        npix = float(imdims[0] * imdims[1])
+        # npix = float(imdims[0] * imdims[1])
         temparr = np.zeros((imdims[0], imdims[1]), dtype=np.complex128)
         for i in range(self.start, self.nchan):
             self._printInfo("Doing frequency channel %i of %i" % (i + 1 - self.start, self.nchan - self.start))
@@ -4441,7 +4443,7 @@ class immultifit(uvmultifit):
     #
     #  SANITY CHECKS AND PARAMETER SETTINGS
     #
-    def checkInputs(self, data_changed=False):
+    def checkInputs(self):
         """ Function re-definition for the immultifit class."""
 
         self._printInfo("In image mode, the whole image is taken.\n"
@@ -4560,7 +4562,7 @@ class immultifit(uvmultifit):
     #
     #  READ DATA (IMAGES AND PSFs)
     #
-    def readData(self, data_changed=True, del_data=True):
+    def readData(self, del_data=True):
         """ Function redefinition for the immultifit class."""
         if self.reinvert:
 
@@ -4586,19 +4588,19 @@ class immultifit(uvmultifit):
         wgti = np.zeros((npix2, nnu), dtype=np.float64)
         datare = np.zeros((npix2, nnu), dtype=np.float64)
         dataim = np.zeros((npix2, nnu), dtype=np.float64)
-        outpre = np.zeros((npix2, nnu), dtype=np.float64)
-        outpim = np.zeros((npix2, nnu), dtype=np.float64)
-        fixedre = np.zeros((npix2, nnu), dtype=np.float64)
-        fixedim = np.zeros((npix2, nnu), dtype=np.float64)
+        # outpre = np.zeros((npix2, nnu), dtype=np.float64)
+        # outpim = np.zeros((npix2, nnu), dtype=np.float64)
+        # fixedre = np.zeros((npix2, nnu), dtype=np.float64)
+        # fixedim = np.zeros((npix2, nnu), dtype=np.float64)
         freqs = np.zeros(nnu, dtype=np.float64)
 
-        zeros = []
+        # zeros = []
         for i in range(imdims[3]):
             freqs[i] = ia.toworld([0, 0, self.stokes, i + self.start])['numeric'][3]
 
         self._printInfo("Reading gridded UV coordinates and weights\n")
-        u0, v0, s0, nu0 = ia.toworld([0, 0, self.stokes, self.start])['numeric']
-        u1, v1, s0, nu1 = ia.toworld([1, 1, self.stokes, self.start])['numeric']
+        u0, v0, _, _ = ia.toworld([0, 0, self.stokes, self.start])['numeric']
+        u1, v1, _, _ = ia.toworld([1, 1, self.stokes, self.start])['numeric']
         du = u1 - u0
         dv = v1 - v0
         for j in range(imdims[0]):
