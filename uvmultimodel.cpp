@@ -64,9 +64,14 @@
 #include "QuinnFringe.h"
 #endif
 
+#define DEBUG
 void show_info(const char *var, PyObject *obj)
 {
     if (obj == NULL) return;
+
+#ifndef DEBUG
+    return;
+#endif
 
     // NPY_BOOL: 0
     // NPY_INT16: 3
@@ -255,10 +260,9 @@ static PyObject *clearPointers(PyObject *self, PyObject *args)
     int i;
     if (!PyArg_ParseTuple(args, "i", &i)) {
         printf("FAILED clearPointers!\n");
-        fflush(stdout);
         return NULL;
     }
-    printf("\ninside uvmod.clearPointers: %i\n", i);
+    printf("inside uvmod.clearPointers: %i\n", i);
 
     switch (i) {
       case 0:
@@ -666,7 +670,7 @@ static PyObject *setNspw(PyObject *self, PyObject *args)
         fflush(stdout);
         return NULL;
     }
-    printf("\ninside uvmod.setNspw: %i\n", i);
+    printf("inside uvmod.setNspw: %i\n", i);
 
     vis.nnu.resize(i);
     vis.nt.resize(i);
@@ -713,7 +717,7 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
         fflush(stdout);
         return NULL;
     }
-    printf("\ninside uvmod.setNCPU: %i\n",i);
+    printf("inside uvmod.setNCPU: %i\n",i);
 
     // printf("Preparing memory for %i workers\n", i);
     // for (j = 0; j < NCPU; j++) {
@@ -783,7 +787,7 @@ static PyObject *setData(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    printf("\ninside uvmod.setData: IF: %i, Ants: %i\n", IF, Nants);
+    printf("inside uvmod.setData: IF: %i, Ants: %i\n", IF, Nants);
 
     show_info("pu", pu);
     show_info("pv", pv);
