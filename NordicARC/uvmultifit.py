@@ -70,7 +70,7 @@ UVMULTIFIT VERSION:
 >>>            write='', MJDrange=[-1.0,-1.0], model=['delta'],
 >>>            var=['p[0],p[1],p[2]'], p_ini=[0.0,0.0,1.0], phase_center = '',
 >>>            fixed=[], fixedvar=[], scalefix='1.0', outfile = 'modelfit.dat',
->>>            NCPU=4, pbeam=False, ldfac = 1.22, dish_diameter=0.0, gridpix=0,
+>>>            NCPU=4, pbeam=False, ldfac = 1.22, dish_diameter=0.0,
 >>>            OneFitPerChannel=True, bounds=None, cov_return=False,
 >>>            finetune=False, uvtaper=0.0, method='levenberg', wgt_power=1.0,
 >>>            LMtune=[1.e-3,10.,1.e-5,200,1.e-3], SMPtune=[1.e-4,1.e-1,200],
@@ -444,9 +444,10 @@ The most important methods of *UVMultiFit* are described below.
 """
 
 __license__ = 'GPL-v3'
-__revision__ = " $Id: 3.0.0-p2 2019-03-28 15:00:00 marti-vidal $ "
+__revision__ = "$Id: 3.0.0-p2 2019-03-28 15:00:00 marti-vidal $"
 __docformat__ = 'reStructuredText'
 
+import logging
 import shutil
 import re
 import gc
@@ -455,12 +456,12 @@ import time
 import sys
 
 import numpy as np
-import scipy.special as spec
+from scipy import special
 
 from casatools import ms
 from casatools import table
-from casatools import coordsys as cs
-from casatools import image as ia
+from casatools import coordsys
+from casatools import image
 
 import uvmultimodel as uvmod
 # global ms, tb
@@ -468,10 +469,12 @@ import uvmultimodel as uvmod
 __version__ = "3.0-p2"
 date = 'JAN 2021'
 
-print("\nC++ shared library loaded successfully\n")
+print("C++ shared library loaded successfully\n")
 
 tb = table()
 ms = ms()
+ia = image()
+cs = coordsys()
 
 # if True:
 #     from taskinit import gentools
@@ -481,13 +484,13 @@ ms = ms()
 #     ia = gentools(['ia'])[0]
 #     cs = gentools(['cs'])[0]
 
-greetings = '\n ##########################################################################\n'
-greetings += ' # UVMULTIFIT --  ' + date + '. EUROPEAN ALMA REGIONAL CENTER (NORDIC NODE).  #\n'
-greetings += ' #       Please, add the UVMULTIFIT reference to your publications:       #\n'
-greetings += ' #                                                                        #\n'
-greetings += ' #      Marti-Vidal, Vlemmings, Muller, & Casey 2014, A&A, 563, A136      #\n'
-greetings += ' #                                                                        #\n'
-greetings += ' ##########################################################################\n\n'
+greetings = '##########################################################################\n'
+greetings += '# UVMULTIFIT --  ' + date + '. EUROPEAN ALMA REGIONAL CENTER (NORDIC NODE).  #\n'
+greetings += '#       Please, add the UVMULTIFIT reference to your publications:       #\n'
+greetings += '#                                                                        #\n'
+greetings += '#      Marti-Vidal, Vlemmings, Muller, & Casey 2014, A&A, 563, A136      #\n'
+greetings += '#                                                                        #\n'
+greetings += '##########################################################################\n'
 
 
 class uvmultifit():
@@ -745,7 +748,7 @@ class uvmultifit():
     #  FREE MEMORY
     #
     def _deleteData(self, delmodel=True):
-        """ Delete pointers to the data.
+        """Delete pointers to the data.
         Hopefully, this will release memory when gc.collect() is run."""
 
         for i in range(len(self.averdata) - 1, -1, -1):
@@ -803,13 +806,19 @@ class uvmultifit():
                  chanwidth=1, timewidth=1, stokes='I', write='', MJDrange=[-1.0, -1.0], ldfac=1.22,
                  phase_center='',
                  fixed=[], fixedvar=[], scalefix='1.0', outfile='modelfit.dat', NCPU=4, pbeam=False,
-                 dish_diameter=0.0, gridpix=0,
-                 cov_return=False, finetune=False, uvtaper=0.0,
+                 dish_diameter=0.0, cov_return=False, finetune=False, uvtaper=0.0,
                  method='levenberg', wgt_power=1.0,
                  LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200], only_flux=False,
                  proper_motion=0.0, HankelOrder=80, phase_gains={}, amp_gains={}):
-        """ Just the constructor method, for class instantiation."""
-        print("uvmultifit::__init__")
+        """Just the constructor method, for class instantiation."""
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger("UVMultiFit")
+        self.logger.debug("uvmultifit::__init__")
+        self.logger.info("logging started")
+        self._printInfo(greetings)
+        # self._printWarning("beware")
+        # self._printError("oops!")
         self.first_time = True
         uvmod.clearPointers(2)
 
@@ -873,57 +882,57 @@ class uvmultifit():
         try:
             self.write_model = {'': 0, 'model': 1, 'residuals': 2, 'calibrated': 3}[write]
         except IndexError:
-            self._printError("ERROR: keyword 'write' should be set to either '', 'model', 'residuals' or 'calibrated'")
+            self._printError("keyword 'write' should be set to either '', 'model', 'residuals' or 'calibrated'")
 
         #######################
         # TIMEWIDTH IS NOT CURRENTLY USED (ISSUES WITH NEW MS TOOL):
         self.timewidth = 1
         if timewidth != 1:
-            self._printInfo("WARNING! timewdith>1 cannot be currently set, due to issues with new MS tool")
+            self._printWarning("timewdith>1 cannot be currently set, due to issues with new MS tool")
 
         # Start instance:
         # self._startUp()
 
     def __repr__(self):
-        str = "uvmultifit("
-        str += f"vis = '{self.vis}', "
-        str += f"spw = {self.spw}, "
-        str += f"column = '{self.column}', "
-        str += f"field = {self.field}, "
-        str += f"scans = {self.scans}, "
-        str += f"uniform = {self.uniform}, "
-        str += f"chanwidth = {self.chanwidth}, "
-        str += f"timewidth = {self.timewidth}, "
-        str += f"stokes = '{self.stokes}', "
-        str += f"write_model = {self.write_model}, "
-        str += f"MJDrange = {self.MJDrange}, "
-        str += f"ldfac = {self.ldfac}, "
-        str += f"model = {self.model}, "
-        str += f"var = {self.var}, "
-        str += f"p_ini = {self.p_ini}, "
-        str += f"phase_center = '{self.phase_center}', "
-        str += f"fixed = {self.fixed}, "
-        str += f"fixedvar = {self.fixedvar}, "
-        str += f"scalefix = {self.scalefix}, "
-        str += f"outfile = {self.outfile}, "
-        str += f"NCPU = {self.NCPU}, "
-        str += f"pbeam = {self.pbeam}, "
-        str += f"dish_diameter = {self.dish_diameter}, "
-        str += f"OneFitPerChannel = {self.OneFitPerChannel}, "
-        str += f"bounds = {self.bounds}, "
-        str += f"cov_return = {self.cov_return}, "
-        str += f"finetune = {self.finetune}, "
-        str += f"uvtaper = {self.uvtaper}, "
-        str += f"method = '{self.method}', "
-        str += f"wgt_power = {self.wgt_power}, "
-        str += f"LMtune = {self.LMtune}, "
-        str += f"SMPtune = {self.SMPtune}, "
-        str += f"only_flux = {self.only_flux}, "
-        str += f"proper_motion = {self.proper_motion}, "
-        str += f"HankelOrder = {self.HankelOrder}, "
-        str += f"phase_gains = {self.phase_gains}, "
-        str += f"amp_gains = {self.amp_gains})"
-        return str
+        txt = "uvmultifit("
+        txt += f"vis = '{self.vis}', "
+        txt += f"spw = {self.spw}, "
+        txt += f"column = '{self.column}', "
+        txt += f"field = {self.field}, "
+        txt += f"scans = {self.scans}, "
+        txt += f"uniform = {self.uniform}, "
+        txt += f"chanwidth = {self.chanwidth}, "
+        txt += f"timewidth = {self.timewidth}, "
+        txt += f"stokes = '{self.stokes}', "
+        txt += f"write_model = {self.write_model}, "
+        txt += f"MJDrange = {self.MJDrange}, "
+        txt += f"ldfac = {self.ldfac}, "
+        txt += f"model = {self.model}, "
+        txt += f"var = {self.var}, "
+        txt += f"p_ini = {self.p_ini}, "
+        txt += f"phase_center = '{self.phase_center}', "
+        txt += f"fixed = {self.fixed}, "
+        txt += f"fixedvar = {self.fixedvar}, "
+        txt += f"scalefix = {self.scalefix}, "
+        txt += f"outfile = {self.outfile}, "
+        txt += f"NCPU = {self.NCPU}, "
+        txt += f"pbeam = {self.pbeam}, "
+        txt += f"dish_diameter = {self.dish_diameter}, "
+        txt += f"OneFitPerChannel = {self.OneFitPerChannel}, "
+        txt += f"bounds = {self.bounds}, "
+        txt += f"cov_return = {self.cov_return}, "
+        txt += f"finetune = {self.finetune}, "
+        txt += f"uvtaper = {self.uvtaper}, "
+        txt += f"method = '{self.method}', "
+        txt += f"wgt_power = {self.wgt_power}, "
+        txt += f"LMtune = {self.LMtune}, "
+        txt += f"SMPtune = {self.SMPtune}, "
+        txt += f"only_flux = {self.only_flux}, "
+        txt += f"proper_motion = {self.proper_motion}, "
+        txt += f"HankelOrder = {self.HankelOrder}, "
+        txt += f"phase_gains = {self.phase_gains}, "
+        txt += f"amp_gains = {self.amp_gains})"
+        return txt
 
     def select_data(self, vis, spw='0', column='data', field=0, scans=[]):
         self.vis = vis
@@ -936,7 +945,6 @@ class uvmultifit():
                      bounds=None, OneFitPerChannel=False):
         print(model)
         print(var)
-        print(type(var))
         print(p_ini)
         self.model = model
         self.var = var
@@ -950,13 +958,13 @@ class uvmultifit():
     #
     # This method will be overriden in the GUI, to avoid execution of CheckInputs() and the fit:
     def start_fit(self):
-        """ This is run each time the class is instantiated."""
-#         if not goodclib:
-#             self._printError("ERROR: C++ library cannot be loaded! Please, contact the Nordic ARC node.")
-#             return False
+        """This is run each time the class is instantiated."""
+        # if not goodclib:
+        #     self._printError("C++ library cannot be loaded! Please, contact the Nordic ARC node.")
+        #     return False
 
-        print("uvmultifit::_startup")
-        self._printInfo(greetings)
+        self.logger.debug("uvmultifit::_startup")
+        # self._printInfo(greetings)
 
         self.mymodel = modeler()
         self.mymodel.Ccompmodel = uvmod.modelcomp
@@ -966,38 +974,38 @@ class uvmultifit():
         if goodread:
             goodread = self.readData(del_data=False)
         else:
-            self._printError("\n\n ABORTING UVMULTIFIT! BAD INPUTS! CHECK INPUTS!\n")
+            self._printError("aborting UVMultiFit! bad inputs! Check inputs!\n")
 
             # Compile Model:
         if goodread:
             goodread = self.initModel()
         else:
-            self._printError("\n\n ABORTING UVMULTIFIT! BAD DATA! CHECK INPUTS!\n")
+            self._printError("aborting UVMultiFit! bad data! Check inputs!\n")
 
         # Fit if finetune == False:
         if goodread:
             if not self.finetune:
                 goodfit = self.fit()
                 if not goodfit:
-                    self._printError("\n FAILED FIT!\n")
+                    self._printError("failed fit!\n")
                 elif self.write_model in [1, 2, 3]:
                     if self.timewidth == 1 and self.stokes not in ['Q', 'U', 'V']:
-                        self._printInfo("\nWriting into measurement set(s)\n")
+                        self._printInfo("Writing into measurement set(s)\n")
                         self.writeModel()
                     else:
-                        msg = "\nCANNOT write into measurement set!\n"
-                        msg += "\nIf you want to fill-in the model (or corrected) column:\n"
+                        msg = "cannot write into measurement set!\n"
+                        msg += "If you want to fill-in the model (or corrected) column:\n"
                         msg += "    1.- 'timewidth' and 'chanwidth' should be set to 1\n"
                         msg += "    2.- 'stokes' should be set to either 'I', 'PI', or a corr. product."
                         self._printError(msg)
 
                 if goodfit:
-                    self._printInfo("\n\n\nFit done!! And UVMULTIFIT class instantiated successfully!\n")
+                    self._printInfo("Fit done!! And UVMULTIFIT class instantiated successfully!\n")
             else:
-                self._printInfo("\n\n\nUVMULTIFIT class instantiated successfully!\n")
+                self._printInfo("UVMULTIFIT class instantiated successfully!\n")
 
         else:
-            self._printError("\n\n ABORTING UVMULTIFIT! BAD MODEL! CHECK INPUTS!\n")
+            self._printError("aborting UVMultiFit! bad model! Check inputs!\n")
 
     ############################################
     #
@@ -1005,15 +1013,25 @@ class uvmultifit():
     #
     # Functions overriden in GUI mode:
     def _printError(self, message):
-        """ Prints a message and raises an exception."""
-        sys.stdout.write(message)
-        sys.stdout.flush()
+        """Prints a message and raises an exception."""
+        # sys.stdout.write(message)
+        # sys.stdout.flush()
+        for part in message.split('\n'):
+            if len(part) > 0:
+                self.logger.critical(part)
         raise Exception(message)
 
+    def _printWarning(self, message):
+        """Prints a warning message."""
+        self.logger.warning(message)
+
     def _printInfo(self, message):
-        """ Prints a message."""
-        sys.stdout.write(message)
-        sys.stdout.flush()
+        """Prints a message."""
+        # sys.stdout.write(message)
+        # sys.stdout.flush()
+        for part in message.split('\n'):
+            if len(part) > 0:
+                self.logger.info(part)
 
     ##################################
     # FRINGE FITTER:
@@ -1060,7 +1078,7 @@ class uvmultifit():
     #  WRITE MODEL (OR RESIDUALS)
     #
     def writeModel(self):
-        """ Writes the requested information into the measurement sets.
+        """Writes the requested information into the measurement sets.
 
         The information can be either the predictions of the compiled model(s) (i.e., they are
         written into the *model column* of the measurement set(s)), or the post-fit residuals
@@ -1074,14 +1092,14 @@ class uvmultifit():
         ``chanwidth`` are set to 1). This function should be called AFTER having run ``fit()``.
         """
 
-        print("uvmultifit::writeModel")
-        self._printInfo("\n\n WARNING: WRITING TO MOSAICS IS EXPERIMENTAL AND MAY NOT WORK!\n")
+        self.logger.debug("uvmultifit::writeModel")
+        self._printWarning("writing to mosaics is experimental and may not work!\n")
 
         for vi, v in enumerate(self.vis):
             # Get the columns of parallel-hand correlations:
             success = ms.open(v)
             if not success:
-                self._printError("ERROR! %s cannot be openned in write mode" % (v))
+                self._printError("%s cannot be openned in write mode" % (v))
                 return False
 
             spws = list(map(int, self.iscan[v].keys()))
@@ -1115,7 +1133,7 @@ class uvmultifit():
             for sp in spws:
                 for scan in self.iscan[v][sp].keys():
                     for field in range(len(self.iscan[v][sp][scan])):
-                        sys.stdout.write("\r Doing %s: spw %i, scan_id %i" % (v, sp, scan))
+                        sys.stdout.write("Doing %s: spw %i, scan_id %i" % (v, sp, scan))
                         sys.stdout.flush()
                         tb.open(v, nomodify=False)
                         select = self.iscan[v][sp][scan][field]
@@ -1128,7 +1146,7 @@ class uvmultifit():
                         tb2.putcol(column, moddata)
                         tb.close()
 
-            self._printInfo("\n %s written successfully!\n" % column)
+            self._printInfo("%s written successfully!\n" % column)
 
         return True
 
@@ -1137,16 +1155,15 @@ class uvmultifit():
     #  SANITY CHECKS AND DEFINING BASIC PARAMETERS
     #
     def _checkOrdinaryInputs(self):
-        """ Performs some sanity checks on the input parameters.
+        """Performs some sanity checks on the input parameters.
       This function should not be called directly by the user."""
 
-        print("uvmultifit::_checkOrdinaryInputs")
+        self.logger.debug("uvmultifit::_checkOrdinaryInputs")
         if isinstance(self.model, str):
             self.model = list([self.model])
         else:
             self.model = list(self.model)
 
-        print(type(self.var))
         print(self.var)
         if isinstance(self.var, str):
             self.var = list([self.var])
@@ -1187,10 +1204,10 @@ class uvmultifit():
         self.amp_gainsNuT = {}
 
         if not isinstance(self.phase_gains, dict):
-            self._printError("\n 'phase_gains' must be a dictionary!")
+            self._printError("'phase_gains' must be a dictionary!")
 
         if not isinstance(self.amp_gains, dict):
-            self._printError("\n 'amp_gains' must be a dictionary!")
+            self._printError("'amp_gains' must be a dictionary!")
 
         for key in self.phase_gains.keys():
             if isinstance(key, int):
@@ -1200,54 +1217,54 @@ class uvmultifit():
         for key in self.amp_gains.keys():
             if isinstance(key, int):
                 self.isMixed = True
-                # self._printError("\n Inconsistent 'amp_gains' and 'phase_gains'!")
+                # self._printError("Inconsistent 'amp_gains' and 'phase_gains'!")
                 break
 
         for key in self.phase_gains.keys():
             if key == 'nuG':
                 if self.isMixed:
                     self._printError(
-                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                        "You cannot define split gains and mixed gains in the same fit. It makes no sense!\n")
                 self.phase_gainsNu = self.phase_gains['nuG']
             elif key == 'tG':
                 if self.isMixed:
                     self._printError(
-                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                        "You cannot define split gains and mixed gains in the same fit. It makes no sense!\n")
                 self.phase_gainsT = self.phase_gains['tG']
             elif not isinstance(key, int):
-                self._printError("\n The keys of 'phase_gains' must be integers or 'nuG/tG'!")
+                self._printError("The keys of 'phase_gains' must be integers or 'nuG/tG'!")
             else:
                 self.phase_gainsNuT[key] = self.phase_gains[key]
 
         for key in self.phase_gainsNu.keys():
             if not isinstance(key, int):
-                self._printError("\n The keys of 'phase_gains[nuG]' must be integers!")
+                self._printError("The keys of 'phase_gains[nuG]' must be integers!")
         for key in self.phase_gainsT.keys():
             if not isinstance(key, int):
-                self._printError("\n The keys of 'phase_gains[tG]' must be integers!")
+                self._printError("The keys of 'phase_gains[tG]' must be integers!")
 
         for key in self.amp_gains.keys():
             if key == 'nuG':
                 if self.isMixed:
                     self._printError(
-                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                        "You cannot define split gains and mixed gains in the same fit. It makes no sense!\n")
                 self.amp_gainsNu = self.amp_gains['nuG']
             elif key == 'tG':
                 if self.isMixed:
                     self._printError(
-                        "You cannot define split gains and mixed gains in the same fit.\n It makes no sense!\n")
+                        "You cannot define split gains and mixed gains in the same fit. It makes no sense!\n")
                 self.amp_gainsT = self.amp_gains['tG']
             elif not isinstance(key, int):
-                self._printError("\n The keys of 'amp_gains' must be integers or 'nuG/tG'!")
+                self._printError("The keys of 'amp_gains' must be integers or 'nuG/tG'!")
             else:
                 self.amp_gainsNuT[key] = self.amp_gains[key]
 
         for key in self.amp_gainsNu.keys():
             if not isinstance(key, int):
-                self._printError("\n The keys of 'amp_gains[nuG]' must be integers!")
+                self._printError("The keys of 'amp_gains[nuG]' must be integers!")
         for key in self.amp_gainsT.keys():
             if not isinstance(key, int):
-                self._printError("\n The keys of 'amp_gains[tG]' must be integers!")
+                self._printError("The keys of 'amp_gains[tG]' must be integers!")
 
         self.useGains = set(list(self.phase_gainsNuT) + list(self.amp_gainsNuT)
                             + list(self.phase_gainsNu) + list(self.amp_gainsNu)
@@ -1256,13 +1273,12 @@ class uvmultifit():
         # Check phase center:
 
         if not isinstance(self.phase_center, str):
-            self._printError("\n 'phase_center' must be a string!")
+            self._printError("'phase_center' must be a string!")
         else:
             if len(self.phase_center) == 0:
                 self.phrefset = False
             else:
-                if True:
-                    #  try:
+                try:
                     self.phrefset = True
                     csys = cs.newcoordsys(direction=True)
                     dirstr = self.phase_center.split()
@@ -1272,14 +1288,13 @@ class uvmultifit():
                         csys.setdirection(refcode=dirstr[0], refval=" ".join(dirstr[1:]))
                     csys.convertdirection("J2000")
                     self.refpos = np.copy(csys.torecord()['direction0']['crval'])
-                else:
-                    #  except:
-                    self._printError("\n 'phase_center' is not a CASA-formatted sky coordinate!")
+                except Exception:
+                    self._printError("'phase_center' is not a CASA-formatted sky coordinate!")
 
         # Did the user forget how does this task work? :D
         for param in self.var:
             if not isinstance(param, str):
-                self._printError("\n 'var' must be a list of strings!")
+                self._printError("'var' must be a list of strings!")
                 return False
 
         # Get the number of parameters and check the model consistency:
@@ -1295,7 +1310,7 @@ class uvmultifit():
                          [m.start() for m in re.finditer(r'\]', self.var[i])])
             maxpar = max([maxpar] + list(map(float, [self.var[i][ss[0]:ss[1]] for ss in paridx])))
             if component not in self.implemented:
-                msg = "\nModel component '" + str(component) + "' is not known!\n"
+                msg = "Model component '" + str(component) + "' is not known!\n"
                 fmt = "Supported models are:" + " '%s' " * len(self.implemented)
                 msg += fmt % tuple(self.implemented)
                 self._printError(msg)
@@ -1359,12 +1374,12 @@ class uvmultifit():
                 try:
                     temp = float(param)
                 except ValueError:
-                    self._printError("\n Fixed variables must be a list of floats (or strings\n representing floats)!")
+                    self._printError("Fixed variables must be a list of floats (or strings representing floats)!")
                     return False
 
         # There should be as many p_inis as parameters!
         if len(self.p_ini) != maxpar + 1:
-            self._printError("\n 'p_ini' is of length %i, but there are %i parameters used!\n ABORT!" %
+            self._printError("'p_ini' is of length %i, but there are %i parameters used!" %
                              (len(self.p_ini), maxpar + 1))
             return False
 
@@ -1383,7 +1398,7 @@ class uvmultifit():
             for i, component in enumerate(self.fixed):
                 checkpars = self.fixedvar[i].split(',')
                 if component not in self.implemented:
-                    msg = "\nModel component '" + str(component) + "' is not known!\n"
+                    msg = "Model component '" + str(component) + "' is not known!\n"
                     fmt = "Supported components are " + " '%s' " * len(self.implemented)
                     msg += fmt % tuple(self.implemented)
                     self._printError(msg)
@@ -1395,7 +1410,7 @@ class uvmultifit():
 
         # Set outfile name:
         if self.outfile == '':
-            self._printInfo("\nSetting 'outfile' to its default (i.e., 'modelfit.dat').\n")
+            self._printInfo("Setting 'outfile' to its default (i.e., 'modelfit.dat').\n")
             self.outfile = 'modelfit.dat'
 
         # Set (and check) the bounds in the fit:
@@ -1429,7 +1444,7 @@ class uvmultifit():
     #  MORE SANITY CHECKS
     #
     def checkInputs(self):
-        """ Reads all the inputs parameters and performs sanity checks.
+        """Reads all the inputs parameters and performs sanity checks.
 
         You have to run this *everytime* after changing any parameter of the UVMUltiFit
         instance.
@@ -1457,7 +1472,7 @@ class uvmultifit():
         the model to repeat the fit.
       """
 
-        print("uvmultifit::checkInputs")
+        self.logger.debug("uvmultifit::checkInputs")
         # Some preliminary (self-consistency) checks of the parameters:
         self.savemodel = True
 
@@ -1478,12 +1493,12 @@ class uvmultifit():
         elif len(self.spw) > 1:
             self.spw = list([str(ss) for ss in self.spw])
             if self.OneFitPerChannel:
-                self._printInfo("\n\n SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n"
-                                + "WILL fit the model to each MS separately!\n\n")
+                self._printInfo("SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n"
+                                + "WILL fit the model to each MS separately!\n")
         elif len(self.spw) > 0:
             self.spw = list([self.spw[0]])
         else:
-            self._printError("\nBad formatted spw!\n")
+            self._printError("Bad formatted spw!\n")
             return False
 
         # Set list of scans:
@@ -1496,25 +1511,25 @@ class uvmultifit():
                 if len(self.vis) == 1:
                     self.scans = [self.scans]
                 else:
-                    self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n"
-                                     + "if there are several measurement sets).\n ABORTING!")
+                    self._printError("'scans' should be a list of integers (or a list of lists of integers, "
+                                     + "if there are several measurement sets).")
                     return False
             if len(self.scans) != len(self.vis):
-                self._printError("\n List of (lists of) scans does not have the same length "
-                                 + "as the list of measurement sets!\n ABORTING!")
+                self._printError("List of (lists of) scans does not have the same length "
+                                 + "as the list of measurement sets!")
                 return False
 
             for si, sc in enumerate(self.scans):
                 if isinstance(sc, str):
                     self.scans[si] = list(map(int, sc.split(',')))
         except Exception:
-            self._printError("\n 'scans' should be a list of integers (or a list of lists of integers,\n"
-                             + "if there are several measurement sets).\n ABORTING!")
+            self._printError("'scans' should be a list of integers (or a list of lists of integers, "
+                             + "if there are several measurement sets).")
             return False
 
         # Check dimensions of vis, spw, model, etc.:
         if len(self.vis) != len(self.spw) and len(self.spw) > 1:
-            self._printError("\n\nThe length of 'spw' is not equal to the length of 'vis'!\n Aborting!\n")
+            self._printError("The length of 'spw' is not equal to the length of 'vis'!")
             return False
 
         if not isinstance(self.stokes, str):
@@ -1527,7 +1542,7 @@ class uvmultifit():
         if self.only_flux:
             if len(self.p_ini) != len(self.model):
                 self._printError("If only_flux=True, number of parameters must be equal to "
-                                 + "number of model components!\n Aborting!\n")
+                                 + "number of model components!")
 
         if self.proper_motion == 0.0:
             self.proper_motion = [[0., 0.] for i in self.model]
@@ -1547,12 +1562,12 @@ class uvmultifit():
         # Do the mss exist?
         for visi in self.vis:
             if not os.path.exists(visi):
-                self._printError("\nMeasurement set %s does not exist!" % (visi))
+                self._printError("Measurement set %s does not exist!" % (visi))
                 return False
 
         # Can the required column exist?
         if self.column not in ['data', 'corrected_data', 'corrected']:
-            self._printError("\n'column' can only take values 'data' or 'corrected'!")
+            self._printError("'column' can only take values 'data' or 'corrected'!")
             return False
         if self.column == 'corrected':
             self.column = 'corrected_data'
@@ -1564,7 +1579,6 @@ class uvmultifit():
 
         # Get number of antennas:
         print(os.path.join(self.vis[0], 'ANTENNA'))
-        print(tb)
         tb.open(os.path.join(self.vis[0], 'ANTENNA'))
         self.Nants = len(tb.getcol('NAME'))
         tb.close()
@@ -1596,7 +1610,7 @@ class uvmultifit():
                         self.field_id[-1].append(f)
                         phasedirs[vi][f] = ms.range('phase_dir')['phase_dir']['direction'][:, f]
                 if len(self.field_id[-1]) == 0:
-                    self._printError("\nERROR! Field %s is not in %s" % (self.field[vi], v))
+                    self._printError("field %s is not in %s" % (self.field[vi], v))
                     ms.close()
                     return False
 
@@ -1605,16 +1619,16 @@ class uvmultifit():
 
         # Ref. position:
         if not self.phrefset:
-            self._printInfo("\nSetting phase center on first scan\n")
+            self._printInfo("Setting phase center on first scan\n")
             self.refpos = self.phasedirs[0][min(self.phasedirs[0].keys())]
         else:
-            self._printInfo("\nSetting phase center on %s\n" % self.phase_center)
+            self._printInfo("Setting phase center on %s\n" % self.phase_center)
 
         # Find out all the scans where this field id is observed:
         for vi, v in enumerate(self.vis):
             success = ms.open(v)
             if not success:
-                self._printError("Failed to open measurement set '+v+'!")
+                self._printError("failed to open measurement set '+v+'!")
                 return False
 
             info = ms.getscansummary()
@@ -1638,7 +1652,7 @@ class uvmultifit():
                 goodscid = filter(lambda x: x in self.sourscans[vi], self.scans[vi])
                 if len(goodscid) != len(self.scans[vi]):
                     badscid = filter(lambda x: x not in self.sourscans[vi], self.scans[vi])
-                    msg = '\n ERROR! The following scans do NOT correspond to source %s:\n' % (str(self.field))
+                    msg = 'the following scans do NOT correspond to source %s: ' % (str(self.field))
                     msg += str(badscid)
                     self._printError(msg)
                     return False
@@ -1668,7 +1682,7 @@ class uvmultifit():
             if aux[0]:
                 ranges = list(aux[1])
             else:
-                self._printError(aux[1] + "\nSomething seems to be wrong with the 'spw' number %i. \n ABORTING!" % (vi))
+                self._printError(aux[1] + "Something seems to be wrong with the 'spw' number %i." % (vi))
                 return False
 
             nspws = range(len(spwchans))
@@ -1689,7 +1703,7 @@ class uvmultifit():
             self.polmod.append(0)
 
             if self.stokes not in ['I', 'Q', 'U', 'V'] + polprods:
-                self._printError("\n Bad Stokes parameter %s" % self.stokes)
+                self._printError("Bad Stokes parameter %s" % self.stokes)
                 return False
 
             # User asks for one correlation product:
@@ -1725,7 +1739,7 @@ class uvmultifit():
                         self.pol2aver[-1][polprods.index('RR')] = 0.5
                         self.pol2aver[-1][polprods.index('LL')] = -0.5
                 except Exception:
-                    self._printError("Cannot convert to '+self.stokes+'!!")
+                    self._printError("Cannot convert to '+self.stokes+'!")
                     return False
             #  CASE 2: Linear feeds.
             elif 'XX' in polprods:
@@ -1753,10 +1767,10 @@ class uvmultifit():
                         self.pol2aver[-1][polprods.index('XY')] = -0.5
                         self.polmod[-1] = 1
                 except Exception:
-                    self._printError("Cannot convert to '+self.stokes+'!!")
+                    self._printError("Cannot convert to '+self.stokes+'")
                     return False
             else:
-                self._printError("Polarization " + self.stokes + " not understood.\n ABORTING!")
+                self._printError("Polarization " + self.stokes + " not understood.")
                 return False
 
             ms.close()
@@ -1790,7 +1804,7 @@ class uvmultifit():
         """Prepare the PB correction, the model and the number of cores for the modeler.
         Not to be called directly by the user."""
 
-        print("uvmultifit::_setEngineWgt")
+        self.logger.debug("uvmultifit::_setEngineWgt")
         # Load the C++ library:
         # if self.mymodel.Ccompmodel is None:
         #     self.mymodel.Ccompmodel = uvmod.modelcomp
@@ -1806,34 +1820,34 @@ class uvmultifit():
     def _setWgtEq(self):
         """Depends on setEngineWgt. Not to be called by the user."""
 
-        print("uvmultifit::_setWgtEq")
+        self.logger.debug("uvmultifit::_setWgtEq")
         tempfloat = 0.0
 
         if not isinstance(self.dish_diameter, dict):
             try:
                 self.dish_diameter = float(self.dish_diameter)
             except ValueError:
-                self._printError("\n The dish diameter must be a number! (in meters)\n")
+                self._printError("The dish diameter must be a number! (in meters)")
                 return False
 
         tb.open(os.path.join(self.vis[0], 'ANTENNA'))
         self.antnames = tb.getcol('NAME')
 
         if self.pbeam:
-            self._printInfo("""\n
+            self._printInfo("""
 You selected to apply primary-beam correction.
 PLEASE, remember that the beam is being approximated
 with a Gaussian, so it may not be very accuracte far
-from the pointing direction.\n\n""")
+from the pointing direction.\n""")
             if isinstance(self.dish_diameter, float):
                 if self.dish_diameter == 0.0:
                     try:
                         tempfloat = np.copy(tb.getcol('DISH_DIAMETER'))
                     except Exception:
-                        self._printInfo("\n\n Dish Diameter column NOT found in antenna tables!\n")
+                        self._printInfo("Dish Diameter column NOT found in antenna tables!\n")
                     tempfloat = np.zeros(len(self.antnames))
                 else:
-                    self._printInfo("\n\n An antenna diameter of %.3f m will be applied\n" % self.dish_diameter)
+                    self._printInfo("An antenna diameter of %.3f m will be applied\n" % self.dish_diameter)
                     tempfloat = np.array([self.dish_diameter for a in self.antnames])
 
             elif isinstance(self.dish_diameter, dict):
@@ -1843,15 +1857,15 @@ from the pointing direction.\n\n""")
                         antids = re.search(anam, self.antnames[anid])
                         if 'start' in dir(antids):
                             tempfloat[anid] = self.dish_diameter[anam]
-                self._printInfo("\n\nManual antenna-size setting:\n")
+                self._printInfo("Manual antenna-size setting:\n")
                 for anid in range(len(self.antnames)):
-                    self._printInfo("  Antenna %s has a diameter of %.2fm.\n" % (self.antnames[anid], tempfloat[anid]))
+                    self._printInfo("Antenna %s has a diameter of %.2fm.\n" % (self.antnames[anid], tempfloat[anid]))
 
             else:
-                self._printError("\n\n BAD dish_diameter! Should be a float or a dict!\n")
+                self._printError("BAD dish_diameter! Should be a float or a dict!")
 
             if np.max(tempfloat) == 0.0:
-                self._printError("\nThe antenna diameters are not set in the ms.\n"
+                self._printError("The antenna diameters are not set in the ms.\n"
                                  + "Please, set it manually or turn off primary-beam correction.\n")
                 return False
             else:
@@ -1874,7 +1888,7 @@ from the pointing direction.\n\n""")
     #  READ THE DATA. ARRANGE ALL ARRAYS
     #
     def readData(self, del_data=True):
-        """ Reads the data, according to the properties ``vis, column, chanwidth``, etc.
+        """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
 
         It then fills in the properties ``averdata, averfreqs, averweights, u, v, w``, etc.
 
@@ -1887,7 +1901,7 @@ from the pointing direction.\n\n""")
         new data, avoiding some memory leakage related to potential hidden references to the
         data in the IPython's *recall* prompt."""
 
-        print("uvmultifit::readData")
+        self.logger.debug("uvmultifit::readData")
         tic = time.time()
 
         if del_data:  # data_changed:
@@ -1896,7 +1910,7 @@ from the pointing direction.\n\n""")
             #    self.clearPointers(1)
 
         self.success = False
-        print("DEBUG >> inside readData")
+        self.logger.debug("inside readData")
 
         # Initiate the lists and arrays where the data will be read-in:
         ntotspw = self.spwlist[-1][3] + len(self.spwlist[-1][2])
@@ -1926,7 +1940,7 @@ from the pointing direction.\n\n""")
             self.iscan[vi] = {}
 
         for si in nsprang:
-            print(f"DEBUG >> si {si} of {nsprang}")
+            print(f"si {si} of {nsprang}")
             # These are temporary lists of arrays that will be later concatenated:
             datascanAv = []
             modelscanAv = []
@@ -1951,7 +1965,7 @@ from the pointing direction.\n\n""")
 
                 msname = self.vis[vis[1]]
 
-                self._printInfo("\n\n Opening measurement set " + msname + ".\n")
+                self._printInfo("Opening measurement set " + msname + ".\n")
                 tb.open(msname)
                 SPW = tb.getcol('DATA_DESC_ID')
                 crosscorr = tb.getcol('ANTENNA1') != tb.getcol('ANTENNA2')
@@ -1971,7 +1985,7 @@ from the pointing direction.\n\n""")
                         DDs = np.where(DDSC == sp)[0]
 
                         if len(DDs) > 1:
-                            self._printInfo("WARNING! spw %i has more than one Data Description ID!" % sp)
+                            self._printWarning("spw %i has more than one Data Description ID!" % sp)
 
                         maskspw = np.zeros(np.shape(crosscorr), dtype=np.bool)
 
@@ -1988,7 +2002,7 @@ from the pointing direction.\n\n""")
                             self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
                             nfreq = len(rang)
                             tb.close()
-                        self._printInfo("\n\n Reading scans for spw %i \n" % sp)
+                        self._printInfo("Reading scans for spw %i \n" % sp)
 
                         # Read all scans for this field id:
                         for sc, scan in enumerate(self.sourscans[vis[1]]):
@@ -2000,7 +2014,7 @@ from the pointing direction.\n\n""")
                             tb.close()
 
                             for fieldid in fieldids:
-                                self._printInfo("\r Reading scan #%i (%i of %i). Field: %i" %
+                                self._printInfo("Reading scan #%i (%i of %i). Field: %i" %
                                                 (scan, sc + 1, len(self.sourscans[vis[1]]), fieldid))
                                 tb.open(msname)
                                 maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
@@ -2110,7 +2124,7 @@ from the pointing direction.\n\n""")
 
                                     if phshift[0] != 0.0 or phshift[1] != 0.0:
                                         self._printInfo(
-                                            "\r\t\t\t\t Offset: %.2e RA (tsec) %.2e Dec (asec)." %
+                                            "\t\t\t\t Offset: %.2e RA (tsec) %.2e Dec (asec)." %
                                             (phshift[0] / 15., phshift[1]))
 
                                     # Average spectral channels:
@@ -2306,19 +2320,19 @@ from the pointing direction.\n\n""")
             if self.takeModel:
                 del modelscanAv
 
-            try:
-                del GaussFact
-            except Exception:
-                pass
+            # try:
+            #     del GaussFact
+            # except Exception:
+            #     pass
             gc.collect()
 
         # Initial and final times of observations (time reference for proper motions):
         self.t0 = np.min([np.min(ti) for ti in self.t])
         self.t1 = np.max([np.max(ti) for ti in self.t])
 
-        self._printInfo("\n\n Done reading\n")
+        self._printInfo("Done reading\n")
         tac = time.time()
-        self._printInfo("\nReading took %.2f seconds.\n" % (tac - tic))
+        self._printInfo("Reading took %.2f seconds.\n" % (tac - tic))
 
         self.success = True
 
@@ -2339,7 +2353,7 @@ from the pointing direction.\n\n""")
 
         # Set pointers to data, model, etc.:
         # self.initData(del_data=del_data)
-        print("DEBUG >> leaving readData")
+        self.logger.debug("leaving readData")
 
         return True
 
@@ -2354,13 +2368,13 @@ from the pointing direction.\n\n""")
         Notice that the fixed model is recomputed for each spectral channel (i.e., if
         OneFitPerChannel=True), and is computed only once if OneFitPerChannel==False."""
 
-        print("uvmultifit::computeFixedModel")
+        self.logger.debug("uvmultifit::computeFixedModel")
 
         if self.takeModel:
-            self._printInfo("\nFixed model was taken from model column.\n"
-                            + "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n\n")
+            self._printInfo("Fixed model was taken from model column.\n"
+                            + "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n")
         else:
-            self._printInfo("\nGoing to compute fixed model (may need quite a bit of time)\n")
+            self._printInfo("Going to compute fixed model (may need quite a bit of time)\n")
             self.mymodel.residuals([0], mode=0)
 
     ############################################
@@ -2388,7 +2402,7 @@ from the pointing direction.\n\n""")
         The 'modeler' instance stores pointers to the data and metadata, the compiled model (and
         fixedmodel), the parameter values, and all the methods to compute residuals, Chi Squared, etc."""
 
-        print("uvmultifit::initData")
+        self.logger.debug("uvmultifit::initData")
         # Reset pointers for the modeler:
         self.mymodel._deleteData()
 
@@ -2400,7 +2414,7 @@ from the pointing direction.\n\n""")
         print("gooduvm, Nspw:", gooduvm, self.Nspw)
 
         if gooduvm != self.Nspw:
-            self._printError("\nError in the C++ extension!\n")
+            self._printError("Error in the C++ extension!\n")
             return False
 
         # Maximum number of frequency channels (i.e., the maximum from all the selected spws):
@@ -2470,7 +2484,7 @@ from the pointing direction.\n\n""")
                 try:
                     self.mymodel.output[-1][:] = self.avermod[spidx]
                 except Exception:
-                    self._printError("You already used the model column! Should read it again!\n")
+                    self._printError("You already used the model column! Should read it again!")
 
             ########
             # Array of booleans, to determine if a datum enters the fit:
@@ -2484,27 +2498,27 @@ from the pointing direction.\n\n""")
             self.mymodel.fittablebool[-1] = np.require(np.copy(self.mymodel.fittable[-1]
                                                                ).astype(np.bool), requirements=['C', 'A'])
 
-            print("calling setData")
-            print(f"spidx: {spidx}")
-            print(f"self.mymodel.uv[-1][0]: {self.mymodel.uv[-1][0]}")
-            print(f"self.mymodel.uv[-1][1]: {self.mymodel.uv[-1][1]}")
-            print(f"self.mymodel.uv[-1][2]: {self.mymodel.uv[-1][2]}")
-            print(f"self.mymodel.wgt[-1]: {self.mymodel.wgt[-1]}")
-            print(f"self.mymodel.data[-1]: {self.mymodel.data[-1]}")
-            print(f"self.mymodel.output[-1]: {self.mymodel.output[-1]}")
-            print(f"self.mymodel.freqs[-1]: {self.mymodel.freqs[-1]}")
-            print(f"self.mymodel.fittable[-1]: {self.mymodel.fittable[-1]}")
-            print(f"self.mymodel.wgtcorr[-1]: {self.mymodel.wgtcorr[-1]}")
-            print(f"self.mymodel.dt[-1]: {self.mymodel.dt[-1]}")
-            print(f"self.mymodel.dtArr[-1]: {self.mymodel.dtArr[-1]}")
-            print(f"self.mymodel.dtIdx[-1]: {self.mymodel.dtIdx[-1]}")
-            print(f"self.mymodel.offset[-1][0]: {self.mymodel.offset[-1][0]}")
-            print(f"self.mymodel.offset[-1][1]: {self.mymodel.offset[-1][1]}")
-            print(f"self.mymodel.offset[-1][2]: {self.mymodel.offset[-1][2]}")
-            print(f"self.mymodel.ants[-1][0]: {self.mymodel.ants[-1][0]}")
-            print(f"self.mymodel.ants[-1][1]: {self.mymodel.ants[-1][1]}")
-            print(f"self.mymodel.isGain[-1]: {self.mymodel.isGain[-1]}")
-            print(f"self.mymodel.Nants: {self.mymodel.Nants}")
+            # print("calling setData")
+            # print(f"spidx: {spidx}")
+            # print(f"self.mymodel.uv[-1][0]: {self.mymodel.uv[-1][0]}")
+            # print(f"self.mymodel.uv[-1][1]: {self.mymodel.uv[-1][1]}")
+            # print(f"self.mymodel.uv[-1][2]: {self.mymodel.uv[-1][2]}")
+            # print(f"self.mymodel.wgt[-1]: {self.mymodel.wgt[-1]}")
+            # print(f"self.mymodel.data[-1]: {self.mymodel.data[-1]}")
+            # print(f"self.mymodel.output[-1]: {self.mymodel.output[-1]}")
+            # print(f"self.mymodel.freqs[-1]: {self.mymodel.freqs[-1]}")
+            # print(f"self.mymodel.fittable[-1]: {self.mymodel.fittable[-1]}")
+            # print(f"self.mymodel.wgtcorr[-1]: {self.mymodel.wgtcorr[-1]}")
+            # print(f"self.mymodel.dt[-1]: {self.mymodel.dt[-1]}")
+            # print(f"self.mymodel.dtArr[-1]: {self.mymodel.dtArr[-1]}")
+            # print(f"self.mymodel.dtIdx[-1]: {self.mymodel.dtIdx[-1]}")
+            # print(f"self.mymodel.offset[-1][0]: {self.mymodel.offset[-1][0]}")
+            # print(f"self.mymodel.offset[-1][1]: {self.mymodel.offset[-1][1]}")
+            # print(f"self.mymodel.offset[-1][2]: {self.mymodel.offset[-1][2]}")
+            # print(f"self.mymodel.ants[-1][0]: {self.mymodel.ants[-1][0]}")
+            # print(f"self.mymodel.ants[-1][1]: {self.mymodel.ants[-1][1]}")
+            # print(f"self.mymodel.isGain[-1]: {self.mymodel.isGain[-1]}")
+            # print(f"self.mymodel.Nants: {self.mymodel.Nants}")
             gooduvm = uvmod.setData(spidx, self.mymodel.uv[-1][0], self.mymodel.uv[-1][1], self.mymodel.uv[-1][2],
                                     self.mymodel.wgt[-1], self.mymodel.data[-1],
                                     self.mymodel.output[-1], self.mymodel.freqs[-1],
@@ -2513,10 +2527,10 @@ from the pointing direction.\n\n""")
                                     self.mymodel.offset[-1][0], self.mymodel.offset[-1][1], self.mymodel.offset[-1][2],
                                     self.mymodel.ants[-1][0], self.mymodel.ants[-1][1],
                                     self.mymodel.isGain[-1], self.Nants)
-            print(f"DEBUG >> gooduvm = {gooduvm}")
+            print("gooduvm = ", gooduvm)
 
 ###             if not gooduvm:
-###                 self._printError("\nError in the C++ extension!\n")
+###                 self._printError("Error in the C++ extension!\n")
 ###                 return False
 ###
 ###         try:
@@ -2525,7 +2539,7 @@ from the pointing direction.\n\n""")
 ###         except Exception:
 ###             pass
 ###         gc.collect()
-        print("DEBUG >> leaving initData")
+        self.logger.debug("leaving initData")
         return True
 
     ############################################
@@ -2540,7 +2554,7 @@ from the pointing direction.\n\n""")
 
         It is indeed MANDATORY to run this function if the model to be fitted has changed."""
 
-        print("uvmultifit::initModel")
+        self.logger.debug("uvmultifit::initModel")
         if self.mymodel.initiated:
             #     self.clearPointers(1)
             self.mymodel._deleteModel()
@@ -2551,7 +2565,7 @@ from the pointing direction.\n\n""")
         ncpu = int(self.NCPU)
         gooduvm = uvmod.setNCPU(ncpu)
         if gooduvm != ncpu:
-            self._printError("\nError in the C++ extension!\n")
+            self._printError("Error in the C++ extension!")
             return False
 
         # Initial setup modeler:
@@ -2617,7 +2631,7 @@ from the pointing direction.\n\n""")
         self.mymodel.minnum = self.minDp
 
         if not gooduvm:
-            self._printError("\nError in the C++ extension!\n")
+            self._printError("Error in the C++ extension!")
             return False
         else:
             self._printInfo("Success!\n")
@@ -2669,7 +2683,7 @@ from the pointing direction.\n\n""")
           set by spetial routines of **UVMultiFit** (e.g., the Quinn Fringe Fitter). Default is
           to NOT reset flags (this option should be OK most of the time)."""
 
-        print("uvmultifit::fit")
+        self.logger.debug("uvmultifit::fit")
         tic = time.time()
 
         self.mymodel.bounds = self.bounds
@@ -2688,10 +2702,9 @@ from the pointing direction.\n\n""")
             if reset_flags:
                 self.mymodel.fittablebool[si][:] = True
             if self.MJDrange[0] > 0.0 and self.MJDrange[1] > 0.0:
-                self._printInfo("\nSelecting data by Modified Julian Date\n")
-                timeWindow = np.logical_and(np.logical_and(
-                    self.t[si] >= self.MJDrange[0],
-                    self.t[si] <= self.MJDrange[1]))
+                self._printInfo("Selecting data by Modified Julian Date\n")
+                timeWindow = np.logical_and(self.t[si] >= self.MJDrange[0],
+                                            self.t[si] <= self.MJDrange[1])
                 self.mymodel.fittablebool[si][:] = np.logical_and(timeWindow, self.mymodel.fittablebool[si])
                 del timeWindow
 
@@ -2724,14 +2737,14 @@ from the pointing direction.\n\n""")
 
         #  for si in range(nspwtot):
         #    self.mymodel.wgtcorr[si][:] = -self.mymodel.KfacWgt
-        self._printInfo("\nNow, fitting model \n")
+        self._printInfo("Now, fitting model \n")
 
         # Initialize model:
         if reinit_model:
             if self.mymodel.initiated:
                 goodinit = self.initModel()
             if self.mymodel.failed or goodinit is False:
-                self._printError("ERROR: Bad model (re)initialization! \n%s" % self.mymodel.resultstring)
+                self._printError("bad model (re)initialization! %s" % self.mymodel.resultstring)
                 return False
 
         for i in range(len(self.p_ini) + 1):
@@ -2756,7 +2769,7 @@ from the pointing direction.\n\n""")
                 print("")
 
                 for nuidx in range(rang):
-                    self._printInfo("\r Fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
+                    self._printInfo("Fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
 
                     self.mymodel.currspw = si
                     self.mymodel.currchan = nuidx
@@ -2813,7 +2826,7 @@ from the pointing direction.\n\n""")
         ##################
         # CASE OF CONTINUUM-MODE FIT:
         else:
-            self._printInfo("\nFitting to all frequencies at once.\n")
+            self._printInfo("Fitting to all frequencies at once.\n")
 
             # This will tell the modeller to solve in continuum mode:
             self.mymodel.currspw = -1
@@ -2821,9 +2834,9 @@ from the pointing direction.\n\n""")
 
             # Compute fixed model:
             if redo_fixed and len(self.mymodel.fixed) > 0 and not self.takeModel:
-                print("Generating fixed model. May take some time")
+                self.logger.debug("Generating fixed model. May take some time")
                 self.computeFixedModel()
-                print("Done!")
+                self.logger.debug("Done!")
 
             # Pre-fit with simplex:
             if self.method == 'simplex':
@@ -2863,7 +2876,7 @@ from the pointing direction.\n\n""")
             fiterrors = [np.sqrt(fit[1][i, i] * ChiSq) for i in range(npars)]
             covariance = fit[1] * ChiSq
 
-        self._printInfo("\n The reduced Chi Squared will be set to 1 by re-scaling the visibility weights.\n")
+        self._printInfo("The reduced Chi Squared will be set to 1 by re-scaling the visibility weights.\n")
         # Free some memory:
         gc.collect()
 
@@ -2907,11 +2920,11 @@ from the pointing direction.\n\n""")
         if not save_file:
             return True
 
-        self._printInfo("\n DONE FITTING. Now, saving to file.\n")
+        self._printInfo("DONE FITTING. Now, saving to file.\n")
 
         outf = open(self.outfile, 'w')
         outf.write("# MODELFITTING RESULTS FOR MS: " + ','.join(self.vis))
-        outf.write("\n\n# NOTICE THAT THE REDUCED CHI SQUARE SHOWN HERE IS THE VALUE\n")
+        outf.write("# NOTICE THAT THE REDUCED CHI SQUARE SHOWN HERE IS THE VALUE\n")
         outf.write("# *BEFORE* THE RE-SCALING OF THE VISIBILITY WEIGHTS.\n")
         outf.write("# HOWEVER, THE PARAMETER UNCERTAINTIES ARE *ALREADY* GIVEN\n")
         outf.write("# FOR A REDUCED CHI SQUARE OF 1.\n")
@@ -2933,29 +2946,29 @@ from the pointing direction.\n\n""")
         else:
             outf.write("# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.")
 
-        outf.write("\n\n###########################################\n")
+        outf.write("###########################################\n")
         outf.write("#\n# MODEL CONSISTS OF:\n#")
         for m, mod in enumerate(self.model):
-            outf.write("\n# '" + mod + "' with variables: " + self.var[m])
+            outf.write("# '" + mod + "' with variables: " + self.var[m])
         if len(self.fixed) > 0:
-            outf.write("\n#\n#\n# FIXED MODEL CONSISTS OF:\n#")
+            outf.write("#\n#\n# FIXED MODEL CONSISTS OF:\n#")
             if self.takeModel:
-                outf.write("\n# THE MODEL COLUMN FOUND IN THE DATA")
+                outf.write("# THE MODEL COLUMN FOUND IN THE DATA")
             else:
                 for m, mod in enumerate(self.fixed):
                     var2print = list(map(float, self.fixedvar[m].split(',')))
                     outf.write(
-                        "\n# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
-                outf.write("\n#\n#  - AND SCALING FACTOR: %s" % self.scalefix)
+                        "# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
+                outf.write("#\n#  - AND SCALING FACTOR: %s" % self.scalefix)
 
-        outf.write("\n#\n#\n# INITIAL PARAMETER VALUES:\n#")
+        outf.write("#\n#\n# INITIAL PARAMETER VALUES:\n#")
         for p0i, p0 in enumerate(self.p_ini):
             if self.bounds is not None:
-                outf.write("\n#  p[%i] = %.5e with bounds: %s " % (p0i, p0, str(self.bounds[p0i])))
+                outf.write("#  p[%i] = %.5e with bounds: %s " % (p0i, p0, str(self.bounds[p0i])))
             else:
-                outf.write("\n#  p[%i] = %.5e with no bounds" % (p0i, p0))
+                outf.write("#  p[%i] = %.5e with no bounds" % (p0i, p0))
 
-        outf.write("\n#\n##########################################\n\n")
+        outf.write("#\n##########################################\n")
         parshead = []
 
         for pp in range(len(self.p_ini)):
@@ -2985,7 +2998,7 @@ from the pointing direction.\n\n""")
 
         tac = time.time()
 
-        self._printInfo("\n Fit took %.2f seconds.\n\n END!\n" % (tac - tic))
+        self._printInfo("Fit took %.2f seconds.\n END!\n" % (tac - tic))
         #  uvmod.unsetWork()
 
         return True
@@ -3432,7 +3445,7 @@ class modeler():
                         self.strucvar.append(list(map(float, tempstr2[:2])))
                 except Exception:
                     print(tempstr.split(','))
-                    self.resultstring = '\n If only_flux=True, all variables but the flux must be constants! Aborting!'
+                    self.resultstring = ' If only_flux=True, all variables but the flux must be constants! Aborting!'
                     self.failed = True
 
             modstr = 'self.varfunc[' + str(ii) + '] = lambda p, nu: [' + tempstr + ']'
@@ -3444,7 +3457,7 @@ class modeler():
                 return
 
             if component not in self.allowedmod:
-                self.resultstring = "\n Component '" + component + "' is unknown. Aborting!"
+                self.resultstring = " Component '" + component + "' is unknown. Aborting!"
                 self.failed = True
                 return
             else:
@@ -3479,7 +3492,7 @@ class modeler():
                 return
 
             if component not in self.allowedmod:
-                self.resultstring = "\n Component '" + component + "' is unknown. Aborting!"
+                self.resultstring = " Component '" + component + "' is unknown. Aborting!"
                 self.failed = True
                 return
             else:
@@ -3594,7 +3607,7 @@ class modeler():
 
         if self.only_flux and self.currchan == -1:
             nnu = max([len(self.freqs[sp]) for sp in range(len(self.freqs))])
-            print("\nComputing structure-only parameters")
+            print("Computing structure-only parameters")
 
             for midx in range(len(p)):
                 if len(self.strucvar[midx]) > 3:
@@ -3690,7 +3703,7 @@ class modeler():
                 backupP[:] = self.par2[0, :]
 
         if controlIter == NITER:
-            sys.stdout.write("\n REACHED MAXIMUM NUMBER OF ITERATIONS!\n"
+            sys.stdout.write("REACHED MAXIMUM NUMBER OF ITERATIONS!\n"
                              + "The algorithm may not have converged!\n"
                              + "Please, check if the parameter values are meaningful.\n")
             sys.stdout.flush()
@@ -3720,7 +3733,7 @@ class modeler():
             m = 2 * n + 1
 
             # Recurrence relation:
-            merf = (1. - spec.erf(-np.sqrt(k) * a))
+            merf = (1. - special.erf(-np.sqrt(k) * a))
 
             m0 = np.sqrt(np.pi / k) / 2. * merf
             m1 = np.exp(-k * a * a) / 2. / k + np.sqrt(np.pi / k) * a / 2. * merf
@@ -3752,7 +3765,7 @@ class modeler():
 
         else:
 
-            raise ValueError("\n\nModel %i was not correctly interpreted!\n\n" % imod)
+            raise ValueError("Model %i was not correctly interpreted!\n" % imod)
 
     ############################################
     #
@@ -3955,8 +3968,8 @@ class modeler():
 
         if mode in [-2, -1]:
             if nui < 0:
-                sys.stdout.write("\r Iteration # %i. " % (self.calls))
-                sys.stdout.write("\r \t\t\t\t Achieved ChiSq:  %.8e" % (ChiSq))
+                sys.stdout.write("Iteration # %i. " % (self.calls))
+                sys.stdout.write("\t\t\t\t Achieved ChiSq:  %.8e" % (ChiSq))
                 sys.stdout.flush()
 
         if ChiSq <= 0.0:
@@ -4361,7 +4374,7 @@ class immultifit(uvmultifit):
         Instead of writing model (or residual) visibilities into measurement sets, the task make a new image
         with the post-fit residuals, with the same gridding as the image used for the fit."""
 
-        self._printInfo("\nThere is no measurement set (i.e., you are running 'immultifit').\n"
+        self._printInfo("There is no measurement set (i.e., you are running 'immultifit').\n"
                         + "Will generate an image, instead.\n")
         if os.path.exists(self.residual + '.immultifit'):
             shutil.rmtree(self.residual + '.immultifit')
@@ -4386,7 +4399,7 @@ class immultifit(uvmultifit):
             resim[:, :, :, i] = 0.0
 
         for i in range(self.start, self.nchan):
-            self._printInfo("\r Doing frequency channel %i of %i" % (i + 1 - self.start, self.nchan - self.start))
+            self._printInfo("Doing frequency channel %i of %i" % (i + 1 - self.start, self.nchan - self.start))
             for j in range(imdims[0]):
                 for k in range(imdims[1]):
                     cpix = imdims[1] * j + k
@@ -4400,7 +4413,7 @@ class immultifit(uvmultifit):
         ia.setbrightnessunit('Jy/beam')
         ia.close()
 
-        self._printInfo("\n\n Will now save the unconvolved model image.\n")
+        self._printInfo("Will now save the unconvolved model image.\n")
         modname = '.'.join(self.residual.split('.')[:-1]) + '.fitmodel.immultifit'
         if os.path.exists(modname):
             shutil.rmtree(modname)
@@ -4412,7 +4425,7 @@ class immultifit(uvmultifit):
         npix = float(imdims[0] * imdims[1])
         temparr = np.zeros((imdims[0], imdims[1]), dtype=np.complex128)
         for i in range(self.start, self.nchan):
-            self._printInfo("\r Doing frequency channel %i of %i" % (i + 1 - self.start, self.nchan - self.start))
+            self._printInfo("Doing frequency channel %i of %i" % (i + 1 - self.start, self.nchan - self.start))
             for j in range(imdims[0]):
                 for k in range(imdims[1]):
                     cpix = imdims[1] * j + k
@@ -4431,8 +4444,8 @@ class immultifit(uvmultifit):
     def checkInputs(self, data_changed=False):
         """ Function re-definition for the immultifit class."""
 
-        self._printInfo("\nIn image mode, the whole image is taken.\n"
-                        + "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n\n")
+        self._printInfo("In image mode, the whole image is taken.\n"
+                        + "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n")
         self._printInfo("In image mode, the channelization used is that of the image.\n"
                         + "Will override the 'chanwidth' and 'timewidth' parameters.\n")
 
@@ -4445,14 +4458,14 @@ class immultifit(uvmultifit):
         try:
             self.stokes = abs(int(self.stokes))
         except Exception:
-            self._printInfo("\n\nIn image mode, 'stokes' must be an integer\n(i.e., the Stokes column of the image).\n")
+            self._printInfo("In image mode, 'stokes' must be an integer\n(i.e., the Stokes column of the image).\n")
             polimag = ['I', 'Q', 'U', 'V']
             if self.stokes in polimag:
                 stchan = polimag.index(self.stokes)
                 self._printInfo("Since stokes is '%s', will try with image column %i\n" % (self.stokes, stchan))
                 self.stokes = stchan
             else:
-                self._printError("\nPlease, set the 'stokes' keyword to an image pol. channel\n")
+                self._printError("Please, set the 'stokes' keyword to an image pol. channel")
                 return False
 
         try:
@@ -4461,7 +4474,7 @@ class immultifit(uvmultifit):
             imsum = ia.summary()
             ia.close()
         except Exception:
-            self._printError("The residual image is not an image (or does not exist)!\n\n")
+            self._printError("The residual image is not an image (or does not exist)!")
             return False
 
         try:
@@ -4469,17 +4482,17 @@ class immultifit(uvmultifit):
             imdims2 = np.array(ia.shape())
             ia.close()
         except Exception:
-            self._printError("The PSF image is not an image (or does not exist)!\n\n")
+            self._printError("The PSF image is not an image (or does not exist)!")
             return False
 
         if max(np.abs(imdims - imdims2)) > 0:
-            self._printError("The dimensions of the PSF image and the image of residuals do NOT coindice!\n\n")
+            self._printError("The dimensions of the PSF image and the image of residuals do NOT coindice!")
             return False
 
         if imdims[2] > self.stokes:
             self._printInfo("Selecting stokes column %i" % self.stokes)
         else:
-            self._printError("\n\nThe images only have %i stokes columns, but you selected stokes=%i\n" %
+            self._printError("The images only have %i stokes columns, but you selected stokes=%i" %
                              (imdims[2], self.stokes))
             return False
 
@@ -4554,7 +4567,7 @@ class immultifit(uvmultifit):
             os.system('rm -rf %s.fft.*' % self.residual)
             os.system('rm -rf %s.fft.*' % self.psf)
 
-            self._printInfo("\nInverting images into Fourier space\n")
+            self._printInfo("Inverting images into Fourier space\n")
             ia.open(self.residual)
             ia.fft(real=self.residual + '.fft.real', imag=self.residual + '.fft.imag')
             ia.close()
@@ -4583,13 +4596,13 @@ class immultifit(uvmultifit):
         for i in range(imdims[3]):
             freqs[i] = ia.toworld([0, 0, self.stokes, i + self.start])['numeric'][3]
 
-        self._printInfo("\nReading gridded UV coordinates and weights\n")
+        self._printInfo("Reading gridded UV coordinates and weights\n")
         u0, v0, s0, nu0 = ia.toworld([0, 0, self.stokes, self.start])['numeric']
         u1, v1, s0, nu1 = ia.toworld([1, 1, self.stokes, self.start])['numeric']
         du = u1 - u0
         dv = v1 - v0
         for j in range(imdims[0]):
-            self._printInfo("\r Reading row %i of %i" % (j, imdims[0]))
+            self._printInfo("Reading row %i of %i" % (j, imdims[0]))
             for k in range(imdims[1]):
                 cpix = imdims[1] * j + k
                 ui[cpix] = (u0 + du * j)
@@ -4600,11 +4613,11 @@ class immultifit(uvmultifit):
         ia.close()
         # Maximum dynamic range set by "Window effect"
         maskwgt = wgti < np.max(wgti) * (10.**(self.dBcut / 10.))
-        self._printInfo("\n\nReading gridded visibilities\n")
+        self._printInfo("Reading gridded visibilities\n")
         ia.open(self.residual + '.fft.real')
         datas = ia.getchunk()
         for j in range(imdims[0]):
-            self._printInfo("\r Reading row %i of %i" % (j, imdims[0]))
+            self._printInfo("Reading row %i of %i" % (j, imdims[0]))
             for k in range(imdims[1]):
                 cpix = imdims[1] * j + k
                 datare[cpix, :] = datas[j, k, self.stokes, self.start:self.nchan]
@@ -4612,11 +4625,10 @@ class immultifit(uvmultifit):
         del datas
         ia.close()
 
-        self._printInfo(" ")
         ia.open(self.residual + '.fft.imag')
         datas = ia.getchunk()
         for j in range(imdims[0]):
-            self._printInfo("\r Reading row %i of %i" % (j, imdims[0]))
+            self._printInfo("Reading row %i of %i" % (j, imdims[0]))
             for k in range(imdims[1]):
                 cpix = imdims[1] * j + k
                 dataim[cpix, :] = -datas[j, k, self.stokes, self.start:self.nchan]
@@ -4653,7 +4665,7 @@ class immultifit(uvmultifit):
 
         self.Nants = 2
 
-        self._printInfo("\nDone reading.\n")
+        self._printInfo("Done reading.\n")
 
         self.initData()
 
