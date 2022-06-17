@@ -1,5 +1,6 @@
 import sys
 import re
+import logging
 import numpy as np
 from scipy import special
 
@@ -136,7 +137,11 @@ class modeler():
     #
     def __init__(self):
         """ Just the constructor of the 'modeler' class."""
-        print("modeler::__init__")
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger("modeler")
+        self.logger.debug("modeler::__init__")
+        self.logger.debug("modeler::__init__")
         self.Nants = 0
         self.initiated = False
         self.addfixed = False
@@ -225,7 +230,7 @@ class modeler():
 
         Not to be called by the user."""
 
-        print("modeler::setup")
+        self.logger.debug("modeler::setup")
 
         # self.minnum = np.finfo(np.float64).eps  # Step for Jacobian computation
         self.propRA = np.zeros(len(model), dtype=np.float64)
@@ -260,7 +265,7 @@ class modeler():
     # Compile the functions to make p, nu -> var:
     def compileAllModels(self):
         """ Compile all models (fixed, variable, and fixed-scale. Not to be called directly by the user. """
-        print("modeler::compileAllModels")
+        self.logger.debug("modeler::compileAllModels")
         self.resultstring = ''
         self.failed = False
         self._compileModel()
@@ -271,7 +276,7 @@ class modeler():
     #  print self.gainFunction
     def _compileGains(self):
         """ Compile the functions related to the antenna gains."""
-        print("modeler::_compileGains")
+        self.logger.debug("modeler::_compileGains")
         if self.isMixed:
             self.phaseAntsFunc = [lambda t, nu, p: 0. for i in range(self.Nants)]
             self.ampAntsFunc = [lambda t, nu, p: 1. for i in range(self.Nants)]
@@ -421,7 +426,7 @@ class modeler():
     def _compileModel(self):
         """ Compiles the variable model, according to the contents of the 'model' and 'parameters' lists."""
 
-        print("modeler::_compileModel")
+        self.logger.debug("modeler::_compileModel")
         # Define variable model:
         self.varfunc = [0.0 for component in self.model]
 
@@ -463,7 +468,7 @@ class modeler():
     def _compileFixedModel(self):
         """ Compiles the fixed model, according to the contents of the 'fixed' and 'fixedpars' lists."""
 
-        print("modeler::_compileFixedModels")
+        self.logger.debug("modeler::_compileFixedModels")
         if len(self.fixed) > 0 and 'model_column' in self.fixed:
             return
 
@@ -497,7 +502,7 @@ class modeler():
     def _compileScaleFixed(self):
         """ Compiles the scaling factor for the fixed model """
 
-        print("modeler::_compileScaleFixed")
+        self.logger.debug("modeler::_compileScaleFixed")
         tempstr = self.scalefix.replace(
             'LorentzLine(', 'self.LorentzLine(nu, ').replace(
                 'GaussLine(', 'self.GaussLine(nu, ').replace(
@@ -522,7 +527,7 @@ class modeler():
         in index 1, and bound values are in index 2. The equations for the changes of variables are taken
         from the MINUIT package."""
 
-        print("modeler::getPar2")
+        self.logger.debug("modeler::getPar2")
         if self.bounds is None:
             self.par2[1, :] = 1.0
             if mode == 0:
@@ -575,7 +580,7 @@ class modeler():
     def LMMin(self, p):
         """ Implementation of the Levenberg-Marquardt algorithm. Not to be called directly by the user. """
 
-        print("modeler::LMMin")
+        self.logger.debug("modeler::LMMin")
         NITER = int(self.LMtune[3] * len(p))
         self.calls = 0
 
@@ -719,7 +724,7 @@ class modeler():
     def gridModel(self, imod, tempvar):
         """ Compute elements of Taylor expansion of the source's Hankel transform."""
 
-        print("modeler::gridModel")
+        self.logger.debug("modeler::gridModel")
         n = self.HankelOrder - 1
 
         if imod == 'GaussianRing':   # Gaussian Ring
@@ -788,7 +793,7 @@ class modeler():
         The so-called 'output array' is the data that will be saved into the measurement set(s)
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
-        print("uvmultifit residuals")
+        self.logger.debug("uvmultifit residuals")
         #  varsize = self.maxNvar+self.HankelOrder
         if mode in [0, -3]:
             self.calls = 0
@@ -987,7 +992,7 @@ class modeler():
     def ChiSquare(self, p, bounds=None, p_ini=[]):
         """ Just a wrapper of the 'residuals' function, usually called by simplex."""
 
-        print("uvmultifit ChiSquare")
+        self.logger.debug("uvmultifit ChiSquare")
         inside = True
         if bounds is not None:
             for i, bound in enumerate(bounds):

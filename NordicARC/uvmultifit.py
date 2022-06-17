@@ -812,7 +812,7 @@ class uvmultifit():
         """Just the constructor method, for class instantiation."""
         logging.basicConfig(level=logging.DEBUG,
                             format='%(name)s - %(levelname)s - %(message)s')
-        self.logger = logging.getLogger("UVMultiFit")
+        self.logger = logging.getLogger("uvmultifit")
         self.logger.debug("uvmultifit::__init__")
         self.logger.info("logging started")
         self._printInfo(greetings)

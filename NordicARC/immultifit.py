@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 import numpy as np
 from .uvmultifit import uvmultifit
 
@@ -43,6 +44,11 @@ class immultifit(uvmultifit):
     def __init__(self, reinvert=True, start=0, nchan=-1, psf='', residual='', dBcut=-30., **kwargs):
         """ Constructor."""
 
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger("immultifit")
+        self.logger.debug("immultifit::__init__")
+        self.logger.info("logging started")
         self.Nspw = 1
         self.takeModel = False
         self.psf = str(psf)
