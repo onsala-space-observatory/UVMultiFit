@@ -48,7 +48,6 @@ class immultifit(uvmultifit):
                             format='%(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger("immultifit")
         self.logger.debug("immultifit::__init__")
-        self.logger.info("logging started")
         self.Nspw = 1
         self.takeModel = False
         self.psf = str(psf)

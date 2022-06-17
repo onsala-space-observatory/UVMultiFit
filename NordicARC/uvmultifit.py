@@ -466,7 +466,7 @@ from .modeler import modeler
 # global ms, tb
 
 __version__ = "3.0-p2"
-date = 'JAN 2021'
+date = 'JUN 2022'
 
 print("C++ shared library loaded successfully\n")
 
@@ -483,13 +483,11 @@ cs = coordsys()
 #     ia = gentools(['ia'])[0]
 #     cs = gentools(['cs'])[0]
 
-greetings = '##########################################################################\n'
-greetings += '# UVMULTIFIT --  ' + date + '. EUROPEAN ALMA REGIONAL CENTER (NORDIC NODE).  #\n'
-greetings += '#       Please, add the UVMULTIFIT reference to your publications:       #\n'
-greetings += '#                                                                        #\n'
-greetings += '#      Marti-Vidal, Vlemmings, Muller, & Casey 2014, A&A, 563, A136      #\n'
-greetings += '#                                                                        #\n'
-greetings += '##########################################################################\n'
+greetings = '#######################################################################\n'
+greetings += '# UVMULTIFIT -- ' + date + '. EUROPEAN ALMA REGIONAL CENTER (NORDIC NODE) #\n'
+greetings += '#      Please, add the UVMULTIFIT reference to your publications:     #\n'
+greetings += '#     Marti-Vidal, Vlemmings, Muller & Casey 2014, A&A, 563, A136     #\n'
+greetings += '#######################################################################\n'
 
 
 class uvmultifit():
@@ -810,11 +808,10 @@ class uvmultifit():
                  LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200], only_flux=False,
                  proper_motion=0.0, HankelOrder=80, phase_gains={}, amp_gains={}):
         """Just the constructor method, for class instantiation."""
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                             format='%(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger("uvmultifit")
         self.logger.debug("uvmultifit::__init__")
-        self.logger.info("logging started")
         self._printInfo(greetings)
         # self._printWarning("beware")
         # self._printError("oops!")
@@ -942,9 +939,18 @@ class uvmultifit():
 
     def select_model(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
                      bounds=None, OneFitPerChannel=False):
-        print(model)
-        print(var)
-        print(p_ini)
+        for i, m in enumerate(model):
+            self._printInfo("model[%d]: %s" % (i, m))
+
+        if isinstance(var, list):
+            for i, v in enumerate(var):
+                self._printInfo("variables[%d]: %s" % (i, v))
+        else:
+            self._printInfo("variables[0]: %s" % (var))
+
+        for i, p in enumerate(p_ini):
+            self._printInfo("initial p[%d]: %s" % (i, p))
+
         self.model = model
         self.var = var
         self.p_ini = p_ini
@@ -989,7 +995,7 @@ class uvmultifit():
                     self._printError("failed fit!\n")
                 elif self.write_model in [1, 2, 3]:
                     if self.timewidth == 1 and self.stokes not in ['Q', 'U', 'V']:
-                        self._printInfo("Writing into measurement set(s)\n")
+                        self._printInfo("writing into measurement set(s)")
                         self.writeModel()
                     else:
                         msg = "cannot write into measurement set!\n"
@@ -999,12 +1005,12 @@ class uvmultifit():
                         self._printError(msg)
 
                 if goodfit:
-                    self._printInfo("Fit done!! And UVMULTIFIT class instantiated successfully!\n")
+                    self._printInfo("fit done!! And UVMULTIFIT class instantiated successfully!")
             else:
-                self._printInfo("UVMULTIFIT class instantiated successfully!\n")
+                self._printInfo("UVMultiFit class successfully instantiated")
 
         else:
-            self._printError("aborting UVMultiFit! bad model! Check inputs!\n")
+            self._printError("aborting UVMultiFit! bad model, check inputs!")
 
     ############################################
     #
@@ -1145,7 +1151,7 @@ class uvmultifit():
                         tb2.putcol(column, moddata)
                         tb.close()
 
-            self._printInfo("%s written successfully!\n" % column)
+            self._printInfo("%s written successfully" % column)
 
         return True
 
@@ -1163,7 +1169,7 @@ class uvmultifit():
         else:
             self.model = list(self.model)
 
-        print(self.var)
+        # print(self.var)
         if isinstance(self.var, str):
             self.var = list([self.var])
         else:
@@ -1388,7 +1394,7 @@ class uvmultifit():
 
         if self.takeModel:
             self._printInfo("MODEL COLUMN will be taken as fixed model.\n"
-                            + "Skipping the 'fixedvar' column and all other fixed components")
+                            + "skipping the 'fixedvar' column and all other fixed components")
             self.fixed = ['model_column']
             self.fixedvar = []
         else:
@@ -1407,7 +1413,7 @@ class uvmultifit():
 
         # Set outfile name:
         if self.outfile == '':
-            self._printInfo("Setting 'outfile' to its default (i.e., 'modelfit.dat').\n")
+            self._printInfo("setting 'outfile' to its default (i.e., 'modelfit.dat')")
             self.outfile = 'modelfit.dat'
 
         # Set (and check) the bounds in the fit:
@@ -1491,7 +1497,7 @@ class uvmultifit():
             self.spw = list([str(ss) for ss in self.spw])
             if self.OneFitPerChannel:
                 self._printInfo("SPW is a LIST! User BEWARE! Any fit in *spectral mode*\n"
-                                + "WILL fit the model to each MS separately!\n")
+                                + "will fit the model to each MS separately!")
         elif len(self.spw) > 0:
             self.spw = list([self.spw[0]])
         else:
@@ -1575,7 +1581,7 @@ class uvmultifit():
         self.field_id = []
 
         # Get number of antennas:
-        print(os.path.join(self.vis[0], 'ANTENNA'))
+        # print(os.path.join(self.vis[0], 'ANTENNA'))
         tb.open(os.path.join(self.vis[0], 'ANTENNA'))
         self.Nants = len(tb.getcol('NAME'))
         tb.close()
@@ -1616,10 +1622,10 @@ class uvmultifit():
 
         # Ref. position:
         if not self.phrefset:
-            self._printInfo("Setting phase center on first scan\n")
+            self._printInfo("setting phase center on first scan")
             self.refpos = self.phasedirs[0][min(self.phasedirs[0].keys())]
         else:
-            self._printInfo("Setting phase center on %s\n" % self.phase_center)
+            self._printInfo("setting phase center on %s" % self.phase_center)
 
         # Find out all the scans where this field id is observed:
         for vi, v in enumerate(self.vis):
@@ -1832,19 +1838,19 @@ class uvmultifit():
 
         if self.pbeam:
             self._printInfo("""
-You selected to apply primary-beam correction.
-PLEASE, remember that the beam is being approximated
-with a Gaussian, so it may not be very accuracte far
+You selected to apply primary-beam correction.\n
+PLEASE, remember that the beam is being approximated\n
+with a Gaussian, so it may not be very accuracte far\n
 from the pointing direction.\n""")
             if isinstance(self.dish_diameter, float):
                 if self.dish_diameter == 0.0:
                     try:
                         tempfloat = np.copy(tb.getcol('DISH_DIAMETER'))
                     except Exception:
-                        self._printInfo("Dish Diameter column NOT found in antenna tables!\n")
+                        self._printInfo("dish diameter column not found in antenna tables!")
                     tempfloat = np.zeros(len(self.antnames))
                 else:
-                    self._printInfo("An antenna diameter of %.3f m will be applied\n" % self.dish_diameter)
+                    self._printInfo("an antenna diameter of %.3f m will be applied" % self.dish_diameter)
                     tempfloat = np.array([self.dish_diameter for a in self.antnames])
 
             elif isinstance(self.dish_diameter, dict):
@@ -1854,9 +1860,9 @@ from the pointing direction.\n""")
                         antids = re.search(anam, self.antnames[anid])
                         if 'start' in dir(antids):
                             tempfloat[anid] = self.dish_diameter[anam]
-                self._printInfo("Manual antenna-size setting:\n")
+                self._printInfo("manual antenna-size setting")
                 for anid in range(len(self.antnames)):
-                    self._printInfo("Antenna %s has a diameter of %.2fm.\n" % (self.antnames[anid], tempfloat[anid]))
+                    self._printInfo("antenna %s has a diameter of %.2fm" % (self.antnames[anid], tempfloat[anid]))
 
             else:
                 self._printError("BAD dish_diameter! Should be a float or a dict!")
@@ -1937,7 +1943,7 @@ from the pointing direction.\n""")
             self.iscan[vi] = {}
 
         for si in nsprang:
-            print(f"si {si} of {nsprang}")
+            self._printInfo("spectral index %d of %d" % (si+1, nsprang[-1]+1))
             # These are temporary lists of arrays that will be later concatenated:
             datascanAv = []
             modelscanAv = []
@@ -1961,7 +1967,7 @@ from the pointing direction.\n""")
             for vis in [x for x in self.spwlist if x[3] <= si]:
                 msname = self.vis[vis[1]]
 
-                self._printInfo("Opening measurement set " + msname + ".\n")
+                self._printInfo("opening measurement set '" + msname + "'")
                 tb.open(msname)
                 SPW = tb.getcol('DATA_DESC_ID')
                 crosscorr = tb.getcol('ANTENNA1') != tb.getcol('ANTENNA2')
@@ -1998,7 +2004,7 @@ from the pointing direction.\n""")
                         self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
                         nfreq = len(rang)
                         tb.close()
-                        self._printInfo("Reading scans for spw %i \n" % sp)
+                        self._printInfo("reading scans for spw %i" % sp)
 
                         # Read all scans for this field id:
                         for sc, scan in enumerate(self.sourscans[vis[1]]):
@@ -2010,7 +2016,7 @@ from the pointing direction.\n""")
                             tb.close()
 
                             for fieldid in fieldids:
-                                self._printInfo("Reading scan #%i (%i of %i). Field: %i" %
+                                self._printInfo("reading scan #%i (%i of %i), field: %i" %
                                                 (scan, sc + 1, len(self.sourscans[vis[1]]), fieldid))
                                 tb.open(msname)
                                 maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
@@ -2119,8 +2125,7 @@ from the pointing direction.\n""")
                                     strcos = np.cos(self.phasedirs[vis[1]][fieldid][1])
 
                                     if phshift[0] != 0.0 or phshift[1] != 0.0:
-                                        self._printInfo(
-                                            "\t\t\t\t Offset: %.2e RA (tsec) %.2e Dec (asec)." %
+                                        self._printInfo("offset: %.2e RA (tsec) %.2e Dec (asec)" %
                                             (phshift[0] / 15., phshift[1]))
 
                                     # Average spectral channels:
@@ -2338,9 +2343,9 @@ from the pointing direction.\n""")
         self.t0 = np.min([np.min(ti) for ti in self.t])
         self.t1 = np.max([np.max(ti) for ti in self.t])
 
-        self._printInfo("Done reading\n")
+        self._printInfo("done reading")
         tac = time.time()
-        self._printInfo("Reading took %.2f seconds.\n" % (tac - tic))
+        self._printInfo("reading took %.2f seconds" % (tac - tic))
 
         self.success = True
 
@@ -2348,7 +2353,7 @@ from the pointing direction.\n""")
         self.Nspw = NIFs
 
         for i in range(self.Nspw):
-            self._printInfo("There are %i integrations (%i visibs.) in spw %i\n" %
+            self._printInfo("there are %i integrations (%i visibs.) in spw %i" %
                             (len(self.tArr[i]), len(self.t[i]), i))
 
         #  import pickle as pk
@@ -2379,10 +2384,10 @@ from the pointing direction.\n""")
         self.logger.debug("uvmultifit::computeFixedModel")
 
         if self.takeModel:
-            self._printInfo("Fixed model was taken from model column.\n"
-                            + "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!\n")
+            self._printInfo("fixed model was taken from model column\n"
+                            + "Notice that if you are RE-FITTING, you'll need to RELOAD the model column!")
         else:
-            self._printInfo("Going to compute fixed model (may need quite a bit of time)\n")
+            self._printInfo("going to compute fixed model (may need quite a bit of time)")
             self.mymodel.residuals([0], mode=0)
 
     ############################################
@@ -2416,7 +2421,6 @@ from the pointing direction.\n""")
 
         # Set number of spectral windows:
         gooduvm = uvmod.setNspw(int(self.Nspw))
-        print("gooduvm, Nspw:", gooduvm, self.Nspw)
 
         if gooduvm != self.Nspw:
             self._printError("Error in the C++ extension!\n")
@@ -2532,7 +2536,6 @@ from the pointing direction.\n""")
                                     self.mymodel.offset[-1][0], self.mymodel.offset[-1][1], self.mymodel.offset[-1][2],
                                     self.mymodel.ants[-1][0], self.mymodel.ants[-1][1],
                                     self.mymodel.isGain[-1], self.Nants)
-            print("gooduvm = ", gooduvm)
 
             # if not gooduvm:
             #     self._printError("Error in the C++ extension!\n")
@@ -2564,7 +2567,7 @@ from the pointing direction.\n""")
             #     self.clearPointers(1)
             self.mymodel.deleteModel()
         else:
-            self._printInfo("UVMULTIFIT compiled model(s) do not seem to exist yet.\n")
+            self._printInfo("UVMultiFit compiled model(s) do not seem to exist yet.")
 
         # Set number of threads:
         ncpu = int(self.NCPU)
@@ -2594,6 +2597,8 @@ from the pointing direction.\n""")
         # all of them as a function of frequency. The C++ library will read the variables from here
         # at each iteration and for each model component:
         self.mymodel.initiated = True
+        self.logger.debug("model initiated")
+        self.logger.debug("length of model:" + str(len(self.model)))
         self.mymodel.varbuffer = [np.zeros((len(self.model),
                                             self.maxNvar + self.applyHankel, self.maxnfreq))
                                   for i in range(len(self.p_ini) + 1)]
@@ -2606,7 +2611,7 @@ from the pointing direction.\n""")
         self.mymodel.imod = np.zeros(len(self.model), dtype=np.int32)
 
         # Compile equations that set the model variables and gains:
-        self._printInfo("Going to compile models\n")
+        self._printInfo("going to compile models")
         self.mymodel.compileAllModels()
 
         self.mymodel.GainBuffer = [[[] for AI in range(self.Nants)] for spidx in range(self.Nspw)]
@@ -2626,7 +2631,7 @@ from the pointing direction.\n""")
         compFixed = len(self.fixed) > 0
 
         # Fill in all the information and data pointers for the modeler:
-        self._printInfo("Going to run setModel\n")
+        self._printInfo("going to run setModel")
         gooduvm = uvmod.setModel(self.mymodel.imod, self.mymodel.Hessian, self.mymodel.Gradient,
                                  self.mymodel.varbuffer, self.mymodel.varfixed, self.mymodel.dpar,
                                  self.mymodel.propRA, self.mymodel.propDec, self.refpos,
@@ -2638,8 +2643,6 @@ from the pointing direction.\n""")
         if not gooduvm:
             self._printError("Error in the C++ extension!")
             return False
-        else:
-            self._printInfo("Success!\n")
 
         goodinit = uvmod.setWork()
         if goodinit != 10:
@@ -2707,7 +2710,7 @@ from the pointing direction.\n""")
             if reset_flags:
                 self.mymodel.fittablebool[si][:] = True
             if self.MJDrange[0] > 0.0 and self.MJDrange[1] > 0.0:
-                self._printInfo("Selecting data by Modified Julian Date\n")
+                self._printInfo("selecting data by Modified Julian Date")
                 timeWindow = np.logical_and(self.t[si] >= self.MJDrange[0],
                                             self.t[si] <= self.MJDrange[1])
                 self.mymodel.fittablebool[si][:] = np.logical_and(timeWindow, self.mymodel.fittablebool[si])
@@ -2725,9 +2728,8 @@ from the pointing direction.\n""")
             # ntot = np.sum(self.mymodel.fittablebool[si])
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
-                    self._printInfo(
-                        "ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE! \n CHANNELS: "
-                        + str(list(np.where(unflagged == 0.0))))
+                    self._printError("not enough data for this time range! Channels: "
+                                     + str(list(np.where(unflagged == 0.0))))
                     self.allflagged = True
                     notfit[si] = list(np.where(unflagged == 0.0)[0])
                     #  return False
@@ -2736,13 +2738,13 @@ from the pointing direction.\n""")
 
         #   self.mymodel.output[si][:] = 0.0
         if datatot == 0 and not self.OneFitPerChannel:
-            self._printInfo("ERROR: NOT ENOUGH DATA FOR THIS TIME RANGE!\n")
+            self._printError("not enough data for this time range!\n")
             self.allflagged = True
             return False
 
         #  for si in range(nspwtot):
         #    self.mymodel.wgtcorr[si][:] = -self.mymodel.KfacWgt
-        self._printInfo("Now, fitting model \n")
+        self._printInfo("now fitting model")
 
         # Initialize model:
         if reinit_model:
@@ -2761,6 +2763,7 @@ from the pointing direction.\n""")
 
         ##################
         # CASE OF SPECTRAL-MODE FIT:
+        self.logger.debug("one fit per channel: " + str(self.OneFitPerChannel))
         if self.OneFitPerChannel:
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
@@ -2771,10 +2774,9 @@ from the pointing direction.\n""")
             # Fit channel-wise for each spw:
             for si in range(nspwtot):
                 rang = np.shape(self.mymodel.wgt[si])[1]
-                print("")
 
                 for nuidx in range(rang):
-                    self._printInfo("Fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
+                    self._printInfo("fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
 
                     self.mymodel.currspw = si
                     self.mymodel.currchan = nuidx
@@ -2831,7 +2833,7 @@ from the pointing direction.\n""")
         ##################
         # CASE OF CONTINUUM-MODE FIT:
         else:
-            self._printInfo("Fitting to all frequencies at once.\n")
+            self._printInfo("fitting to all frequencies at once")
 
             # This will tell the modeller to solve in continuum mode:
             self.mymodel.currspw = -1
@@ -2850,11 +2852,14 @@ from the pointing direction.\n""")
                                        relstep=self.SMPtune[1], maxiter=self.SMPtune[2] * len(self.p_ini))
                 fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
             else:
-
                 # Bound least-squares fitting:
                 fit = self.mymodel.LMMin(self.p_ini)
                 if not fit:
                     return False
+
+            self._printInfo("fit results")
+            for x in fit:
+                print(x)
 
             # Estimate the parameter uncertainties and save the model in the output array:
             if self.savemodel:
@@ -2866,7 +2871,6 @@ from the pointing direction.\n""")
                     _ = self.mymodel.residuals(fit[0], mode=-5)
 
             fitparams = fit[0]
-
             for si in range(nspwtot):
                 # Only add the unflagged data to compute the DoF
                 ndata += float(np.sum(self.mymodel.wgt[si] > 0.0))
@@ -2881,7 +2885,7 @@ from the pointing direction.\n""")
             fiterrors = [np.sqrt(fit[1][i, i] * ChiSq) for i in range(npars)]
             covariance = fit[1] * ChiSq
 
-        self._printInfo("The reduced Chi Squared will be set to 1 by re-scaling the visibility weights.\n")
+        self._printInfo("the reduced Chi Squared will be set to 1 by re-scaling the visibility weights.")
         # Free some memory:
         gc.collect()
 
@@ -2925,7 +2929,7 @@ from the pointing direction.\n""")
         if not save_file:
             return True
 
-        self._printInfo("DONE FITTING. Now, saving to file.\n")
+        self._printInfo("done fitting, now saving to file")
 
         outf = open(self.outfile, 'w')
         outf.write("# MODELFITTING RESULTS FOR MS: " + ','.join(self.vis))
@@ -3003,7 +3007,7 @@ from the pointing direction.\n""")
 
         tac = time.time()
 
-        self._printInfo("Fit took %.2f seconds.\n END!\n" % (tac - tic))
+        self._printInfo("fit took %.2f seconds" % (tac - tic))
         #  uvmod.unsetWork()
 
         return True
@@ -3018,7 +3022,6 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
 
     It follows the CASA syntax."""
 
-    print("channeler")
     if spw == '':
         spw = ','.join(list(map(str, range(len(maxchans)))))
 
@@ -3079,7 +3082,6 @@ def modelFromClean(imname, ichan=0, echan=0):
       The flux densities that the task will return for each pixel will be the *frequency average*
       between ichan and echan."""
 
-    print("modelFromClean")
     # Read model:
     success = ia.open(str(imname))
     if not success:

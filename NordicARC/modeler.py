@@ -137,10 +137,9 @@ class modeler():
     #
     def __init__(self):
         """ Just the constructor of the 'modeler' class."""
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                             format='%(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger("modeler")
-        self.logger.debug("modeler::__init__")
         self.logger.debug("modeler::__init__")
         self.Nants = 0
         self.initiated = False
@@ -273,6 +272,14 @@ class modeler():
         self._compileScaleFixed()
         self._compileGains()
 
+    def executeCode(self, code):
+        try:
+            self.logger.info(code)
+            exec(code, locals())
+            return True
+        except Exception:
+            return False
+
     #  print self.gainFunction
     def _compileGains(self):
         """ Compile the functions related to the antenna gains."""
@@ -301,9 +308,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -321,9 +326,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -344,9 +347,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -365,9 +366,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -389,9 +388,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in phase gain of antenna %i' % (ni)
                     return
@@ -413,9 +410,7 @@ class modeler():
                     p1 = tempstr[p0:].find(']') + p0
                     self.parDependence[ni].append(1 + int(tempstr[p0 + 2:p1]))
 
-                try:
-                    exec(modstr, locals())
-                except Exception:
+                if not self.executeCode(modstr):
                     self.failed = True
                     self.resultstring = 'Syntax error in amp gain of antenna %i' % (ni)
                     return
@@ -451,9 +446,7 @@ class modeler():
                     self.failed = True
 
             modstr = 'self.varfunc[' + str(ii) + '] = lambda p, nu: [' + tempstr + ']'
-            try:
-                exec(modstr, locals())
-            except Exception:
+            if not self.executeCode(modstr):
                 self.failed = True
                 self.resultstring = 'Syntax error in component number %i of the variable model' % (ii)
                 return
@@ -484,10 +477,7 @@ class modeler():
                         'nu0', '%.12f' % self.freqs[0][0])
 
             modstr = 'self.fixedvarfunc[' + str(ii) + '] = lambda p, nu: [' + tempstr + ']'
-            try:
-                # if True:
-                exec(modstr, locals())
-            except Exception:
+            if not self.executeCode(modstr):
                 self.resultstring = 'Syntax error in component number %i of the fixed model' % (ii)
                 self.failed = True
                 return
@@ -509,9 +499,7 @@ class modeler():
                     'nu0', '%.12f' % self.freqs[0][0])
 
         scalefixedstr = 'self._compiledScaleFixed = lambda p, nu: ' + tempstr + ' + 0.0'
-        try:
-            exec(scalefixedstr, locals())
-        except Exception:
+        if not self.executeCode(scalefixedstr):
             self.resultstring = 'Syntax error in the flux-scale equation'
             self.failed = True
             return
@@ -969,9 +957,7 @@ class modeler():
 
         if mode in [-2, -1]:
             if nui < 0:
-                sys.stdout.write("Iteration # %i. " % (self.calls))
-                sys.stdout.write("\t\t\t\t Achieved ChiSq:  %.8e" % (ChiSq))
-                sys.stdout.flush()
+                self.logger.info("Iteration # %i: achieved ChiSq: %.8e " % (self.calls, ChiSq))
 
         if ChiSq <= 0.0:
             raise ValueError("Invalid Chi Square!"

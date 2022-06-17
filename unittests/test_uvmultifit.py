@@ -67,7 +67,26 @@ def test_initData(uwm, vis, model, modvars, initial, modeler):
     uwm.mymodel = modeler
     uwm.checkInputs()
     uwm.readData(del_data=False)
-    assert uwm.initData(del_data=False) is True
+    assert uwm.initData() is True
+
+def test_initModel(uwm, vis, model, modvars, initial, modeler):
+    uwm.select_data(vis)
+    uwm.select_model(model, modvars, initial)
+    uwm.mymodel = modeler
+    uwm.checkInputs()
+    uwm.readData(del_data=False)
+    uwm.initData()
+    assert uwm.initModel() is True
+
+def test_fitModel(uwm, vis, model, modvars, initial, modeler):
+    uwm.select_data(vis)
+    uwm.select_model(model, modvars, initial)
+    uwm.mymodel = modeler
+    uwm.checkInputs()
+    uwm.readData(del_data=False)
+    uwm.initData()
+    uwm.initModel()
+    assert uwm.fit() is True
 
 ### def test_modeler(uwm, vis, model, modeler):
 ###     uwm.select_data(vis)

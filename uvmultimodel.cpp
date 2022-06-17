@@ -59,12 +59,30 @@
 #include <iomanip>
 #include <complex>
 #include <vector>
+#include <string>
 
 #if QUINN_FITTER == 0
 #include "QuinnFringe.h"
 #endif
 
-#define DEBUG
+// NPY_BOOL: 0
+// NPY_INT8: 1
+// NPY_UINT8: 2
+// NPY_INT16: 3
+// NPY_UINT16: 4
+// NPY_INT32: 5
+// NPY_UINT32: 6
+// NPY_INT64: 7
+// NPY_UINT64: 8
+// NPY_FLOAT32: 11
+// NPY_FLOAT64: 12
+// NPY_COMPLEX64: 14
+// NPY_COMPLEX128: 15
+static std::string NPTYPES[] = {"NPY_BOOL", "NPY_INT8", "NPY_UINT8", "NPY_INT16", "NPY_UINT16",
+                                "NPY_INT32", "NPY_UINT32", "NPY_INT64", "NPY_UINT64",
+                                "NPY_???", "NPY_???", "NPY_FLOAT32", "NPY_FLOAT64",
+                                "NPY_???", "NPY_COMPLEX64", "NPY_COMPLEX128" };
+#undef DEBUG
 void show_info(const char *var, PyObject *obj)
 {
     if (obj == NULL) return;
@@ -73,38 +91,13 @@ void show_info(const char *var, PyObject *obj)
     return;
 #endif
 
-    // NPY_BOOL: 0
-    // NPY_INT16: 3
-    // NPY_INT32: 5
-    // NPY_INT64: 7
-    // NPY_UINT16: 4
-    // NPY_UINT32: 6
-    // NPY_UINT64: 8
-    // NPY_FLOAT32: 11
-    // NPY_FLOAT64: 12
-    // NPY_COMPLEX64: 14
-    // NPY_COMPLEX128: 15
-
-    // std::cout << "NPY_BOOL: " << NPY_BOOL << std::endl;
-    // std::cout << "NPY_INT: " << NPY_INT << std::endl;
-    // std::cout << "NPY_INT16: " << NPY_INT16 << std::endl;
-    // std::cout << "NPY_INT32: " << NPY_INT32 << std::endl;
-    // std::cout << "NPY_INT64: " << NPY_INT64 << std::endl;
-    // std::cout << "NPY_UINT16: " << NPY_UINT16 << std::endl;
-    // std::cout << "NPY_UINT32: " << NPY_UINT32 << std::endl;
-    // std::cout << "NPY_UINT64: " << NPY_UINT64 << std::endl;
-    // std::cout << "NPY_FLOAT32: " << NPY_FLOAT32 << std::endl;
-    // std::cout << "NPY_FLOAT64: " << NPY_FLOAT64 << std::endl;
-    // std::cout << "NPY_COMPLEX64: " << NPY_COMPLEX64 << std::endl;
-    // std::cout << "NPY_COMPLEX128: " << NPY_COMPLEX128 << std::endl;
-
     int ndim = PyArray_NDIM((PyArrayObject *)obj);
     int type = PyArray_TYPE((PyArrayObject *)obj);
     int size = PyArray_SIZE((PyArrayObject *)obj);
 
     std::cout << "'" << std::setw(10) << var
               << "' " << "is an array (" << PyArray_CheckExact(obj) << "):"
-              << " of type " << std::setw(2) << type
+              << " of type " << std::setw(14) << NPTYPES[type]
               << " and dimension " << ndim;
     if (ndim > 1) {
         std::cout << " [";
@@ -259,10 +252,12 @@ static PyObject *clearPointers(PyObject *self, PyObject *args)
 {
     int i;
     if (!PyArg_ParseTuple(args, "i", &i)) {
-        printf("FAILED clearPointers!\n");
+        fprintf(stderr, "failed to call clearPointers!\n");
         return NULL;
     }
+#ifdef DEBUG
     printf("inside uvmod.clearPointers: %i\n", i);
+#endif
 
     switch (i) {
       case 0:
@@ -666,11 +661,13 @@ static PyObject *setNspw(PyObject *self, PyObject *args)
 {
     int i = 0;
     if (!PyArg_ParseTuple(args, "i",&i)) {
-        printf("FAILED setNspw!\n");
+        fprintf(stderr, "failed to call setNspw!\n");
         fflush(stdout);
         return NULL;
     }
+#ifdef DEBUG
     printf("inside uvmod.setNspw: %i\n", i);
+#endif
 
     vis.nnu.resize(i);
     vis.nt.resize(i);
@@ -713,11 +710,13 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
 {
     int i, j, k, k0, k1;
     if (!PyArg_ParseTuple(args, "i", &i)) {
-        printf("FAILED setNCPU!\n");
+        fprintf(stderr, "failed to call setNCPU!\n");
         fflush(stdout);
         return NULL;
     }
+#ifdef DEBUG
     printf("inside uvmod.setNCPU: %i\n",i);
+#endif
 
     // printf("Preparing memory for %i workers\n", i);
     // for (j = 0; j < NCPU; j++) {
@@ -782,12 +781,14 @@ static PyObject *setData(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "iOOOOOOOOOOOOOOOOOOi", &IF, &pu, &pv, &pw, &pwgt, &preal, &poreal,
                           &pfreqs, &pfittable, &pwgtcorr, &dtime, &tArr, &tIdx, &RAoffset, &Decoffset,
                           &Stretchoff, &ant1l, &ant2l, &iG, &Nants)) {
-        printf("FAILED setData!\n");
+        fprintf(stderr, "failed to call setData!\n");
         fflush(stdout);
         return NULL;
     }
 
+#ifdef DEBUG
     printf("inside uvmod.setData: IF: %i, Ants: %i\n", IF, Nants);
+#endif
 
     show_info("pu", pu);
     show_info("pv", pv);
@@ -843,7 +844,9 @@ static PyObject *setData(PyObject *self, PyObject *args)
     if (vis.nnu[IF] > maxnchan) {
         maxnchan = vis.nnu[IF];
     }
+#ifdef DEBUG
     printf("inside uvmod.setData: vis.nnu[%d]: %i (maxchan = %i)\n", IF, vis.nnu[IF], maxnchan);
+#endif
 
     Py_RETURN_TRUE;
 }
@@ -861,11 +864,13 @@ PyObject *setModel(PyObject *self, PyObject *args)
                           &VarArr, &FixArr, &dparArr,
                           &propRA, &propDec, &refpos,
                           &parDep, &aG,&isFixed, &isMixed)) {
-        printf("FAILED setModel!\n");
+        fprintf(stderr, "failed to call setModel!\n");
         fflush(stdout);
         return NULL;
     }
-    printf("\ninside uvmod.setModel: isFixed: %i, isMixed: %i\n", isFixed, isMixed);
+#ifdef DEBUG
+    printf("inside uvmod.setModel: isFixed: %i, isMixed: %i\n", isFixed, isMixed);
+#endif
 
     isModel = true;
 
@@ -894,7 +899,9 @@ PyObject *setModel(PyObject *self, PyObject *args)
     ncomp = PyArray_DIM(modArr, 0);
     npar = PyArray_DIM(GradArr, 0);
     Nants = (int)PyList_Size(parDep);
-    printf("Nants = %d\n", Nants);
+#ifdef DEBUG
+    printf("setModel: Nants = %d\n", Nants);
+#endif
 
     mod.nparAnt.resize(Nants);
     mod.parAnt.resize(Nants);
@@ -917,7 +924,9 @@ PyObject *setModel(PyObject *self, PyObject *args)
     }
 
     HankelOrder = PyArray_DIM(PyList_GetItem(VarArr, 0), 1) - NparMax;
-    printf("parameters: %d %d %d\n", HankelOrder, NparMax, npar);
+#ifdef DEBUG
+    printf("setModel: parameters: %d %d %d\n", HankelOrder, NparMax, npar);
+#endif
 
     // delete[] mod.vars;
     // delete[] mod.fixp;
@@ -947,7 +956,7 @@ static PyObject *setWork(PyObject *self, PyObject *args)
         mod.WorkHess[i].resize(npar*npar);
         mod.WorkGrad[i].resize(npar);
     }
-    //   printf("\n     setWork %i\n\n",NCPU);
+    //   printf("     setWork %i\n\n",NCPU);
 
     PyObject *ret = Py_BuildValue("i", 10);
     return ret;
@@ -982,11 +991,13 @@ static PyObject *modelcomp(PyObject *self, PyObject *args)
 
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(args, "iii", &cIF, &nui, &mode)) {
-        printf("FAILED modelcomp!\n");
+        fprintf(stderr, "failed to call modelcomp!\n");
         fflush(stdout);
         return NULL;
     }
-    printf("\ninside uvmod.modelcomp: IF: %i nui: %i mode: %i\n", cIF, nui, mode);
+#ifdef DEBUG
+    printf("inside uvmod.modelcomp: IF: %i nui: %i mode: %i\n", cIF, nui, mode);
+#endif
 
     // Zero the workers memory:
     for (i = 0; i < NCPU; i++) {
@@ -1048,7 +1059,7 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
     int ErrStat = 0; // To track errors in GFF (not implemented)
 
     if (!PyArg_ParseTuple(args, "iiii", &IFFit, &refant, &doModel, &doGlobal)) {
-        printf("FAILED QuinnFringe!\n");
+        fprintf(stderr, "failed to call QuinnFringe!\n");
         fflush(stdout);
         return NULL;
     }
@@ -1057,7 +1068,7 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
 #if QUINN_FITTER == 0
     if (IFFit >= Nspw) {
         ret = Py_BuildValue("i", -1);
-        printf("\n spw is too high!");
+        fprintf(stderr, "QuinnFF: spw is too high!\n");
         return ret;
     }
 
@@ -1091,7 +1102,9 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
 
     npy_intp Dims[1];
     Dims[0] = Nants;
-    printf("\nNants: %i\n",Nants);
+#ifdef DEBUG
+    printf("QuinnFF: Nants: %i\n",Nants);
+#endif
 
     PyRate = PyArray_SimpleNewFromData(1, Dims, NPY_FLOAT64, (void *)Rates);
     PyDelay = PyArray_SimpleNewFromData(1, Dims, NPY_FLOAT64, (void *)Delays);
@@ -1101,7 +1114,7 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
     ret = Py_BuildValue("[O,O,O,d,d]", PyDelay, PyRate, PyPhase, Bins[0], Bins[1]);
     if (FringeFit) delete FringeFit;
 #else
-    printf("\n QUINN FITTER NOT INSTALLED!");
+    fprintf(stderr, "Quinn fitter not installed!\n");
     ret = Py_BuildValue("i", -1);
 #endif
     return ret;
