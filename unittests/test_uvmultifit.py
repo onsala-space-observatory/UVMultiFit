@@ -36,6 +36,24 @@ def initial():
     minor = float(si[3].split('a')[0])
     return [0.8, 0.0, size*1.2, minor/size*0.8, 45.0]
 
+def test_clearPointers():
+    # test clearPointers with argument 2
+    result = uvmod.clearPointers(2)
+    # we expect 2 back
+    assert result == 2
+
+def test_setNspw():
+    # function takes one integer
+    result = uvmod.setNspw(10)
+    # we expect 10 back
+    assert result == 10
+
+def test_setNCPU():
+    # function takes one integer
+    result = uvmod.setNCPU(4)
+    # we expect 4 back
+    assert result == 4
+
 def test_uvmultifit_init(uwm):
     assert uwm.NCPU == 4
 
