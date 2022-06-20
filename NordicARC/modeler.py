@@ -224,7 +224,7 @@ class modeler():
         self.resultstring = ''
 
     def setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder,
-               isNumerical, useGains, gainFunction, isMixed):
+              isNumerical, useGains, gainFunction, isMixed):
         """ Setup the model components, fitting parameters, and gain functions. Compile the equations.
 
         Not to be called by the user."""
@@ -455,8 +455,7 @@ class modeler():
                 self.resultstring = " Component '" + component + "' is unknown. Aborting!"
                 self.failed = True
                 return
-            else:
-                self.imod[ii] = self.allowedmod.index(component)
+            self.imod[ii] = self.allowedmod.index(component)
 
     def _compileFixedModel(self):
         """ Compiles the fixed model, according to the contents of the 'fixed' and 'fixedpars' lists."""
@@ -486,8 +485,7 @@ class modeler():
                 self.resultstring = " Component '" + component + "' is unknown. Aborting!"
                 self.failed = True
                 return
-            else:
-                self.ifixmod[ii] = self.allowedmod.index(component)
+            self.ifixmod[ii] = self.allowedmod.index(component)
 
     def _compileScaleFixed(self):
         """ Compiles the scaling factor for the fixed model """
@@ -502,7 +500,6 @@ class modeler():
         if not self.executeCode(scalefixedstr):
             self.resultstring = 'Syntax error in the flux-scale equation'
             self.failed = True
-            return
 
     ############################################
     #
@@ -525,51 +522,51 @@ class modeler():
             return
 
         if mode == 0:
-            p = self.par2[2, :]
-            for p2 in range(len(p)):
-                if self.bounds[p2] is None or (self.bounds[p2][0] is None and self.bounds[p2][1] is None):
-                    self.par2[:, p2] = [p[p2], 1.0, p[p2]]
-                elif self.bounds[p2][0] is None and self.bounds[p2][1] is not None:
-                    self.par2[0, p2] = np.sqrt(np.power(self.bounds[p2][1] - p[p2] + 1, 2.) - 1.)
-                elif self.bounds[p2][0] is not None and self.bounds[p2][1] is None:
-                    self.par2[0, p2] = np.sqrt(np.power(p[p2] - self.bounds[p2][0] + 1, 2.) - 1.)
+            par2 = self.par2[2, :]
+            for i, p in enumerate(par2):
+                if self.bounds[i] is None or (self.bounds[i][0] is None and self.bounds[i][1] is None):
+                    self.par2[:, i] = [p, 1.0, p]
+                elif self.bounds[i][0] is None and self.bounds[i][1] is not None:
+                    self.par2[0, i] = np.sqrt(np.power(self.bounds[i][1] - p + 1, 2.) - 1.)
+                elif self.bounds[i][0] is not None and self.bounds[i][1] is None:
+                    self.par2[0, i] = np.sqrt(np.power(p - self.bounds[i][0] + 1, 2.) - 1.)
                 else:
-                    Kbound = (self.bounds[p2][1] - self.bounds[p2][0]) / 2.
-                    self.par2[0, p2] = np.arcsin((p[p2] - self.bounds[p2][0]) / Kbound - 1.0)
+                    Kbound = (self.bounds[i][1] - self.bounds[i][0]) / 2.
+                    self.par2[0, i] = np.arcsin((p - self.bounds[i][0]) / Kbound - 1.0)
 
         else:
-            p = self.par2[0, :]
-            for p2 in range(len(p)):
-                if self.bounds[p2] is None or (self.bounds[p2][0] is None and self.bounds[p2][1] is None):
-                    self.par2[2, p2] = p[p2]
-                elif self.bounds[p2][0] is None and self.bounds[p2][1] is not None:
-                    self.par2[2, p2] = self.bounds[p2][1] + 1. - np.sqrt(p[p2]**2. + 1.)
-                elif self.bounds[p2][0] is not None and self.bounds[p2][1] is None:
-                    self.par2[2, p2] = self.bounds[p2][0] - 1. + np.sqrt(p[p2]**2. + 1.)
+            par2 = self.par2[0, :]
+            for i, p in enumerate(par2):
+                if self.bounds[i] is None or (self.bounds[i][0] is None and self.bounds[i][1] is None):
+                    self.par2[2, i] = p
+                elif self.bounds[i][0] is None and self.bounds[i][1] is not None:
+                    self.par2[2, i] = self.bounds[i][1] + 1. - np.sqrt(p**2. + 1.)
+                elif self.bounds[i][0] is not None and self.bounds[i][1] is None:
+                    self.par2[2, i] = self.bounds[i][0] - 1. + np.sqrt(p**2. + 1.)
                 else:
-                    Kbound = (self.bounds[p2][1] - self.bounds[p2][0]) / 2.
-                    self.par2[2, p2] = self.bounds[p2][0] + Kbound * (np.sin(p[p2]) + 1.)
+                    Kbound = (self.bounds[i][1] - self.bounds[i][0]) / 2.
+                    self.par2[2, i] = self.bounds[i][0] + Kbound * (np.sin(p) + 1.)
 
-        for p2 in range(len(p)):
-            if self.bounds[p2] is None or (self.bounds[p2][0] is None and self.bounds[p2][1] is None):
-                self.par2[1, p2] = 1.0
-            elif self.bounds[p2][0] is None and self.bounds[p2][1] is not None:
-                self.par2[1, p2] = -self.par2[0, p2] / np.sqrt(self.par2[0, p2]**2. + 1.)
-            elif self.bounds[p2][0] is not None and self.bounds[p2][1] is None:
-                self.par2[1, p2] = self.par2[0, p2] / np.sqrt(self.par2[0, p2]**2. + 1.)
+        for i, p in enumerate(par2):
+            if self.bounds[i] is None or (self.bounds[i][0] is None and self.bounds[i][1] is None):
+                self.par2[1, i] = 1.0
+            elif self.bounds[i][0] is None and self.bounds[i][1] is not None:
+                self.par2[1, i] = -self.par2[0, i] / np.sqrt(self.par2[0, i]**2. + 1.)
+            elif self.bounds[i][0] is not None and self.bounds[i][1] is None:
+                self.par2[1, i] = self.par2[0, i] / np.sqrt(self.par2[0, i]**2. + 1.)
             else:
-                Kbound = (self.bounds[p2][1] - self.bounds[p2][0]) / 2.
-                self.par2[1, p2] = Kbound * np.cos(self.par2[0, p2])
+                Kbound = (self.bounds[i][1] - self.bounds[i][0]) / 2.
+                self.par2[1, i] = Kbound * np.cos(self.par2[0, i])
 
     ############################################
     #
     #  LEVENBERG-MARQUARDT LEAST-SQUARE MINIMIZATION
     #
-    def LMMin(self, p):
+    def LMMin(self, pars):
         """ Implementation of the Levenberg-Marquardt algorithm. Not to be called directly by the user. """
 
         self.logger.debug("modeler::LMMin")
-        NITER = int(self.LMtune[3] * len(p))
+        NITER = int(self.LMtune[3] * len(pars))
         self.calls = 0
 
         Lambda = float(self.LMtune[0])
@@ -580,7 +577,7 @@ class modeler():
         else:
             partol = functol
         Chi2 = 0
-        self.par2[2, :] = p
+        self.par2[2, :] = pars
         self.getPar2()
 
         Hessian2 = np.zeros(np.shape(self.Hessian), dtype=np.float64)
@@ -598,14 +595,15 @@ class modeler():
             nnu = max([len(self.freqs[sp]) for sp in range(len(self.freqs))])
             self.logger.info("Computing structure-only parameters")
 
-            for midx in range(len(p)):
+            # for midx in range(len(p)):
+            for midx, p in enumerate(pars):
                 if len(self.strucvar[midx]) > 3:
-                    tempvar = self.strucvar[midx][:2] + [p[midx]] + self.strucvar[midx][2:]
+                    tempvar = self.strucvar[midx][:2] + [p] + self.strucvar[midx][2:]
                 else:
-                    tempvar = self.strucvar[midx] + [p[midx]]
-                for i in range(len(tempvar)):
-                    for j in range(len(p) + 1):
-                        self.varbuffer[j][midx, i, :nnu] = tempvar[i]
+                    tempvar = self.strucvar[midx] + [p]
+                for i, tv in enumerate(tempvar):
+                    for j in range(len(pars) + 1):
+                        self.varbuffer[j][midx, i, :nnu] = tv
 
         CurrChi = self.residuals(self.par2[2, :], -1, dof=False)
         Hessian2[:, :] = self.Hessian * (self.par2[1, :])[np.newaxis, :] * (self.par2[1, :])[:, np.newaxis]
@@ -616,13 +614,13 @@ class modeler():
         controlIter = 0
         for i in range(NITER):
             controlIter += 1
-            for n in range(len(p)):
+            for n in range(len(pars)):
                 HessianDiag[n, n] = Hessian2[n, n]
             try:
                 goodsol = True
                 Inverse[:] = np.linalg.pinv(Hessian2 + Lambda * HessianDiag)
                 Dpar = np.dot(Inverse, Gradient2)
-                DirDer = sum([Hessian2[n, n] * Dpar[n] * Dpar[n] for n in range(len(p))])
+                DirDer = sum([Hessian2[n, n] * Dpar[n] * Dpar[n] for n in range(len(pars))])
                 DirDer2 = np.sum(Gradient2 * Dpar)
                 TheorImpr = DirDer - 2. * DirDer2
             except Exception:
@@ -732,35 +730,29 @@ class modeler():
             if m in [0, 1]:
                 return tempvar  # Only order n=0.
 
-            else:  # Higher orders.
-                res = a * m1 + 1. / (2 * k) * m0  # order m=2
-                resaux = np.copy(res)
-                res2 = np.copy(m1)
-                for mi in range(3, m + 1):
-                    if isinstance(res, np.float64):
-                        res = a * res + (mi - 1) / (2 * k) * res2
-                        res2 = resaux
-                        resaux = res
-                    else:
-                        res[:] = a * res + (mi - 1) / (2 * k) * res2
-                        res2[:] = resaux
-                        resaux[:] = res
-                    if np.mod(mi + 1, 2) == 0:  # (i.e., orders n=1, 2, 3...)
-                        tempvar.append(
-                            res / m1 * np.power(-1., (mi - 1) / 2) / np.power(np.math.factorial((mi - 1) / 2),
-                                                                              2.))
-
+            res = a * m1 + 1. / (2 * k) * m0  # order m=2
+            resaux = np.copy(res)
+            res2 = np.copy(m1)
+            for mi in range(3, m + 1):
+                if isinstance(res, np.float64):
+                    res = a * res + (mi - 1) / (2 * k) * res2
+                    res2 = resaux
+                    resaux = res
+                else:
+                    res[:] = a * res + (mi - 1) / (2 * k) * res2
+                    res2[:] = resaux
+                    resaux[:] = res
+                if np.mod(mi + 1, 2) == 0:  # (i.e., orders n=1, 2, 3...)
+                    tempvar.append(res / m1 * np.power(-1., (mi - 1) / 2)
+                                   / np.power(np.math.factorial((mi - 1) / 2), 2.))
             return tempvar
-
-        else:
-
-            raise ValueError("Model %i was not correctly interpreted!\n" % imod)
+        raise ValueError("Model %i was not correctly interpreted!\n" % imod)
 
     ############################################
     #
     #  COMPUTE RESIDUALS FOR A MODEL REALIZATION
     #
-    def residuals(self, p, mode=-1, dof=True):
+    def residuals(self, pars, mode=-1, dof=True):
         """ Compute the residuals, fixed model, and/or covariance matrix and Chi square.
 
         This method has a wide and flexible usage, depending on the value of 'mode'
@@ -799,12 +791,12 @@ class modeler():
             spwrange = [int(self.currspw)]
 
         # DELTA FOR DERIVATIVES:
-        for j in range(len(p)):
+        for j, p in enumerate(pars):
             #  self.dpar[j] = self.minnum
-            if np.abs(p[j]) < 1.0:
+            if np.abs(p) < 1.0:
                 self.dpar[j] = self.minnum
             else:
-                self.dpar[j] = np.abs(p[j]) * self.minnum
+                self.dpar[j] = np.abs(p) * self.minnum
 
         # Compute antenna-gain corrections:
         if len(self.useGains) > 0 and mode != 0:
@@ -813,7 +805,7 @@ class modeler():
                 Nint = len(self.dtArr[spw])
                 for i in self.useGains:
                     for j in range(len(self.parDependence[i])):
-                        ptemp = [pi for pi in p]
+                        ptemp = list(pars)   # [pi for pi in pars]
                         if j > 0:
                             j2 = self.parDependence[i][j] - 1
                             ptemp[j2] += self.dpar[j2]
@@ -849,65 +841,63 @@ class modeler():
             for spw in spwrange:
                 self.output[spw][:] = 0.0
                 for midx, mi in enumerate(self.ifixmod):
-                    tempvar = self.fixedvarfunc[midx](p, self.freqs[spw])
+                    tempvar = self.fixedvarfunc[midx](pars, self.freqs[spw])
                     self.imod[0] = mi
                     if self.imod[0] in self.isNumerical:
                         tempvar = self.gridModel(self.imod[0], tempvar)
-                    for i in range(len(tempvar)):
+                    for i, tv in enumerate(tempvar):
                         nnu = len(self.freqs[spw])
-                        self.varbuffer[0][0, i, :nnu] = tempvar[i]
+                        self.varbuffer[0][0, i, :nnu] = tv
                     self.Ccompmodel(spw, nui, 0)
 
             self.imod[0] = modbackup
             return 0
 
-        else:  # Compute the variable model:
-            currmod = self.model
-            currvar = self.varfunc
-
-            # currimod = self.imod
-            # isfixed = False
+        currmod = self.model
+        currvar = self.varfunc
+        # currimod = self.imod
+        # isfixed = False
 
         ChiSq = 0.0
         ndata = 0
         for spw in spwrange:
             _, nnu = np.shape(self.output[spw])
             if nui == -1:
-                scalefx = self._compiledScaleFixed(p, self.freqs[spw])
+                scalefx = self._compiledScaleFixed(pars, self.freqs[spw])
                 self.varfixed[0][:nnu] = scalefx
-                for j in range(len(p)):
-                    ptemp = [pi for pi in p]
+                for j in range(len(pars)):
+                    ptemp = list(pars)   # [pi for pi in pars]
                     ptemp[j] += self.dpar[j]
                     # Variables of current component
                     scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw])
                     self.varfixed[j + 1][:nnu] = scalefx
             else:
-                scalefx = self._compiledScaleFixed(p, self.freqs[spw][nui])
+                scalefx = self._compiledScaleFixed(pars, self.freqs[spw][nui])
                 self.varfixed[0][0] = scalefx
-                for j in range(len(p)):
-                    ptemp = [pi for pi in p]
+                for j in range(len(pars)):
+                    ptemp = list(pars)   # [pi for pi in pars]
                     ptemp[j] += self.dpar[j]
                     # Variables of current component
                     scalefx = self._compiledScaleFixed(ptemp, self.freqs[spw][nui])
                     self.varfixed[j + 1][0] = scalefx
 
             for midx, modi in enumerate(currmod):
-                ptemp = [float(pi) for pi in p]
+                ptemp = [float(pi) for pi in pars]
 
                 if nui == -1:  # Continuum
 
                     if self.only_flux:
-                        currflux = p[midx]
+                        currflux = pars[midx]
                         # nstrucpars = len(self.strucvar[midx])
                         self.varbuffer[0][midx, 2, :nnu] = currflux
 
                     else:
                         # Variables of current component
-                        tempvar = currvar[midx](p, self.freqs[spw])
+                        tempvar = currvar[midx](pars, self.freqs[spw])
                         if modi in self.isNumerical:
                             tempvar = self.gridModel(modi, tempvar)
 
-                        for i in range(len(tempvar)):
+                        for i, tv in range(len(tempvar)):
                             self.varbuffer[0][midx, i, :nnu] = tempvar[i]
 
                     if self.only_flux:
@@ -916,34 +906,34 @@ class modeler():
 
                     else:
 
-                        for j in range(len(p)):
-                            ptemp = [pi for pi in p]
+                        for j in range(len(pars)):
+                            ptemp = list(pars)   # [pi for pi in pars]
                             ptemp[j] += self.dpar[j]
                         # Variables of current component
                             tempvar = currvar[midx](ptemp, self.freqs[spw])
                             if modi in self.isNumerical:
                                 tempvar = self.gridModel(modi, tempvar)
-                            for i in range(len(tempvar)):
-                                self.varbuffer[j + 1][midx, i, :nnu] = tempvar[i]
+                            for i, tv in enumerate(tempvar):
+                                self.varbuffer[j + 1][midx, i, :nnu] = tv
 
                 else:  # Spectral mode
 
                     # Variables of current component
-                    tempvar = currvar[midx](p, self.freqs[spw][nui])
+                    tempvar = currvar[midx](pars, self.freqs[spw][nui])
                     if modi in self.isNumerical:
                         tempvar = self.gridModel(modi, tempvar)
-                    for i in range(len(tempvar)):
-                        self.varbuffer[0][midx, i, 0] = tempvar[i]
+                    for i, tv in enumerate(tempvar):
+                        self.varbuffer[0][midx, i, 0] = tv
 
-                    for j in range(len(p)):
-                        ptemp = [pi for pi in p]
+                    for j in range(len(pars)):
+                        ptemp = list(pars)    # [pi for pi in pars]
                         ptemp[j] += self.dpar[j]  # self.minnum
                         # Variables of current component
                         tempvar = currvar[midx](ptemp, self.freqs[spw][nui])
                         if modi in self.isNumerical:
                             tempvar = self.gridModel(modi, tempvar)
-                        for i in range(len(tempvar)):
-                            self.varbuffer[j + 1][midx, i, 0] = tempvar[i]
+                        for i, tv in enumerate(tempvar):
+                            self.varbuffer[j + 1][midx, i, 0] = tv
 
             ChiSq += self.Ccompmodel(spw, nui, mode)
 
@@ -957,7 +947,8 @@ class modeler():
 
         if mode in [-2, -1]:
             if nui < 0:
-                self.logger.info("Iteration # %i: achieved ChiSq: %.8e " % (self.calls, ChiSq))
+                msg = "Iteration # %i: achieved ChiSq: %.8e " % (self.calls, ChiSq)
+                self.logger.info(msg)
 
         if ChiSq <= 0.0:
             raise ValueError("Invalid Chi Square!"
@@ -968,8 +959,8 @@ class modeler():
             if dof:
                 self.calls = 0
                 return [ChiSq, ndata]
-            else:
-                return ChiSq
+            return ChiSq
+        return None
 
     ############################################
     #

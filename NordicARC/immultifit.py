@@ -2,9 +2,9 @@ import os
 import shutil
 import logging
 import numpy as np
-from .uvmultifit import uvmultifit
-
 from casatools import image
+
+from .uvmultifit import uvmultifit
 
 ia = image()
 
@@ -66,7 +66,7 @@ class immultifit(uvmultifit):
         with the post-fit residuals, with the same gridding as the image used for the fit."""
 
         self._printInfo("There is no measurement set (i.e., you are running 'immultifit').\n"
-                        + "Will generate an image, instead.\n")
+                        + "Will generate an image, instead.")
         if os.path.exists(self.residual + '.immultifit'):
             shutil.rmtree(self.residual + '.immultifit')
         os.system('cp -r %s %s' % (self.residual, self.residual + '.immultifit'))
@@ -104,7 +104,7 @@ class immultifit(uvmultifit):
         ia.setbrightnessunit('Jy/beam')
         ia.close()
 
-        self._printInfo("Will now save the unconvolved model image.\n")
+        self._printInfo("Will now save the unconvolved model image.")
         modname = '.'.join(self.residual.split('.')[:-1]) + '.fitmodel.immultifit'
         if os.path.exists(modname):
             shutil.rmtree(modname)
@@ -136,9 +136,9 @@ class immultifit(uvmultifit):
         """ Function re-definition for the immultifit class."""
 
         self._printInfo("In image mode, the whole image is taken.\n"
-                        + "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.\n")
+                        + "Will override the 'spw', 'field', 'MJDrange', and 'scan' parameters.")
         self._printInfo("In image mode, the channelization used is that of the image.\n"
-                        + "Will override the 'chanwidth' and 'timewidth' parameters.\n")
+                        + "Will override the 'chanwidth' and 'timewidth' parameters.")
 
         self.savemodel = True
         success = self._checkOrdinaryInputs()
@@ -149,11 +149,11 @@ class immultifit(uvmultifit):
         try:
             self.stokes = abs(int(self.stokes))
         except Exception:
-            self._printInfo("In image mode, 'stokes' must be an integer\n(i.e., the Stokes column of the image).\n")
+            self._printInfo("In image mode, 'stokes' must be an integer\n(i.e., the Stokes column of the image).")
             polimag = ['I', 'Q', 'U', 'V']
             if self.stokes in polimag:
                 stchan = polimag.index(self.stokes)
-                self._printInfo("Since stokes is '%s', will try with image column %i\n" % (self.stokes, stchan))
+                self._printInfo("Since stokes is '%s', will try with image column %i" % (self.stokes, stchan))
                 self.stokes = stchan
             else:
                 self._printError("Please, set the 'stokes' keyword to an image pol. channel")
@@ -258,7 +258,7 @@ class immultifit(uvmultifit):
             os.system('rm -rf %s.fft.*' % self.residual)
             os.system('rm -rf %s.fft.*' % self.psf)
 
-            self._printInfo("Inverting images into Fourier space\n")
+            self._printInfo("Inverting images into Fourier space")
             ia.open(self.residual)
             ia.fft(real=self.residual + '.fft.real', imag=self.residual + '.fft.imag')
             ia.close()
@@ -287,7 +287,7 @@ class immultifit(uvmultifit):
         for i in range(imdims[3]):
             freqs[i] = ia.toworld([0, 0, self.stokes, i + self.start])['numeric'][3]
 
-        self._printInfo("Reading gridded UV coordinates and weights\n")
+        self._printInfo("Reading gridded UV coordinates and weights")
         u0, v0, _, _ = ia.toworld([0, 0, self.stokes, self.start])['numeric']
         u1, v1, _, _ = ia.toworld([1, 1, self.stokes, self.start])['numeric']
         du = u1 - u0
@@ -304,7 +304,7 @@ class immultifit(uvmultifit):
         ia.close()
         # Maximum dynamic range set by "Window effect"
         maskwgt = wgti < np.max(wgti) * (10.**(self.dBcut / 10.))
-        self._printInfo("Reading gridded visibilities\n")
+        self._printInfo("Reading gridded visibilities")
         ia.open(self.residual + '.fft.real')
         datas = ia.getchunk()
         for j in range(imdims[0]):
@@ -356,7 +356,7 @@ class immultifit(uvmultifit):
 
         self.Nants = 2
 
-        self._printInfo("Done reading.\n")
+        self._printInfo("Done reading.")
 
         self.initData()
 

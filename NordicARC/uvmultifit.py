@@ -452,7 +452,6 @@ import re
 import gc
 import os
 import time
-import sys
 
 import numpy as np
 
@@ -1034,45 +1033,9 @@ class uvmultifit():
             if len(part) > 0:
                 self.logger.info(part)
 
-    ##################################
-    # FRINGE FITTER:
-    #
-    def QuinnFF(self, IF, refant, doModel, doGlobal):
-        """Perform a *Global Fringe Fitting* search in delay-rate space.
-
-      It uses the Quinn estimator for the fringe peak.
-
-      :Parameters:
-      ------------
-      **IF** : `int`
-          The spectral window to fringe-fit (index referred to the data already read).
-      **refant** : `int`
-          The index of the antenna to use as reference. If this antenna is missing or has
-          bad data, another refant will be picked automatically.
-      **doModel** : `bool`
-          If True, deconvolve the fixed model before the GFF.
-      **doGlobal** : `bool`
-          If True, globalize the solutions (i.e., use all available baselines to estimate
-          the antenna gains).
-
-      :Returns:
-      ---------
-      Returns a `list` of 5 elements:
-
-      * An array with the delays (in seconds). One value per antenna (the reference
-        antenna, as well as any other antenna with failed solutions, will have null
-        values).
-
-      * An array with the rates (in 1/s), one value per antenna.
-
-      * An array with the phases (in radians), one value per antenna.
-
-      * A double (the delay equivalent to one pixel in the delay/rate matrices).
-
-      * A double (the rate equivalent to one pixel in the delay/rate matrices).
-
-      """
-        return uvmod.QuinnFF(IF, refant, doModel, doGlobal)
+    def _printDebug(self, message):
+        """Prints a debug message."""
+        self.logger.debug(message)
 
     ############################################
     #
@@ -1093,7 +1056,7 @@ class uvmultifit():
         ``chanwidth`` are set to 1). This function should be called AFTER having run ``fit()``.
         """
 
-        self.logger.debug("uvmultifit::writeModel")
+        self._printDebug("uvmultifit::writeModel")
         self._printWarning("writing to mosaics is experimental and may not work!\n")
 
         for v in self.vis:
@@ -1158,7 +1121,7 @@ class uvmultifit():
         """Performs some sanity checks on the input parameters.
       This function should not be called directly by the user."""
 
-        self.logger.debug("uvmultifit::_checkOrdinaryInputs")
+        self._printDebug("uvmultifit::_checkOrdinaryInputs")
         if isinstance(self.model, str):
             self.model = list([self.model])
         else:
@@ -1170,7 +1133,7 @@ class uvmultifit():
         else:
             self.var = list(self.var)
 
-        if type(self.fixedvar) in [str, float]:
+        if isinstance(self.fixedvar, (float, str)):
             self.fixedvar = list([self.fixedvar])
         else:
             self.fixedvar = list(self.fixedvar)
@@ -1180,7 +1143,7 @@ class uvmultifit():
         else:
             self.fixed = list(self.fixed)
 
-        if type(self.p_ini) in [float, str]:
+        if isinstance(self.p_ini, (float, str)):
             self.p_ini = list([self.p_ini])
         else:
             self.p_ini = list(self.p_ini)
@@ -1470,7 +1433,7 @@ class uvmultifit():
         the model to repeat the fit.
       """
 
-        self.logger.debug("uvmultifit::checkInputs")
+        self._printDebug("uvmultifit::checkInputs")
         # Some preliminary (self-consistency) checks of the parameters:
         self.savemodel = True
 
@@ -1576,7 +1539,6 @@ class uvmultifit():
         self.field_id = []
 
         # Get number of antennas:
-        # print(os.path.join(self.vis[0], 'ANTENNA'))
         tb.open(os.path.join(self.vis[0], 'ANTENNA'))
         self.Nants = len(tb.getcol('NAME'))
         tb.close()
@@ -1592,7 +1554,7 @@ class uvmultifit():
             allfields = list(ms.range('fields')['fields'])
 
             try:
-                if type(self.field) in [str, int]:
+                if isinstance(self.field, (int, str)):
                     fitest = int(self.field)
                 else:
                     fitest = int(self.field[vi])
@@ -1802,7 +1764,7 @@ class uvmultifit():
         """Prepare the PB correction, the model and the number of cores for the modeler.
         Not to be called directly by the user."""
 
-        self.logger.debug("uvmultifit::_setEngineWgt")
+        self._printDebug("uvmultifit::_setEngineWgt")
         # Load the C++ library:
         # if self.mymodel.Ccompmodel is None:
         #     self.mymodel.Ccompmodel = uvmod.modelcomp
@@ -1818,7 +1780,7 @@ class uvmultifit():
     def _setWgtEq(self):
         """Depends on setEngineWgt. Not to be called by the user."""
 
-        self.logger.debug("uvmultifit::_setWgtEq")
+        self._printDebug("uvmultifit::_setWgtEq")
         tempfloat = 0.0
 
         if not isinstance(self.dish_diameter, dict):
@@ -1898,7 +1860,7 @@ from the pointing direction.\n""")
         new data, avoiding some memory leakage related to potential hidden references to the
         data in the IPython's *recall* prompt."""
 
-        self.logger.debug("uvmultifit::readData")
+        self._printDebug("uvmultifit::readData")
         tic = time.time()
 
         if del_data:  # data_changed:
@@ -1907,7 +1869,7 @@ from the pointing direction.\n""")
             #    self.clearPointers(1)
 
         self.success = False
-        self.logger.debug("inside readData")
+        self._printDebug("inside readData")
 
         # Initiate the lists and arrays where the data will be read-in:
         ntotspw = self.spwlist[-1][3] + len(self.spwlist[-1][2])
@@ -2120,7 +2082,7 @@ from the pointing direction.\n""")
 
                                     if phshift[0] != 0.0 or phshift[1] != 0.0:
                                         self._printInfo("offset: %.2e RA (tsec) %.2e Dec (asec)" %
-                                            (phshift[0] / 15., phshift[1]))
+                                                        (phshift[0] / 15., phshift[1]))
 
                                     # Average spectral channels:
                                     _, ndata = np.shape(datamask)
@@ -2359,7 +2321,7 @@ from the pointing direction.\n""")
 
         # Set pointers to data, model, etc.:
         # self.initData(del_data=del_data)
-        self.logger.debug("leaving readData")
+        self._printDebug("leaving readData")
 
         return True
 
@@ -2374,7 +2336,7 @@ from the pointing direction.\n""")
         Notice that the fixed model is recomputed for each spectral channel (i.e., if
         OneFitPerChannel=True), and is computed only once if OneFitPerChannel==False."""
 
-        self.logger.debug("uvmultifit::computeFixedModel")
+        self._printDebug("uvmultifit::computeFixedModel")
 
         if self.takeModel:
             self._printInfo("fixed model was taken from model column\n"
@@ -2408,7 +2370,7 @@ from the pointing direction.\n""")
         The 'modeler' instance stores pointers to the data and metadata, the compiled model (and
         fixedmodel), the parameter values, and all the methods to compute residuals, Chi Squared, etc."""
 
-        self.logger.debug("uvmultifit::initData")
+        self._printDebug("uvmultifit::initData")
         # Reset pointers for the modeler:
         self.mymodel.deleteData()
 
@@ -2540,7 +2502,7 @@ from the pointing direction.\n""")
             # except Exception:
             #     pass
             # gc.collect()
-        self.logger.debug("leaving initData")
+        self._printDebug("leaving initData")
         return True
 
     ############################################
@@ -2555,7 +2517,7 @@ from the pointing direction.\n""")
 
         It is indeed MANDATORY to run this function if the model to be fitted has changed."""
 
-        self.logger.debug("uvmultifit::initModel")
+        self._printDebug("uvmultifit::initModel")
         if self.mymodel.initiated:
             #     self.clearPointers(1)
             self.mymodel.deleteModel()
@@ -2590,8 +2552,8 @@ from the pointing direction.\n""")
         # all of them as a function of frequency. The C++ library will read the variables from here
         # at each iteration and for each model component:
         self.mymodel.initiated = True
-        self.logger.debug("model initiated")
-        self.logger.debug("length of model:" + str(len(self.model)))
+        self._printDebug("model initiated")
+        self._printDebug("length of model: %s" % (str(len(self.model))))
         self.mymodel.varbuffer = [np.zeros((len(self.model),
                                             self.maxNvar + self.applyHankel, self.maxnfreq))
                                   for i in range(len(self.p_ini) + 1)]
@@ -2650,7 +2612,7 @@ from the pointing direction.\n""")
     #
     #  PERFORM (AND SAVE) THE FIT
     #
-    def fit(self, redo_fixed=True, reinit_model=False, save_file=True, nuidx=-1, reset_flags=False):
+    def fit(self, redo_fixed=True, reinit_model=False, save_file=True, reset_flags=False):
         """ Fits the data, using the models previously compiled with ``initModel()``.
 
         Parameters
@@ -2674,17 +2636,12 @@ from the pointing direction.\n""")
           It is True by default. If False, the external ascii file with the fitting results will
           not be created.
 
-        **nuidx** : `int`
-          A helper parameter for internal use (if -1, fit to the continuum. Otherwise, fit only
-          the ``nui`` channel). The user should NOT need to redefine (or force) this parameter when
-          calling this function.
-
         **reset_flags** : `bool`
           Default is False. This is used to clear out the status of *bad data* that may have been
           set by spetial routines of **UVMultiFit** (e.g., the Quinn Fringe Fitter). Default is
           to NOT reset flags (this option should be OK most of the time)."""
 
-        self.logger.debug("uvmultifit::fit")
+        self._printDebug("uvmultifit::fit")
         tic = time.time()
 
         self.mymodel.bounds = self.bounds
@@ -2756,7 +2713,7 @@ from the pointing direction.\n""")
 
         ##################
         # CASE OF SPECTRAL-MODE FIT:
-        self.logger.debug("one fit per channel: " + str(self.OneFitPerChannel))
+        self._printDebug("one fit per channel: %s" % (str(self.OneFitPerChannel)))
         if self.OneFitPerChannel:
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
@@ -2834,9 +2791,9 @@ from the pointing direction.\n""")
 
             # Compute fixed model:
             if redo_fixed and len(self.mymodel.fixed) > 0 and not self.takeModel:
-                self.logger.debug("Generating fixed model. May take some time")
+                self._printDebug("Generating fixed model. May take some time")
                 self.computeFixedModel()
-                self.logger.debug("Done!")
+                self._printDebug("Done!")
 
             # Pre-fit with simplex:
             if self.method == 'simplex':
