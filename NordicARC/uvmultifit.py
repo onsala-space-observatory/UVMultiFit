@@ -1019,8 +1019,6 @@ class uvmultifit():
     # Functions overriden in GUI mode:
     def _printError(self, message):
         """Prints a message and raises an exception."""
-        # sys.stdout.write(message)
-        # sys.stdout.flush()
         for part in message.split('\n'):
             if len(part) > 0:
                 self.logger.critical(part)
@@ -1032,8 +1030,6 @@ class uvmultifit():
 
     def _printInfo(self, message):
         """Prints a message."""
-        # sys.stdout.write(message)
-        # sys.stdout.flush()
         for part in message.split('\n'):
             if len(part) > 0:
                 self.logger.info(part)
@@ -1138,8 +1134,7 @@ class uvmultifit():
             for sp in spws:
                 for scan in self.iscan[v][sp].keys():
                     for field in range(len(self.iscan[v][sp][scan])):
-                        sys.stdout.write("Doing %s: spw %i, scan_id %i" % (v, sp, scan))
-                        sys.stdout.flush()
+                        self._printInfo("Doing %s: spw %i, scan_id %i" % (v, sp, scan))
                         tb.open(v, nomodify=False)
                         select = self.iscan[v][sp][scan][field]
                         tb2 = tb.selectrows(select[-1])
@@ -1151,7 +1146,7 @@ class uvmultifit():
                         tb2.putcol(column, moddata)
                         tb.close()
 
-            self._printInfo("%s written successfully" % column)
+            self._printInfo("%s written successfully" % (column))
 
         return True
 
@@ -1871,13 +1866,12 @@ from the pointing direction.\n""")
                 self._printError("The antenna diameters are not set in the ms.\n"
                                  + "Please, set it manually or turn off primary-beam correction.\n")
                 return False
-            else:
-                # Negative means not to apply PB corr for that antenna
-                tempfloat[tempfloat == 0.0] = -1.0
-                FWHM = self.ldfac / tempfloat * (2.99e8)
-                sigma = FWHM / 2.35482 * (180. / np.pi) * 3600.
-                self.mymodel.KfacWgt = 1. / (2. * sigma**2.) * (tempfloat > 0.0)  # (0.5*(tempfloat/1.17741)**2.)
-                self.userDiameters = tempfloat
+            # Negative means not to apply PB corr for that antenna
+            tempfloat[tempfloat == 0.0] = -1.0
+            FWHM = self.ldfac / tempfloat * (2.99e8)
+            sigma = FWHM / 2.35482 * (180. / np.pi) * 3600.
+            self.mymodel.KfacWgt = 1. / (2. * sigma**2.) * (tempfloat > 0.0)  # (0.5*(tempfloat/1.17741)**2.)
+            self.userDiameters = tempfloat
         else:
             self.mymodel.KfacWgt = np.zeros(len(self.antnames))
 
