@@ -1943,7 +1943,7 @@ from the pointing direction.\n""")
             self.iscan[vi] = {}
 
         for si in nsprang:
-            self._printInfo("spectral index %d of %d" % (si+1, nsprang[-1]+1))
+            self._printInfo("spectral index #%d (%d of %d)" % (si, si+1, len(nsprang)))
             # These are temporary lists of arrays that will be later concatenated:
             datascanAv = []
             modelscanAv = []
@@ -2343,7 +2343,6 @@ from the pointing direction.\n""")
         self.t0 = np.min([np.min(ti) for ti in self.t])
         self.t1 = np.max([np.max(ti) for ti in self.t])
 
-        self._printInfo("done reading")
         tac = time.time()
         self._printInfo("reading took %.2f seconds" % (tac - tic))
 
@@ -2857,9 +2856,9 @@ from the pointing direction.\n""")
                 if not fit:
                     return False
 
-            self._printInfo("fit results")
-            for x in fit:
-                print(x)
+            # self._printInfo("fit results")
+            # for x in fit:
+            #     print(x)
 
             # Estimate the parameter uncertainties and save the model in the output array:
             if self.savemodel:
@@ -3294,7 +3293,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
                 if doshrink:
                     for j in one2np1:
                         sim[j] = sim[0] + sigma * (sim[j] - sim[0])
-                        print('simj', sim[j])
+                        # print('simj', sim[j])
                         fsim[j] = func(sim[j])
 
         ind = np.argsort(fsim)

@@ -426,8 +426,8 @@ class modeler():
         self.varfunc = [0.0 for component in self.model]
 
         for ii, component in enumerate(self.model):
-            print(ii, component, self.var[ii])
-            print(self.freqs)
+            # print(ii, component, self.var[ii])
+            # print(self.freqs)
             tempstr = self.var[ii].replace(
                 'LorentzLine(', 'self.LorentLine(nu, ').replace(
                     'GaussLine(', 'self.GaussLine(nu, ').replace(
@@ -596,7 +596,7 @@ class modeler():
 
         if self.only_flux and self.currchan == -1:
             nnu = max([len(self.freqs[sp]) for sp in range(len(self.freqs))])
-            print("Computing structure-only parameters")
+            self.logger.info("Computing structure-only parameters")
 
             for midx in range(len(p)):
                 if len(self.strucvar[midx]) > 3:
