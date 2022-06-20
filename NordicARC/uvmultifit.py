@@ -2928,10 +2928,10 @@ from the pointing direction.\n""")
         if not save_file:
             return True
 
-        self._printInfo("done fitting, now saving to file")
+        self._printInfo("done fitting, now saving to file '%s'" % (self.outfile))
 
         outf = open(self.outfile, 'w')
-        outf.write("# MODELFITTING RESULTS FOR MS: " + ','.join(self.vis))
+        outf.write("# MODELFITTING RESULTS FOR MS: " + ','.join(self.vis) + "\n")
         outf.write("# NOTICE THAT THE REDUCED CHI SQUARE SHOWN HERE IS THE VALUE\n")
         outf.write("# *BEFORE* THE RE-SCALING OF THE VISIBILITY WEIGHTS.\n")
         outf.write("# HOWEVER, THE PARAMETER UNCERTAINTIES ARE *ALREADY* GIVEN\n")
@@ -2940,10 +2940,10 @@ from the pointing direction.\n""")
             DOG = int(np.average(Nvis))
         else:
             DOG = Nvis
-        outf.write("# AVG. NUMBER OF DEGREES OF FREEDOM: %i" % DOG)
+        outf.write("# AVG. NUMBER OF DEGREES OF FREEDOM: %i\n" % DOG)
         if self.pbeam:
             if isinstance(self.dish_diameter, float):
-                outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING A DISH DIAMETER OF: %.3f METERS" %
+                outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING A DISH DIAMETER OF: %.3f METERS\n" %
                            self.dish_diameter)
             else:
                 outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING: \n")
@@ -2952,29 +2952,29 @@ from the pointing direction.\n""")
                                (self.antnames[iant], self.userDiameters[iant]))
 
         else:
-            outf.write("# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.")
+            outf.write("# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.\n")
 
         outf.write("###########################################\n")
-        outf.write("#\n# MODEL CONSISTS OF:\n#")
+        outf.write("#\n# MODEL CONSISTS OF:\n")
         for m, mod in enumerate(self.model):
-            outf.write("# '" + mod + "' with variables: " + self.var[m])
+            outf.write("# '" + mod + "' with variables: " + self.var[m] + "\n")
         if len(self.fixed) > 0:
-            outf.write("#\n#\n# FIXED MODEL CONSISTS OF:\n#")
+            outf.write("#\n#\n# FIXED MODEL CONSISTS OF:\n")
             if self.takeModel:
-                outf.write("# THE MODEL COLUMN FOUND IN THE DATA")
+                outf.write("# THE MODEL COLUMN FOUND IN THE DATA\n")
             else:
                 for m, mod in enumerate(self.fixed):
                     var2print = list(map(float, self.fixedvar[m].split(',')))
                     outf.write(
                         "# '" + mod + "' with variables: " + ' '.join(['%.3e'] * len(var2print)) % tuple(var2print))
-                outf.write("#\n#  - AND SCALING FACTOR: %s" % self.scalefix)
+                outf.write("#\n#  - AND SCALING FACTOR: %s\n" % self.scalefix)
 
-        outf.write("#\n#\n# INITIAL PARAMETER VALUES:\n#")
+        outf.write("#\n# INITIAL PARAMETER VALUES:\n")
         for p0i, p0 in enumerate(self.p_ini):
             if self.bounds is not None:
-                outf.write("#  p[%i] = %.5e with bounds: %s " % (p0i, p0, str(self.bounds[p0i])))
+                outf.write("#  p[%i] = %.5e with bounds: %s\n" % (p0i, p0, str(self.bounds[p0i])))
             else:
-                outf.write("#  p[%i] = %.5e with no bounds" % (p0i, p0))
+                outf.write("#  p[%i] = %.5e with no bounds\n" % (p0i, p0))
 
         outf.write("#\n##########################################\n")
         parshead = []
@@ -2984,17 +2984,15 @@ from the pointing direction.\n""")
             parshead.append(pp)
 
         headstr = (
-            "# Frequency (Hz)   " + "p[%i]  error(p[%i])   " * len(self.p_ini) + "Red. Chi Sq.\n") % tuple(parshead)
+            "# Frequency (Hz)     " + "  p[%i]       err[%i]   " * len(self.p_ini) + "   red. ChiSq\n") % tuple(parshead)
         outf.write(headstr)
 
+        formatting = "%.12e   " + "%.4e " * (2 * npars) + "   %.4e \n"
         if not self.OneFitPerChannel:
-            formatting = "%.12e   " + "%.4e " * (2 * npars) + "   %.4e \n"
             toprint = tuple([np.average(self.averfreqs)] + prtpars + [ChiSq])
             outf.write(formatting % toprint)
 
         else:
-            formatting = "%.12e    " + "%.4e " * (2 * npars) + "  %.4e \n"
-
             for spwvi in self.spwlist:
                 for r, rr in enumerate(spwvi[2]):
                     k = spwvi[3] + r
@@ -3003,7 +3001,6 @@ from the pointing direction.\n""")
                         toprint = tuple([freq] + prtpars[k][nu] + [ChiSq[k][nu]])
                         outf.write(formatting % toprint)
         outf.close()
-
         tac = time.time()
 
         self._printInfo("fit took %.2f seconds" % (tac - tic))
