@@ -16,120 +16,120 @@ class modeler():
     #
     #  FREE MEMORY
     #
-    def __del__(self):
-        self.deleteData()
-        self.deleteModel()
+    # def __del__(self):
+    #     self.deleteData()
+    #     self.deleteModel()
 
     ############################################
     #
     #  FREE MEMORY JUST FOR THE MODEL-RELATED DATA:
     #
-    def deleteModel(self):
-        """ Free pointers to the model-related arrays and parameters."""
+    # def deleteModel(self):
+    #     """ Free pointers to the model-related arrays and parameters."""
+    #
+    #     for mdi in range(len(self.varbuffer) - 1, -1, -1):  # [::-1]:
+    #         del self.varbuffer[mdi]
+    #     #    del self.varbuffer
+    #
+    #     for mdi in range(len(self.varfixed) - 1, -1, -1):  # [::-1]:
+    #         del self.varfixed[mdi]
+    #     #    del self.varfixed
+    #
+    #     #    for mdi in range(len(self.dpar)-1, -1, -1):  # -[::-1]:
+    #     #      del self.dpar[mdi]
+    #     del self.dpar
+    #
+    #     #    for mdi in range(len(self.par2)-1, -1, -1):  # [::-1]:
+    #     #      del self.par2[mdi]
+    #     del self.par2
+    #
+    #     del self.Hessian, self.Gradient, self.imod
 
-        for mdi in range(len(self.varbuffer) - 1, -1, -1):  # [::-1]:
-            del self.varbuffer[mdi]
-        #    del self.varbuffer
-
-        for mdi in range(len(self.varfixed) - 1, -1, -1):  # [::-1]:
-            del self.varfixed[mdi]
-        #    del self.varfixed
-
-        #    for mdi in range(len(self.dpar)-1, -1, -1):  # -[::-1]:
-        #      del self.dpar[mdi]
-        del self.dpar
-
-        #    for mdi in range(len(self.par2)-1, -1, -1):  # [::-1]:
-        #      del self.par2[mdi]
-        del self.par2
-
-        del self.Hessian, self.Gradient, self.imod
-
-    def deleteData(self):
-        """ Free pointers to the data-related arrays and gain buffers."""
-
-        for mdi in range(len(self.data) - 1, -1, -1):  # [::-1]:
-            del self.data[mdi]
-        #    del self.data
-
-        for mdi in range(len(self.wgt) - 1, -1, -1):  # [::-1]:
-            del self.wgt[mdi]
-        #    del self.wgt
-
-        for mdi in range(len(self.uv) - 1, -1, -1):  # [::-1]:
-            try:
-                del self.uv[mdi][2], self.uv[mdi][1], self.uv[mdi][0]
-                del self.uv[mdi]
-            except Exception:
-                pass
-        #    del self.uv
-
-        for mdi in range(len(self.offset) - 1, -1, -1):  # [::-1]:
-            try:
-                del self.offset[mdi][2], self.offset[mdi][1], self.offset[mdi][0]
-                del self.offset[mdi]
-            except Exception:
-                pass
-
-        #    del self.offset
-        for mdi in range(len(self.ants) - 1, -1, -1):  # [::-1]:
-            try:
-                del self.ants[mdi][1], self.ants[mdi][0]
-                del self.ants[mdi]
-            except Exception:
-                pass
-        #    del self.ants
-        for mdspw in range(len(self.GainBuffer) - 1, -1, -1):  # [::-1]:
-            NA = len(self.GainBuffer[mdspw])
-            for a in range(NA - 1, -1, -1):
-                NP = len(self.GainBuffer[mdspw][a])
-                for mdp in range(NP - 1, -1, -1):
-                    del self.GainBuffer[mdspw][a][mdp]
-                del self.GainBuffer[mdspw][a]
-            del self.GainBuffer[mdspw]
-        #    del self.GainBuffer
-
-        for mdi in range(len(self.dt) - 1, -1, -1):  # [::-1]:
-            del self.dt[mdi]
-        #    del self.dt
-
-        for mdi in range(len(self.dtArr) - 1, -1, -1):  # [::-1]:
-            del self.dtArr[mdi]
-        #    del self.dtArr
-
-        for mdi in range(len(self.dtIdx) - 1, -1, -1):  # [::-1]:
-            del self.dtIdx[mdi]
-        #    del self.dtIdx
-
-        for mdi in range(len(self.output) - 1, -1, -1):  # [::-1]:
-            del self.output[mdi]
-        #    del self.output
-
-        for mdi in range(len(self.freqs) - 1, -1, -1):  # [::-1]:
-            del self.freqs[mdi]
-
-        for mdi in range(len(self.fittable) - 1, -1, -1):  # self.fittable[::-1]:
-            del self.fittable[mdi]
-        #    del self.fittable
-
-        for mdi in range(len(self.wgtcorr) - 1, -1, -1):  # [::-1]:
-            del self.wgtcorr[mdi]
-        #    del self.wgtcorr
-
-        for mdi in range(len(self.fittablebool) - 1, -1, -1):  # [::-1]:
-            del self.fittablebool[mdi]
-        #    del self.fittablebool
-
-        for mdi in range(len(self.isGain) - 1, -1, -1):  # [::-1]:
-            del self.isGain[mdi]
-        #    del self.isGain
-
-        for mdi in range(len(self.iscancoords) - 1, -1, -1):  # [::-1]:
-            Npar = len(self.iscancoords[mdi])
-            for mdp in range(Npar - 1, -1, -1):
-                del self.iscancoords[mdi][mdp]
-            del self.iscancoords[mdi]
-        #    del self.iscancoords
+    # def deleteData(self):
+    #     """ Free pointers to the data-related arrays and gain buffers."""
+    #
+    #     for mdi in range(len(self.data) - 1, -1, -1):  # [::-1]:
+    #         del self.data[mdi]
+    #     #    del self.data
+    #
+    #     for mdi in range(len(self.wgt) - 1, -1, -1):  # [::-1]:
+    #         del self.wgt[mdi]
+    #     #    del self.wgt
+    #
+    #     for mdi in range(len(self.uv) - 1, -1, -1):  # [::-1]:
+    #         try:
+    #             del self.uv[mdi][2], self.uv[mdi][1], self.uv[mdi][0]
+    #             del self.uv[mdi]
+    #         except Exception:
+    #             pass
+    #     #    del self.uv
+    #
+    #     for mdi in range(len(self.offset) - 1, -1, -1):  # [::-1]:
+    #         try:
+    #             del self.offset[mdi][2], self.offset[mdi][1], self.offset[mdi][0]
+    #             del self.offset[mdi]
+    #         except Exception:
+    #             pass
+    #
+    #     #    del self.offset
+    #     for mdi in range(len(self.ants) - 1, -1, -1):  # [::-1]:
+    #         try:
+    #             del self.ants[mdi][1], self.ants[mdi][0]
+    #             del self.ants[mdi]
+    #         except Exception:
+    #             pass
+    #     #    del self.ants
+    #     for mdspw in range(len(self.GainBuffer) - 1, -1, -1):  # [::-1]:
+    #         NA = len(self.GainBuffer[mdspw])
+    #         for a in range(NA - 1, -1, -1):
+    #             NP = len(self.GainBuffer[mdspw][a])
+    #             for mdp in range(NP - 1, -1, -1):
+    #                 del self.GainBuffer[mdspw][a][mdp]
+    #             del self.GainBuffer[mdspw][a]
+    #         del self.GainBuffer[mdspw]
+    #     #    del self.GainBuffer
+    #
+    #     for mdi in range(len(self.dt) - 1, -1, -1):  # [::-1]:
+    #         del self.dt[mdi]
+    #     #    del self.dt
+    #
+    #     for mdi in range(len(self.dtArr) - 1, -1, -1):  # [::-1]:
+    #         del self.dtArr[mdi]
+    #     #    del self.dtArr
+    #
+    #     for mdi in range(len(self.dtIdx) - 1, -1, -1):  # [::-1]:
+    #         del self.dtIdx[mdi]
+    #     #    del self.dtIdx
+    #
+    #     for mdi in range(len(self.output) - 1, -1, -1):  # [::-1]:
+    #         del self.output[mdi]
+    #     #    del self.output
+    #
+    #     for mdi in range(len(self.freqs) - 1, -1, -1):  # [::-1]:
+    #         del self.freqs[mdi]
+    #
+    #     for mdi in range(len(self.fittable) - 1, -1, -1):  # self.fittable[::-1]:
+    #         del self.fittable[mdi]
+    #     #    del self.fittable
+    #
+    #     for mdi in range(len(self.wgtcorr) - 1, -1, -1):  # [::-1]:
+    #         del self.wgtcorr[mdi]
+    #     #    del self.wgtcorr
+    #
+    #     for mdi in range(len(self.fittablebool) - 1, -1, -1):  # [::-1]:
+    #         del self.fittablebool[mdi]
+    #     #    del self.fittablebool
+    #
+    #     for mdi in range(len(self.isGain) - 1, -1, -1):  # [::-1]:
+    #         del self.isGain[mdi]
+    #     #    del self.isGain
+    #
+    #     for mdi in range(len(self.iscancoords) - 1, -1, -1):  # [::-1]:
+    #         Npar = len(self.iscancoords[mdi])
+    #         for mdp in range(Npar - 1, -1, -1):
+    #             del self.iscancoords[mdi][mdp]
+    #         del self.iscancoords[mdi]
+    #     #    del self.iscancoords
 
     ############################################
     #
@@ -897,8 +897,8 @@ class modeler():
                         if modi in self.isNumerical:
                             tempvar = self.gridModel(modi, tempvar)
 
-                        for i, tv in range(len(tempvar)):
-                            self.varbuffer[0][midx, i, :nnu] = tempvar[i]
+                        for i, tv in enumerate(tempvar):
+                            self.varbuffer[0][midx, i, :nnu] = tv
 
                     if self.only_flux:
                         ptemp[midx] += self.dpar[midx]

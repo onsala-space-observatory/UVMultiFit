@@ -743,56 +743,56 @@ class uvmultifit():
     #
     #  FREE MEMORY
     #
-    def deleteData(self, delmodel=True):
-        """Delete pointers to the data.
-        Hopefully, this will release memory when gc.collect() is run."""
-
-        for i in range(len(self.averdata) - 1, -1, -1):
-            del self.averdata[i]
-            if self.takeModel:
-                try:
-                    del self.avermod[i]
-                except Exception:
-                    pass
-            del self.averweights[i]
-            del self.averfreqs[i]
-            del self.u[i]
-            del self.v[i]
-            del self.w[i]
-            del self.t[i]
-            del self.tArr[i]
-            del self.tIdx[i]
-            del self.ant1[i]
-            del self.ant2[i]
-            del self.RAshift[i]
-            del self.Decshift[i]
-            del self.Stretch[i]
-
-        try:
-            for mdi in self.iscancoords[::-1]:
-                Npar = len(mdi)
-                for mdp in range(Npar - 1, -1, -1):
-                    del mdi[mdp]
-                del mdi
-            del self.iscancoords
-        except Exception:
-            pass
-
-        del self.averdata, self.avermod, self.averweights, self.averfreqs, self.v, self.u, self.w, self.t
-        del self.ant1, self.ant2, self.RAshift, self.Decshift, self.Stretch
-
-        if delmodel:
-            self.mymodel.deleteData()
-
-    def __del__(self):
-        # Delete the model first, so that C++ has green light to free pointers:
-        # del self.mymodel
-        #
-        # # Clear all data and C++ pointers:
-        # self.deleteData(delmodel=False)
-        # uvmod.clearPointers(0)
-        # uvmod.clearPointers(1)
-        pass
+    # def deleteData(self, delmodel=True):
+    #     """Delete pointers to the data.
+    #     Hopefully, this will release memory when gc.collect() is run."""
+    #
+    #     for i in range(len(self.averdata) - 1, -1, -1):
+    #         del self.averdata[i]
+    #         if self.takeModel:
+    #             try:
+    #                 del self.avermod[i]
+    #             except Exception:
+    #                 pass
+    #         del self.averweights[i]
+    #         del self.averfreqs[i]
+    #         del self.u[i]
+    #         del self.v[i]
+    #         del self.w[i]
+    #         del self.t[i]
+    #         del self.tArr[i]
+    #         del self.tIdx[i]
+    #         del self.ant1[i]
+    #         del self.ant2[i]
+    #         del self.RAshift[i]
+    #         del self.Decshift[i]
+    #         del self.Stretch[i]
+    #
+    #     try:
+    #         for mdi in self.iscancoords[::-1]:
+    #             Npar = len(mdi)
+    #             for mdp in range(Npar - 1, -1, -1):
+    #                 del mdi[mdp]
+    #             del mdi
+    #         del self.iscancoords
+    #     except Exception:
+    #         pass
+    #
+    #     del self.averdata, self.avermod, self.averweights, self.averfreqs, self.v, self.u, self.w, self.t
+    #     del self.ant1, self.ant2, self.RAshift, self.Decshift, self.Stretch
+    #
+    #     if delmodel:
+    #         self.mymodel.deleteData()
+    #
+    # def __del__(self):
+    #     # Delete the model first, so that C++ has green light to free pointers:
+    #     # del self.mymodel
+    #     #
+    #     # # Clear all data and C++ pointers:
+    #     # self.deleteData(delmodel=False)
+    #     # uvmod.clearPointers(0)
+    #     # uvmod.clearPointers(1)
+    #     pass
 
     ############################################
     #
@@ -974,42 +974,42 @@ class uvmultifit():
         self.mymodel.Ccompmodel = uvmod.modelcomp
 
         # Check parameters and read the data in:
-        goodread = self.checkInputs()
-        if goodread:
-            goodread = self.readData(del_data=False)
-        else:
-            self._printError("aborting UVMultiFit! bad inputs! Check inputs!\n")
+        if not self.checkInputs():
+            self._printError("aborting UVMultiFit, checkInputs failed!")
+            return False
+
+        if not self.readData(del_data=False):
+            self._printError("aborting UVMultiFit, readData failed!")
+            return False
 
             # Compile Model:
-        if goodread:
-            goodread = self.initModel()
+        if not self.initData():
+            self._printError("aborting UVMultiFit, initData failed!")
+            return False
+
+        if not self.initModel():
+            self._printError("aborting UVMultiFit, initModel failed!")
+            return False
+
+        if not self.finetune:
+            if not self.fit():
+                self._printError("failed fit!\n")
+                return False
+            if self.write_model in [1, 2, 3]:
+                if self.timewidth == 1 and self.stokes not in ['Q', 'U', 'V']:
+                    self._printInfo("writing into measurement set(s)")
+                    self.writeModel()
+                else:
+                    msg = "cannot write into measurement set!\n"
+                    msg += "If you want to fill-in the model (or corrected) column:\n"
+                    msg += "    1.- 'timewidth' and 'chanwidth' should be set to 1\n"
+                    msg += "    2.- 'stokes' should be set to either 'I', 'PI', or a corr. product."
+                    self._printError(msg)
+
+            self._printInfo("fit done!! And UVMULTIFIT class instantiated successfully!")
         else:
-            self._printError("aborting UVMultiFit! bad data! Check inputs!\n")
-
-        # Fit if finetune == False:
-        if goodread:
-            if not self.finetune:
-                goodfit = self.fit()
-                if not goodfit:
-                    self._printError("failed fit!\n")
-                elif self.write_model in [1, 2, 3]:
-                    if self.timewidth == 1 and self.stokes not in ['Q', 'U', 'V']:
-                        self._printInfo("writing into measurement set(s)")
-                        self.writeModel()
-                    else:
-                        msg = "cannot write into measurement set!\n"
-                        msg += "If you want to fill-in the model (or corrected) column:\n"
-                        msg += "    1.- 'timewidth' and 'chanwidth' should be set to 1\n"
-                        msg += "    2.- 'stokes' should be set to either 'I', 'PI', or a corr. product."
-                        self._printError(msg)
-
-                if goodfit:
-                    self._printInfo("fit done!! And UVMULTIFIT class instantiated successfully!")
-            else:
-                self._printInfo("UVMultiFit class successfully instantiated")
-
-        else:
-            self._printError("aborting UVMultiFit! bad model, check inputs!")
+            self._printInfo("UVMultiFit class successfully instantiated")
+        return True
 
     ############################################
     #
@@ -1846,7 +1846,7 @@ from the pointing direction.\n""")
     #
     #  READ THE DATA. ARRANGE ALL ARRAYS
     #
-    def readData(self, del_data=True):
+    def readData(self, del_data=False):
         """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
 
         It then fills in the properties ``averdata, averfreqs, averweights, u, v, w``, etc.
@@ -1863,13 +1863,14 @@ from the pointing direction.\n""")
         self._printDebug("uvmultifit::readData")
         tic = time.time()
 
-        if del_data:  # data_changed:
-            self.deleteData()
-            #    self.clearPointers(0)
-            #    self.clearPointers(1)
+        # if del_data:  # data_changed:
+        #     # self.deleteData()
+        #     #    self.clearPointers(0)
+        #     #    self.clearPointers(1)
+        #     pass
 
         self.success = False
-        self._printDebug("inside readData")
+        # self._printDebug("inside readData")
 
         # Initiate the lists and arrays where the data will be read-in:
         ntotspw = self.spwlist[-1][3] + len(self.spwlist[-1][2])
@@ -2321,7 +2322,7 @@ from the pointing direction.\n""")
 
         # Set pointers to data, model, etc.:
         # self.initData(del_data=del_data)
-        self._printDebug("leaving readData")
+        # self._printDebug("leaving readData")
 
         return True
 
@@ -2372,7 +2373,7 @@ from the pointing direction.\n""")
 
         self._printDebug("uvmultifit::initData")
         # Reset pointers for the modeler:
-        self.mymodel.deleteData()
+        # self.mymodel.deleteData()
 
         # Set number of spectral windows:
         gooduvm = uvmod.setNspw(int(self.Nspw))
@@ -2502,7 +2503,7 @@ from the pointing direction.\n""")
             # except Exception:
             #     pass
             # gc.collect()
-        self._printDebug("leaving initData")
+        # self._printDebug("leaving initData")
         return True
 
     ############################################
@@ -2518,10 +2519,10 @@ from the pointing direction.\n""")
         It is indeed MANDATORY to run this function if the model to be fitted has changed."""
 
         self._printDebug("uvmultifit::initModel")
-        if self.mymodel.initiated:
-            #     self.clearPointers(1)
-            self.mymodel.deleteModel()
-        else:
+        if not self.mymodel.initiated:
+            # self.clearPointers(1)
+            # self.mymodel.deleteModel()
+            # else:
             self._printInfo("UVMultiFit compiled model(s) do not seem to exist yet.")
 
         # Set number of threads:
