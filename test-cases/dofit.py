@@ -22,26 +22,33 @@ foo.select_model(model, var=modvars, p_ini=initial, bounds=modbounds)
 foo.mymodel = uvm.modeler()
 foo.mymodel.Ccompmodel = uvmod.modelcomp
 
-if not foo.checkInputs():
-    print("failed to check inputs")
-    sys.exit(1)
-
-if not foo.readData(del_data=False):
-    print("failed to read data")
-    sys.exit(1)
-
-if not foo.initData():
-    print("failed to init data")
-    sys.exit(1)
-
-if not foo.initModel():
-    print("failed to init model")
-    sys.exit(1)
-
-if not foo.fit():
-    print("failed to fit model")
+if True:
+    if not foo.start_fit():
+        print("failed to fit model")
+        sys.exit(1)
+    else:
+        print("success!")
 else:
-    print("success!")
+    if not foo.checkInputs():
+        print("failed to check inputs")
+        sys.exit(1)
+
+    if not foo.readData(del_data=False):
+        print("failed to read data")
+        sys.exit(1)
+
+    if not foo.initData():
+        print("failed to init data")
+        sys.exit(1)
+
+    if not foo.initModel():
+        print("failed to init model")
+        sys.exit(1)
+
+    if not foo.fit():
+        print("failed to fit model")
+    else:
+        print("success!")
 
 # exact solution
 S = [2.435e-01, 1.000e+00, 2.000e-01, 5.000e-01, 6.000e+01]
