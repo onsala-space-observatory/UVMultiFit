@@ -739,6 +739,7 @@ class uvmultifit():
     LIGHTSPEED = 2.99792458e+8
     FOURIERFACTOR = (2.0 * np.pi) * np.pi / 180.0 / 3600.0
     logger = logging.getLogger("uvmultifit")
+    isNumerical = ['GaussianRing']
 
     def __init__(self, uniform=False,
                  chanwidth=1, timewidth=1, stokes='I', write='', MJDrange=[-1.0, -1.0], ldfac=1.22,
@@ -761,7 +762,6 @@ class uvmultifit():
         # Number of variables for the models
         numvars = [3, 6, 6, 6, 6, 6, 6, 6, 6, 7]
         # Models that need a series expansion for J0.
-        self.isNumerical = ['GaussianRing']
         self.uniform = uniform
         self.averdata = []
         self.avermod = []
@@ -890,7 +890,7 @@ class uvmultifit():
             self._printError("aborting UVMultiFit, checkInputs failed!")
             return False
 
-        if not self.readData(del_data=False):
+        if not self.readData():   # del_data=False):
             self._printError("aborting UVMultiFit, readData failed!")
             return False
 
@@ -1053,9 +1053,9 @@ class uvmultifit():
     def check_phase_center(self):
         if not isinstance(self.phase_center, str):
             self._printError("'phase_center' must be a string!")
-            return
-        if len(self.phase_center) == 0:
             return False
+        if len(self.phase_center) == 0:
+            return True
         try:
             csys = cs.newcoordsys(direction=True)
             dirstr = self.phase_center.split()
@@ -1200,7 +1200,7 @@ class uvmultifit():
             return False
 
         # Check for consistency in the fixed model:
-            self.takeModel = 'model_column' in self.fixed
+        self.takeModel = 'model_column' in self.fixed
         if self.takeModel:
             self._printInfo("MODEL COLUMN will be taken as fixed model. "
                             "Skipping the 'fixedvar' column and all other fixed components")
@@ -1668,7 +1668,8 @@ class uvmultifit():
     #
     #  READ THE DATA. ARRANGE ALL ARRAYS
     #
-    def readData(self, del_data=False):
+    # def readData(self, del_data=False):
+    def readData(self):
         """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
 
         It then fills in the properties ``averdata, averfreqs, averweights, u, v, w``, etc.
