@@ -12,6 +12,8 @@ class modeler():
 
     This class should NOT be instantiated by the user (it is called from the UVMultiFit class."""
 
+    logger = logging.getLogger("modeler")
+
     ############################################
     #
     #  FREE MEMORY
@@ -139,7 +141,6 @@ class modeler():
         """ Just the constructor of the 'modeler' class."""
         logging.basicConfig(level=logging.INFO,
                             format='%(name)s - %(levelname)s - %(message)s')
-        self.logger = logging.getLogger("modeler")
         self.logger.debug("modeler::__init__")
         self.Nants = 0
         self.initiated = False
@@ -285,13 +286,13 @@ class modeler():
         """ Compile the functions related to the antenna gains."""
         self.logger.debug("modeler::_compileGains")
         if self.isMixed:
-            self.phaseAntsFunc = [lambda t, nu, p: 0. for i in range(self.Nants)]
-            self.ampAntsFunc = [lambda t, nu, p: 1. for i in range(self.Nants)]
+            self.phaseAntsFunc = [lambda t, nu, p: 0.0 for i in range(self.Nants)]
+            self.ampAntsFunc = [lambda t, nu, p: 1.0 for i in range(self.Nants)]
         else:
-            self.phaseAntsFuncNu = [lambda nu, p: 0. for i in range(self.Nants)]
-            self.ampAntsFuncNu = [lambda nu, p: 1. for i in range(self.Nants)]
-            self.phaseAntsFuncT = [lambda t, p: 0. for i in range(self.Nants)]
-            self.ampAntsFuncT = [lambda t, p: 1. for i in range(self.Nants)]
+            self.phaseAntsFuncNu = [lambda nu, p: 0.0 for i in range(self.Nants)]
+            self.ampAntsFuncNu = [lambda nu, p: 1.0 for i in range(self.Nants)]
+            self.phaseAntsFuncT = [lambda t, p: 0.0 for i in range(self.Nants)]
+            self.ampAntsFuncT = [lambda t, p: 1.0 for i in range(self.Nants)]
 
         self.parDependence = [[0] for i in range(self.Nants)]
 
