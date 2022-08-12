@@ -4,7 +4,9 @@ import logging
 import numpy as np
 from scipy import special
 
-class modeler():
+from utils import get_list_of_strings
+
+class Modeler():
     """ Class to deal with model equations and fitting procedures.
 
     If convert strings representing models and parameters into compiled equations, to be used in a ChiSq
@@ -13,135 +15,47 @@ class modeler():
     This class should NOT be instantiated by the user (it is called from the UVMultiFit class."""
 
     logger = logging.getLogger("modeler")
+    isNumerical = ['GaussianRing']
 
-    ############################################
-    #
-    #  FREE MEMORY
-    #
-    # def __del__(self):
-    #     self.deleteData()
-    #     self.deleteModel()
+    # the following models are implemented, the integer values are the number of parameters used
+    implemented_models = {'delta': 3,
+                          'disc': 6,
+                          'ring': 6,
+                          'Gaussian': 6,
+                          'sphere': 6,
+                          'bubble': 6,
+                          'expo': 6,
+                          'power-2': 6,
+                          'power-3': 6,
+                          'GaussianRing': 7}
 
-    ############################################
-    #
-    #  FREE MEMORY JUST FOR THE MODEL-RELATED DATA:
-    #
-    # def deleteModel(self):
-    #     """ Free pointers to the model-related arrays and parameters."""
-    #
-    #     for mdi in range(len(self.varbuffer) - 1, -1, -1):  # [::-1]:
-    #         del self.varbuffer[mdi]
-    #     #    del self.varbuffer
-    #
-    #     for mdi in range(len(self.varfixed) - 1, -1, -1):  # [::-1]:
-    #         del self.varfixed[mdi]
-    #     #    del self.varfixed
-    #
-    #     #    for mdi in range(len(self.dpar)-1, -1, -1):  # -[::-1]:
-    #     #      del self.dpar[mdi]
-    #     del self.dpar
-    #
-    #     #    for mdi in range(len(self.par2)-1, -1, -1):  # [::-1]:
-    #     #      del self.par2[mdi]
-    #     del self.par2
-    #
-    #     del self.Hessian, self.Gradient, self.imod
-
-    # def deleteData(self):
-    #     """ Free pointers to the data-related arrays and gain buffers."""
-    #
-    #     for mdi in range(len(self.data) - 1, -1, -1):  # [::-1]:
-    #         del self.data[mdi]
-    #     #    del self.data
-    #
-    #     for mdi in range(len(self.wgt) - 1, -1, -1):  # [::-1]:
-    #         del self.wgt[mdi]
-    #     #    del self.wgt
-    #
-    #     for mdi in range(len(self.uv) - 1, -1, -1):  # [::-1]:
-    #         try:
-    #             del self.uv[mdi][2], self.uv[mdi][1], self.uv[mdi][0]
-    #             del self.uv[mdi]
-    #         except Exception:
-    #             pass
-    #     #    del self.uv
-    #
-    #     for mdi in range(len(self.offset) - 1, -1, -1):  # [::-1]:
-    #         try:
-    #             del self.offset[mdi][2], self.offset[mdi][1], self.offset[mdi][0]
-    #             del self.offset[mdi]
-    #         except Exception:
-    #             pass
-    #
-    #     #    del self.offset
-    #     for mdi in range(len(self.ants) - 1, -1, -1):  # [::-1]:
-    #         try:
-    #             del self.ants[mdi][1], self.ants[mdi][0]
-    #             del self.ants[mdi]
-    #         except Exception:
-    #             pass
-    #     #    del self.ants
-    #     for mdspw in range(len(self.GainBuffer) - 1, -1, -1):  # [::-1]:
-    #         NA = len(self.GainBuffer[mdspw])
-    #         for a in range(NA - 1, -1, -1):
-    #             NP = len(self.GainBuffer[mdspw][a])
-    #             for mdp in range(NP - 1, -1, -1):
-    #                 del self.GainBuffer[mdspw][a][mdp]
-    #             del self.GainBuffer[mdspw][a]
-    #         del self.GainBuffer[mdspw]
-    #     #    del self.GainBuffer
-    #
-    #     for mdi in range(len(self.dt) - 1, -1, -1):  # [::-1]:
-    #         del self.dt[mdi]
-    #     #    del self.dt
-    #
-    #     for mdi in range(len(self.dtArr) - 1, -1, -1):  # [::-1]:
-    #         del self.dtArr[mdi]
-    #     #    del self.dtArr
-    #
-    #     for mdi in range(len(self.dtIdx) - 1, -1, -1):  # [::-1]:
-    #         del self.dtIdx[mdi]
-    #     #    del self.dtIdx
-    #
-    #     for mdi in range(len(self.output) - 1, -1, -1):  # [::-1]:
-    #         del self.output[mdi]
-    #     #    del self.output
-    #
-    #     for mdi in range(len(self.freqs) - 1, -1, -1):  # [::-1]:
-    #         del self.freqs[mdi]
-    #
-    #     for mdi in range(len(self.fittable) - 1, -1, -1):  # self.fittable[::-1]:
-    #         del self.fittable[mdi]
-    #     #    del self.fittable
-    #
-    #     for mdi in range(len(self.wgtcorr) - 1, -1, -1):  # [::-1]:
-    #         del self.wgtcorr[mdi]
-    #     #    del self.wgtcorr
-    #
-    #     for mdi in range(len(self.fittablebool) - 1, -1, -1):  # [::-1]:
-    #         del self.fittablebool[mdi]
-    #     #    del self.fittablebool
-    #
-    #     for mdi in range(len(self.isGain) - 1, -1, -1):  # [::-1]:
-    #         del self.isGain[mdi]
-    #     #    del self.isGain
-    #
-    #     for mdi in range(len(self.iscancoords) - 1, -1, -1):  # [::-1]:
-    #         Npar = len(self.iscancoords[mdi])
-    #         for mdp in range(Npar - 1, -1, -1):
-    #             del self.iscancoords[mdi][mdp]
-    #         del self.iscancoords[mdi]
-    #     #    del self.iscancoords
-
-    ############################################
-    #
-    #  CREATE INSTANCE
-    #
-    def __init__(self):
+    def __init__(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
+                 bounds=None, OneFitPerChannel=False,
+                 fixed=[], fixedvar=[], scalefix='1.0'):
         """ Just the constructor of the 'modeler' class."""
         logging.basicConfig(level=logging.INFO,
                             format='%(name)s - %(levelname)s - %(message)s')
         self.logger.debug("modeler::__init__")
+        self.model = get_list_of_strings(model)
+
+        self.propRA = np.zeros(len(model), dtype=np.float64)
+        self.propDec = np.zeros(len(model), dtype=np.float64)
+        self.fixed = fixed
+        self.fixedvar = fixedvar
+        self.var = var  # variables of the model components.
+        self.scalefix = scalefix
+        self._hankelOrder = 80
+
+        # Lists of compiled functions (one per model component).
+        # These will take p and nu and return the variables of the model:
+
+        self.varfunc = [0.0 for component in model]
+
+        self._NCPU = 4
+        self.t0 = 0.0
+        self.t1 = 1.e12
+        self._only_flux = False
+
         self.Nants = 0
         self.initiated = False
         self.addfixed = False
@@ -223,9 +137,86 @@ class modeler():
         self.allowedmod = ['delta', 'Gaussian', 'disc', 'ring', 'sphere',
                            'bubble', 'expo', 'power-2', 'power-3', 'GaussianRing']
         self.resultstring = ''
+        self.check_model_consistency()
 
-    def setup(self, model, parameters, fixedmodel, fixedparameters, scalefix, NCPU, only_flux, HankelOrder,
-              isNumerical, useGains, gainFunction, isMixed):
+    def __repr__(self):
+        txt = "Modeler("
+        txt += f"model = {self.model}, "
+        txt += f"var = {self.var}, "
+        txt += f"fixed = {self.fixed}, "
+        txt += f"fixedvar = {self.fixedvar}, "
+        txt += f"scalefix = {self.scalefix}, "
+        txt += f"NCPU = {self._NCPU}, "
+        txt += f"fluxOnly = {self._only_flux}, "
+        txt += f"hankelOrder = {self._hankelOrder})"
+        return txt
+
+    @property
+    def NCPU(self):
+        return self._NCPU
+
+    @NCPU.setter
+    def NCPU(self, no_of_cpus):
+        self._NCPU = no_of_cpus
+
+    @property
+    def fluxOnly(self):
+        return self._only_flux
+
+    @fluxOnly.setter
+    def fluxOnly(self, flag):
+        self._only_flux = flag
+
+    @property
+    def hankelOrder(self):
+        return self._hankelOrder
+
+    @hankelOrder.setter
+    def hankelOrder(self, flag):
+        self._hankelOrder = flag
+
+    @classmethod
+    def get_parameter_indices(cls, par):
+        indices = []
+        paridx = zip([m.start() + 1 for m in re.finditer(r'\[', par)],
+                     [m.start() for m in re.finditer(r'\]', par)])
+        for m, n in paridx:
+            indices.append(int(par[m:n]))
+        return indices
+
+    def check_model_consistency(self):
+        """Get the number of parameters and check the model consistency"""
+
+        indices = []
+        # Typical function that can be used.
+        lf = ['GaussLine', 'GaussLine', 'LorentzLine', 'LorentzLine', 'power', 'maximum', 'minimum']
+        for i, component in enumerate(self.model):
+            if component not in self.implemented_models.keys():
+                msg = "Model component '" + str(component) + "' is not known!"
+                # fmt = "Supported models are:" + " '%s' " * len(self.implemented)
+                # msg += fmt % tuple(self.implemented)
+                self.logger.error(msg)
+                return 0
+
+            vic = self.var[i].count
+            checkpars = [p.strip() for p in self.var[i].split(',')]
+            nfuncs = sum(list(map(vic, lf)))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
+            indices += self.get_parameter_indices(self.var[i])
+
+            nvars = len(checkpars) - nfuncs
+            if self.implemented_models[component] != nvars:
+                self._printError(f"Wrong number of variables ({nvars}) in '{component}' model.")
+                return 0
+
+        # Scalefix must be a string representing a function:
+        if not isinstance(self.scalefix, str):
+            self._printError("'scalefix' should be a string!")
+            return 0
+
+        indices += self.get_parameter_indices(self.scalefix)
+        return indices
+
+    def setup(self):
         """ Setup the model components, fitting parameters, and gain functions. Compile the equations.
 
         Not to be called by the user."""
@@ -233,30 +224,6 @@ class modeler():
         self.logger.debug("modeler::setup")
 
         # self.minnum = np.finfo(np.float64).eps  # Step for Jacobian computation
-        self.propRA = np.zeros(len(model), dtype=np.float64)
-        self.propDec = np.zeros(len(model), dtype=np.float64)
-        self.fixed = fixedmodel
-        self.fixedvar = fixedparameters
-        self.model = model
-        self.var = parameters  # variables of the model components.
-        self.scalefix = scalefix
-        self.HankelOrder = HankelOrder
-        self.isNumerical = isNumerical
-        self.isMixed = isMixed
-
-        # Lists of compiled functions (one per model component).
-        # These will take p and nu and return the variables of the model:
-
-        self.varfunc = [0.0 for component in model]
-        self.fixedvarfunc = [0.0 for component in fixedmodel]
-
-        self.NCPU = NCPU
-        self.t0 = 0.0
-        self.t1 = 1.e12
-        self.only_flux = only_flux
-        self.useGains = useGains
-
-        self.gainFunction = gainFunction
 
     ############################################
     #
@@ -434,7 +401,7 @@ class modeler():
                     'GaussLine(', 'self.GaussLine(nu, ').replace(
                         'nu0', '%.12f' % self.freqs[0][0])
 
-            if self.only_flux:
+            if self._only_flux:
                 try:
                     tempstr2 = tempstr.split(',')
                     if len(tempstr2) > 3:
@@ -592,7 +559,7 @@ class modeler():
         self.Hessian[:, :] = 0.0
         self.Gradient[:] = 0.0
 
-        if self.only_flux and self.currchan == -1:
+        if self._only_flux and self.currchan == -1:
             nnu = max([len(self.freqs[sp]) for sp in range(len(self.freqs))])
             self.logger.info("Computing structure-only parameters")
 
@@ -712,7 +679,7 @@ class modeler():
         """ Compute elements of Taylor expansion of the source's Hankel transform."""
 
         self.logger.debug("modeler::gridModel")
-        n = self.HankelOrder - 1
+        n = self._hankelOrder - 1
 
         if imod == 'GaussianRing':   # Gaussian Ring
 
@@ -775,7 +742,7 @@ class modeler():
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
         self.logger.debug("uvmultifit residuals")
-        #  varsize = self.maxNvar+self.HankelOrder
+        #  varsize = self.maxNvar + self._hankelOrder
         if mode in [0, -3]:
             self.calls = 0
         else:
@@ -887,7 +854,7 @@ class modeler():
 
                 if nui == -1:  # Continuum
 
-                    if self.only_flux:
+                    if self._only_flux:
                         currflux = pars[midx]
                         # nstrucpars = len(self.strucvar[midx])
                         self.varbuffer[0][midx, 2, :nnu] = currflux
@@ -901,7 +868,7 @@ class modeler():
                         for i, tv in enumerate(tempvar):
                             self.varbuffer[0][midx, i, :nnu] = tv
 
-                    if self.only_flux:
+                    if self._only_flux:
                         ptemp[midx] += self.dpar[midx]
                         self.varbuffer[midx + 1][midx, 2, :nnu] = ptemp[midx]
 
