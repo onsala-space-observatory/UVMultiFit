@@ -461,8 +461,8 @@ from casatools import coordsys
 from casatools import image
 
 import uvmultimodel as uvmod
-from .modeler import modeler
-# global ms, tb
+from NordicARC.modeler import Modeler
+from NordicARC.measurementset import MeasurementSet
 
 __version__ = "3.0-p2"
 date = 'JUN 2022'
@@ -489,267 +489,19 @@ greetings += '#     Marti-Vidal, Vlemmings, Muller & Casey 2014, A&A, 563, A136 
 greetings += '#######################################################################\n'
 
 
-class uvmultifit():
-    """This is the main UVMultiFit class.
+class UVMultiFit():
 
-   It includes pointers to the data and many different methods
-   to perform fits, retrieve Chi square values, covariance matrices, calibrate data, write either model
-   or residual visibilities to your measurement sets, etc.
-
-   Fits with different models can be performed on the same data, (or on different time ranges within the
-   same data to, e.g., perform variability studies) with no need to re-read the same data every time.
-
-   The multi-threaded C++ engine, coupled to the flexibility of Python and CASA, makes UVMultiFit a fast,
-   flexible and powerful tool for your advanced visibility-based analysis.
-
-   :Parameters:
-   ------------
-   **vis** : `str`
-     Name of the measurement set. It can also be a list of MS names.
-   **spw** : `str`
-     String (or list of strings). These are the spectral window(s) and channel selection(s)
-     to be fitted. For each spw, the user can select many channel ranges in the usual CASA
-     way. If one string is given, all ms listed in 'vis' are supposed to have the same
-     spectral configuration. If a list of strings is given, one per ms, this restriction
-     doesn't apply.
-   **column** : `str`
-     The data column. It can be either 'data' or 'corrected'
-   **field** : `str`
-     The id number (or name) of the target source in the measurement set(s).
-   **pbeam** : `bool`
-     If false, the primary-beam correction is not applied. This is *very important* for
-     fitting mosaic data.
-   **dish_diameter** : `double` or `dict`
-     In case that the antenna diameters cannot be read from the datasets, the user must
-     provide the antenna diameters (in meters). This can be given as a single float (so
-     the array is assumed to be homogeneous) or as a dictionary, whose keys are
-     antenna names (or *regular expressions*, that match antenna-name patterns) and whose
-     elements are the antenna diameters (in meters).
-
-     .. note:: For PB correction of heterogeneous, please use either one concatenated
-               Measurement Set (MS) for all your data or several MSs with *the same*
-               antenna table.
-
-   **ldfac** : `double`
-     Proportionality constant between the ratio 'lambda/Diameter' and the FWHM of the
-     primary beam (assumed to be a Gaussian!). I.e.: FWHM = ldfac*lambda/Diameter.
-     Normally, ``ldfac = 1.22`` should be fine, although 1.00 works better with data coming
-     from simobserve.
-   **scans** : `list`
-     List of integers; default []. The id numbers of the scans to load. Default means to
-     load all the scans of the selected source. If multiple measurement sets are selected,
-     this should be a list of lists (i.e., one list of scans per measurement set).
-     For instance, if ``vis = ["ms1.ms","ms2.ms"]``, then ``scans = [[1, 2, 3],[]]`` would select the
-     scans 1, 2, and 3 from the ``ms1.ms`` dataset and all the scans from the ``ms2.ms``
-     dataset.
-   **chanwidth** : `int`
-     Number of spectral channels to average in each chunk of data **before the fit**. BEWARE of
-     the bandwidth-smearing effects if your baselines are long (and/or your source is large).
-   **timewidth** : `int`
-     Number of time channels (i.e., integration times) to average in each chunk of data
-     **before the fit**. The averaging is always cut at the scan boundaries (so a very large
-     timewidth means to average down to one visibility per scan). BEWARE of the
-     time-smearing effects!
-   **MJDrange** : `list`
-     List of two floats. These are the initial and final Modified Julian Dates of the data
-     to be used in the fitting. Notice that all the scans asked by the user are loaded
-     a-priori, and the MJDrange condition is applied *afterwards*. This way, variability
-     studies can be performed efficiently, by loading all data at once and then setting
-     different MJDranges iteratively. Default (i.e., <= 0.0) means not to select data based
-     on JD time range.
-   **stokes** : `str`
-     Polarization product. Can be any of ``PI, I, Q, U, V``. It also accepts individual
-     correlation products: ``XX, YY, XY, YX, RR, LL, LR``, or ``LR``. Default is ``I``.
-     If ``PI`` (which stands for *Polarization Independent*) is given, the program will
-     compute ``I`` whenever possible and use either ``XX, YY, RR`` or ``LL`` otherwise.
-     This way, the amount of data used in polarization-independent fits is maximized.
-   **model** : `list`
-     List of strings (i.e., model components to fit). Each component is given as a string.
-     Possible models are: ``delta, disc, Gaussian, ring, sphere, bubble, expo, power-2,
-     power-3``, and ``GaussianRing``.
-     If only one model component is being fitted, the **model** keyword can also be a string.
-   **var** : `list`
-     List of strings (or just one string, if only one model component is being fitted).
-     These are the variables for each model. The variables can be set to *any* algebraic
-     expression involving the fitting parameters (being the ith parameter represented by
-     ``p[i]``) and the observing frequency in Hz (represented by ``nu``). Any numpy function
-     can also be called, using the prefix ``np`` (e.g., ``p[0]*np.power(nu, p[1])``).
-     See some examples below.
-   **p_ini** : `list`
-     List of the initial values of the fitting parameters. This is expected to be a list
-     of floats.
-   **phase_center** : `str`
-     The sky position where all components are referenced to. If an empty string is given,
-     the phase center will be that of the first field id that is being read (i.e., if a
-     mosaic is being read, the first pointing will be set as the phase center).
-     If the string is not empty, the program expects to find a coordinate in CASA format
-     (i.e., ``J2000 RA Dec``, where **RA** is in format ``00h00m00.0s`` and **Dec** is in
-     format ``00d00m00.0s``).
-   **fixed** : `list`
-     Like **model**, but defines model components with completely fixed variables (i.e.,
-     whose variables are defined only by numbers; not fitting parameters). This model will
-     be computed only once (i.e., just before the fit), hence making the code execution
-     faster. The user can load the model column of the measurement set(s) as a fixed model,
-     by setting ``fixed='model_column'``.
-   **fixedvar** : `list`
-     Like **var**, but refers to the **fixed** model. Hence, it is expected to be either a
-     list of numbers or a list of strings representing numbers. This is not needed if
-     ``fixed = 'model_column'`` (since, in that case, the model column is read *as is* from
-     the measurement set).
-   **scalefix** : `str`
-     String representing a function that sets a scaling factor for the fixed-model's total
-     flux density. It *can be* a function of the fitting parameters (e.g., ``scalefix='p[0]'``
-     will multiply the overall flux density of the fixed model by ``p[0]``) and can also be
-     a function of the observing frequency ``nu``.
-   **OneFitPerChannel** : `bool`
-     If True, independent fits are performed to the different frequency channels, one by
-     one. If False, one common fit is performed to all data. In this case, the user may
-     want to fit for the spectral indices of the components, if the fractional bandwidth
-     is wide.
-   **outfile** : `str`
-     Name of the output file to store results (i.e., fitting parameters, uncertainties,
-     and metadata, in ASCII format).
-   **bounds** : `list`
-     List of boundaries (i.e., minimum and maximum allowed values) for the fitting
-     parameters. 'None' means that no bound is defined. If the list is empty, no bounds
-     are assumed for any parameter (see examples below).
-   **cov_return** : `bool`
-     If True, the covariance matrix for each fit is added to the dictionary returning from
-     the ``fit()`` method (the dictionary key will have the name ``'covariance'``, see
-     the **Returns** section below).
-   **uvtaper** : `double`
-     Default is 0.0. If not 0.0, the weights of the visibilities are multiplied by a
-     Gaussian in Fourier space, whose HWHM is the value of **uvtaper**, *in meters*.
-   **uniform** : `bool`
-     Default is False. If True, the weights of all data are made equal. Notice that a
-     uvtaper can still be applied (i.e., by setting the **uvtaper** parameter).
-   **finetune** : `bool`
-     Default is False. If set to True, the fit is not performed, but only a ``uvmultifit``
-     instance is created with the data properly read and the models compiled and ready.
-     The user can then run different methods of the UVMultiFit class by him/herself (see
-     the help text for each method) before actually fitting the data. This can be useful,
-     for instanse, if the user wants to try many different models (and/or subtract many
-     different fixed models), apply ad-hoc calibrations, perform an *MCMC* exploration of
-     the parameter space, etc., without having to reload the data every time after each
-     step.
-   **wgt_power** : `double`
-     Default is 1. Power index of the visibility weights in the computation of the Chi
-     square. ``wgt_power = 1`` would be the *statistically justified* value, although other
-     values may be tested if the user suspects that the visibility uncertainties are not
-     well estimated in his/her dataset.
-   **method** : `str`
-     Method to use in the chi-square minimization. Default is ``simplex``. Possible values
-     are ``simplex`` and ``levenberg``. Sometimes, the least-squares minimization may not
-     converge well with the *Levenberg-Marquardt* method (if the model is complicated and/or
-     the uv coverage is quite sparse). *Levenberg-Marquardt* also requires a lot of memory,
-     so may not be very convenient if the datasets are very large. In these cases, a Chi
-     square minimization using the *simplex* algorithm may work beter. However, *simplex*
-     may require more function evaluations to find the minimum.
-
-     .. warning:: The SIMPLEX method does not currently provide parameter uncertainties.
-                  It just returns the reduced Chi squared!
-
-   **write** : `str`
-     The kind of information to store in the measurement set(s) after the fit.
-     Default is '' (i.e., does not change anything in the datasets).
-
-   * If it is set to ``model``, the best-fit model is saved in the *model column* of the
-     measurement set.
-
-   * If it is set to ``residuals``, the fit residuals are saved in the *corrected' column*
-     of the measurement set.
-
-   * If it is set to ``calibrated`` (this option will be available in the next release),
-     the gains defined in the **amp_gains** and **phase_gains** dictionaries (see below)
-     will be applied, and the calibrated data will be saved in the *corrected column*
-     of the ms.
-
-     Currently, this keyword is only activated if **stokes** is set to either ``PI, I`` or
-     an individual correlation product (like ``XX`` or ``XY``) *and* if both **timewidth**
-     and **chanwidth** are set to 1.
-   **NCPU** : `int`
-     Default is 4. Number of threads allowed to run in parallel.
-   **SMPtune** : `list`
-     Used to fine-tune the Simplex algorithm. Change only if you really know what you
-     are doing. The meaning of the list elements is:
-
-   * ``SMPtune[0]`` -> Maximum allowed error in the parameters, from the search of the Chi
-     Square minimum. Default is 1.e-4.
-
-   * ``SMPtune[1]`` -> Relative size of the first step in the parameter search.
-     Default is 1.e-1.
-
-   * ``SMPtune[2]`` -> Maximum number of iterations allowed per fitting parameter.
-     Default is 200
-   **LMtune** : `list`
-     Used to fine-tune the Levenberg-Marquardt algorithm. Change only if you really know
-     what you are doing. The meaning of the list elements is:
-
-   * ``LMtune[0]`` -> The Lambda factor to weight up the Newton component
-     (i.e., *H + Lambda*H_diag = Res*), where *H* is the Hessian and *Res* the vector of
-     residuals. Default is 1.e-3
-
-   * ``LMtune[1]`` -> The factor to multiply (divide) Lambda if the iterator worsened
-     (improved) the Chi Squared. Default: 10.
-
-   * ``LMtune[2]`` -> The maximum relative error allowed for the ChiSq. Default: 1.e-5
-
-   * ``LMtune[3]`` -> Maximum number of iterations allowed per fitting parameter.
-     Default: 200
-
-   * ``LMtune[4]`` -> (optional) Maximum relative error allowed for the parameters.
-     Default: 1.e-3. If it is not provided, then ``LMtune[4] = LMtune[2]``
-   **only_flux** : `bool`
-     Default is False. If True, the program assumes that only the flux densities of all
-     components are going to be fitted. Furthermore, the fitting parameters shall be just
-     equal to the flux densities being fitted, and should be given in the same order as
-     the list of model components. In these cases, using ``only_flux = True`` can speed
-     up the fit quite a bit, especially if there are many components to be fitted. This
-     option may be useful to implement simple *compressed sensing*-like algorithms.
-   **proper_motion** : `list`
-     List of 2-element lists of numbers: Each element (i.e., each list of two numbers)
-     is the proper motion, in RA and Dec, of each model component. The units are
-     arc-seconds per year. Proper motions cannot be fitted yet, but may be fittable in
-     future versions of UVMultiFit. Default is a float = 0.0, meaning that all proper
-     motions are null. If the proper motions are not null, the position used as reference
-     for the fit will correspond to that of the first integration time of the first scan
-     of the observed field.
-   **HankelOrder** : `int`
-     Only used for models without an analytic expression (i.e., at the moment, only the
-     ``GaussianRing`` model). In these cases, UVMultiFit performs the Hankel transform by
-     using the series expansion of the Bessel function J0. The order of this expansion is
-     set by this keyword. The larger the distance in Fourier space (i.e., the larger the
-     source, in beam units), the higher HankelOrder should be, to keep the numerical
-     precision. Default is 80. For cases of sources with sizes similar to the synthesized
-     beam, HankelOrder=80 should suffice. The use of too high values may cause Overflow
-     errors!
-   **amp_gains**: `dict`
-     Dictionary (default empty). Controls whether to solve for antenna amplitude gains
-     and source-model parameters *simultaneously*. The keys of the dictionary are the
-     indices of the antennas to self-calibrate. The values of the dictionary are strings,
-     whose elements represent functions of the fitting parameters. See examples below.
-   **phase_gains** : `dict`
-     Same as for amp_gains, but dealing with phase gains.
-
-     .. note:: For the gain solver to work, please use either one concatenated Measurement
-               Set (MS) for all your data or ensure that all your MSs have the same
-               antenna table.
-
-    """
-    LIGHTSPEED = 2.99792458e+8
-    FOURIERFACTOR = (2.0 * np.pi) * np.pi / 180.0 / 3600.0
     logger = logging.getLogger("uvmultifit")
     isNumerical = ['GaussianRing']
 
-    def __init__(self, uniform=False,
-                 chanwidth=1, timewidth=1, stokes='I', write='', MJDrange=[-1.0, -1.0], ldfac=1.22,
+    def __init__(self,
+                 write='', ldfac=1.22,
                  phase_center='',
-                 fixed=[], fixedvar=[], scalefix='1.0', outfile='modelfit.dat', NCPU=4, pbeam=False,
-                 dish_diameter=0.0, cov_return=False, finetune=False, uvtaper=0.0,
-                 method='levenberg', wgt_power=1.0,
-                 LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200], only_flux=False,
-                 proper_motion=0.0, HankelOrder=80, phase_gains={}, amp_gains={}):
-        """Just the constructor method, for class instantiation."""
+                 outfile='modelfit.dat', pbeam=False,
+                 dish_diameter=0.0, cov_return=False, finetune=False,
+                 method='levenberg',
+                 proper_motion=0.0):
+
         logging.basicConfig(level=logging.INFO,
                             format='%(name)s - %(levelname)s - %(message)s')
         self.logger.debug("uvmultifit::__init__")
@@ -757,59 +509,31 @@ class uvmultifit():
         self.first_time = True
         uvmod.clearPointers(2)
 
-        self.implemented = ['delta', 'disc', 'ring', 'Gaussian', 'sphere',
-                            'bubble', 'expo', 'power-2', 'power-3', 'GaussianRing']
-        # Number of variables for the models
-        numvars = [3, 6, 6, 6, 6, 6, 6, 6, 6, 7]
         # Models that need a series expansion for J0.
-        self.uniform = uniform
         self.averdata = []
         self.avermod = []
         self.averweights = []
         self.averfreqs = []
         self.u = []
         self.v = []
-        self.fixed = fixed
-        self.wgt_power = wgt_power
-        self.fixedvar = fixedvar
-        self.scalefix = scalefix
         self.outfile = outfile
         self.ranges = []
-        self.chanwidth = chanwidth
-        #  self.timewidth = timewidth
-        self.stokes = stokes
         self.nspws = []
         self.cov_return = cov_return
-        self.uvtaper = uvtaper
         self.times = []
         self.method = method
-        self.field_id = []
-        self.pointing = []
-        self.sourscans = []
         self.variables = []
-        self.NCPU = NCPU
-        self.MJDrange = MJDrange
         self.finetune = finetune
         self.minDp = np.sqrt(np.finfo(np.float64).eps)
-        self.LMtune = LMtune
-        self.SMPtune = SMPtune
-        self.only_flux = only_flux
         self.proper_motion = proper_motion
         self.phase_center = phase_center
-        self.HankelOrder = HankelOrder
-        self.amp_gains = amp_gains
-        self.phase_gains = phase_gains
         self.ldfac = ldfac
 
         # Some variables to tune the mosaic fitting:
         self.pbeam = pbeam
-        self.dish_diameter = dish_diameter
 
         # Number of variables for each model
         self.numvar = {}
-        for i, component in enumerate(self.implemented):
-            self.numvar[component] = numvars[i]
-        self.maxNvar = np.max(numvars)
 
         write_model = {'': 0, 'model': 1, 'residuals': 2, 'calibrated': 3}
         self.write_model = write_model.get(write, -1)
@@ -817,49 +541,25 @@ class uvmultifit():
             self._printError("keyword 'write' should be set to either '', 'model', 'residuals' or 'calibrated'")
 
         # TIMEWIDTH IS NOT CURRENTLY USED (ISSUES WITH NEW MS TOOL):
-        self.timewidth = 1
-        if timewidth != 1:
-            self._printWarning("timewdith>1 cannot be currently set, due to issues with new MS tool")
+
+    def dump(self):
+        temp = vars(self)
+        print(f"{self.__class__.__name__}(")
+        for item in sorted(temp.keys()):
+            print(f"  {item}: {temp[item]}")
+        print(")")
 
     def __repr__(self):
-        txt = "uvmultifit("
-        txt += f"vis = '{self.vis}', "
-        txt += f"spw = {self.spw}, "
-        txt += f"column = '{self.column}', "
-        txt += f"field = {self.field}, "
-        txt += f"scans = {self.scans}, "
-        txt += f"uniform = {self.uniform}, "
-        txt += f"chanwidth = {self.chanwidth}, "
-        txt += f"timewidth = {self.timewidth}, "
-        txt += f"stokes = '{self.stokes}', "
+        txt = "UVMultiFit("
         txt += f"write_model = {self.write_model}, "
-        txt += f"MJDrange = {self.MJDrange}, "
         txt += f"ldfac = {self.ldfac}, "
-        txt += f"model = {self.model}, "
-        txt += f"var = {self.var}, "
-        txt += f"p_ini = {self.p_ini}, "
         txt += f"phase_center = '{self.phase_center}', "
-        txt += f"fixed = {self.fixed}, "
-        txt += f"fixedvar = {self.fixedvar}, "
-        txt += f"scalefix = {self.scalefix}, "
         txt += f"outfile = {self.outfile}, "
-        txt += f"NCPU = {self.NCPU}, "
         txt += f"pbeam = {self.pbeam}, "
-        txt += f"dish_diameter = {self.dish_diameter}, "
-        txt += f"OneFitPerChannel = {self.OneFitPerChannel}, "
-        txt += f"bounds = {self.bounds}, "
         txt += f"cov_return = {self.cov_return}, "
         txt += f"finetune = {self.finetune}, "
-        txt += f"uvtaper = {self.uvtaper}, "
         txt += f"method = '{self.method}', "
-        txt += f"wgt_power = {self.wgt_power}, "
-        txt += f"LMtune = {self.LMtune}, "
-        txt += f"SMPtune = {self.SMPtune}, "
-        txt += f"only_flux = {self.only_flux}, "
-        txt += f"proper_motion = {self.proper_motion}, "
-        txt += f"HankelOrder = {self.HankelOrder}, "
-        txt += f"phase_gains = {self.phase_gains}, "
-        txt += f"amp_gains = {self.amp_gains})"
+        txt += f"proper_motion = {self.proper_motion})"
         return txt
 
     def select_data(self, vis, spw='0', column='data', field=0, scans=[]):
@@ -877,13 +577,13 @@ class uvmultifit():
         self.bounds = bounds
         self.OneFitPerChannel = OneFitPerChannel
 
-    def start_fit(self):
+    def start_fit(self, model):
         """This is run each time the class is instantiated."""
 
         self.logger.debug("uvmultifit::start_fit")
 
-        self.mymodel = modeler()
-        self.mymodel.Ccompmodel = uvmod.modelcomp
+        self.mymodel = model
+        # self.mymodel.Ccompmodel = uvmod.modelcomp
 
         # Check parameters and read the data in:
         if not self.checkInputs():
@@ -1031,7 +731,7 @@ class uvmultifit():
     @classmethod
     def check_gains(cls, gains):
         if not isinstance(gains, dict):
-            uvmultifit._printError("gains must be a dictionary!")
+            UVMultiFit._printError("gains must be a dictionary!")
         mixed_gains = any(isinstance(key, int) for key in gains.keys())
         gainsNu = {}
         gainsT = {}
@@ -1039,13 +739,13 @@ class uvmultifit():
         for key in gains.keys():
             if key in ['nuG', 'tG']:
                 if mixed_gains:
-                    uvmultifit._printError("You cannot define split gains and mixed gains in the same fit.")
+                    UVMultiFit._printError("You cannot define split gains and mixed gains in the same fit.")
                 if key == 'nuG':
                     gainsNu = gains['nuG']
                 elif key == 'tG':
                     gainsT = gains['tG']
             elif not isinstance(key, int):
-                uvmultifit._printError("The keys of 'phase_gains' must be integers or 'nuG/tG'!")
+                UVMultiFit._printError("The keys of 'phase_gains' must be integers or 'nuG/tG'!")
             else:
                 gainsNuT[key] = gains[key]
         return (mixed_gains, gainsNu, gainsT, gainsNuT)
@@ -1598,558 +1298,6 @@ class uvmultifit():
 
     ############################################
     #
-    #  SET THE WEIGHTING AND PB-CORRECTION
-    #
-    def _setWgtEq(self):
-        """Depends on setEngineWgt. Not to be called by the user."""
-
-        self._printDebug("uvmultifit::_setWgtEq")
-        tempfloat = 0.0
-
-        if not isinstance(self.dish_diameter, dict):
-            try:
-                self.dish_diameter = float(self.dish_diameter)
-            except ValueError:
-                self._printError("The dish diameter must be a number! (in meters)")
-                return False
-
-        tb.open(os.path.join(self.vis[0], 'ANTENNA'))
-        self.antnames = tb.getcol('NAME')
-
-        if self.pbeam:
-            self._printInfo("You selected to apply primary-beam correction.\n"
-                            "PLEASE, remember that the beam is being approximated\n"
-                            "with a Gaussian, so it may not be very accuracte far\n"
-                            "from the pointing direction.")
-            if isinstance(self.dish_diameter, float):
-                if self.dish_diameter == 0.0:
-                    try:
-                        tempfloat = np.copy(tb.getcol('DISH_DIAMETER'))
-                    except Exception:
-                        self._printInfo("dish diameter column not found in antenna tables!")
-                    tempfloat = np.zeros(len(self.antnames))
-                else:
-                    self._printInfo(f"an antenna diameter of {self.dish_diameter:.3f}m will be applied")
-                    tempfloat = np.array([self.dish_diameter for a in self.antnames])
-
-            elif isinstance(self.dish_diameter, dict):
-                tempfloat = np.array([0.0 for a in self.antnames])
-                for anam in self.dish_diameter.keys():
-                    for i, name in enumerate(self.antnames):
-                        antids = re.search(anam, name)
-                        if 'start' in dir(antids):
-                            tempfloat[i] = self.dish_diameter[anam]
-                self._printInfo("manual antenna-size setting")
-                for i, name in enumerate(self.antnames):
-                    self._printInfo(f"antenna {name} has a diameter of {tempfloat[i]:.2f}m")
-
-            else:
-                self._printError("BAD dish_diameter! Should be a float or a dict!")
-
-            if np.max(tempfloat) == 0.0:
-                self._printError("The antenna diameters are not set in the ms. "
-                                 "Please, set it manually or turn off primary-beam correction.")
-                return False
-            # Negative means not to apply PB corr for that antenna
-            tempfloat[tempfloat == 0.0] = -1.0
-            FWHM = self.ldfac / tempfloat * (2.99e8)
-            sigma = FWHM / 2.35482 * (180. / np.pi) * 3600.
-            self.mymodel.KfacWgt = 1. / (2. * sigma**2.) * (tempfloat > 0.0)  # (0.5*(tempfloat/1.17741)**2.)
-            self.userDiameters = tempfloat
-        else:
-            self.mymodel.KfacWgt = np.zeros(len(self.antnames))
-
-        tb.close()
-        # May refine this function in future releases:
-        #  self.mymodel.wgtEquation = lambda D, Kf: -D*Kf
-        return True
-
-    ############################################
-    #
-    #  READ THE DATA. ARRANGE ALL ARRAYS
-    #
-    # def readData(self, del_data=False):
-    def readData(self):
-        """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
-
-        It then fills in the properties ``averdata, averfreqs, averweights, u, v, w``, etc.
-
-        Each one of these properties is a list with the data (one list item per spectral window/scan).
-
-        A previous successful run of function ``checkInputs()`` is assumed.
-
-        .. note:: Instead of re-reading data from scratch, using the same uvmultifit instance, a
-        better approach may be to restart CASA and create a fresh uvmultifit instance with the
-        new data, avoiding some memory leakage related to potential hidden references to the
-        data in the IPython's *recall* prompt."""
-
-        self._printDebug("uvmultifit::readData")
-        tic = time.time()
-
-        # if del_data:  # data_changed:
-        #     # self.deleteData()
-        #     #    self.clearPointers(0)
-        #     #    self.clearPointers(1)
-        #     pass
-
-        self.success = False
-        # self._printDebug("inside readData")
-
-        # Initiate the lists and arrays where the data will be read-in:
-        ntotspw = self.spwlist[-1][3] + len(self.spwlist[-1][2])
-        nsprang = range(ntotspw)
-        self.u = [[] for sp in nsprang]
-        self.v = [[] for sp in nsprang]
-        self.w = [[] for sp in nsprang]
-        self.t = [[] for sp in nsprang]
-        self.tArr = [[] for sp in nsprang]
-        self.tIdx = [[] for sp in nsprang]
-        self.ant1 = [[] for sp in nsprang]
-        self.ant2 = [[] for sp in nsprang]
-        self.RAshift = [[] for sp in nsprang]
-        self.Decshift = [[] for sp in nsprang]
-        self.Stretch = [[] for sp in nsprang]
-        self.averdata = [[] for sp in nsprang]
-        self.avermod = [[] for sp in nsprang]
-        self.averweights = [[] for sp in nsprang]
-        self.averfreqs = [[] for sp in nsprang]
-        self.iscancoords = [[] for sp in nsprang]
-
-        # maxDist = 0.0
-
-        # Read data for each spectral window:
-        self.iscan = {}
-        for vi in self.vis:
-            self.iscan[vi] = {}
-
-        for si in nsprang:
-            self._printInfo(f"spectral index #{si} ({si+1} of {len(nsprang)})")
-            # These are temporary lists of arrays that will be later concatenated:
-            datascanAv = []
-            modelscanAv = []
-            #   datascanim = []
-            weightscan = []
-            uscan = []
-            vscan = []
-            wscan = []
-            tscan = []
-            tArray = []
-            tIndex = []
-            ant1scan = []
-            ant2scan = []
-            RAscan = []
-            Decscan = []
-            Stretchscan = []
-
-            i0scan = 0
-
-            # BEWARE! was sp
-            for vis in [x for x in self.spwlist if x[3] <= si]:
-                msname = self.vis[vis[1]]
-
-                self._printInfo(f"opening measurement set '{msname}'")
-                tb.open(msname)
-                SPW = tb.getcol('DATA_DESC_ID')
-                crosscorr = tb.getcol('ANTENNA1') != tb.getcol('ANTENNA2')
-                tb.close()
-
-                tb.open(os.path.join(msname, 'DATA_DESCRIPTION'))
-                DDSC = tb.getcol('SPECTRAL_WINDOW_ID')
-                tb.close()
-
-                for spidx, spi in enumerate(vis[2]):
-                    if vis[3] + spidx == si:
-
-                        sp = spi[0]
-                        rang = spi[1]
-                        self.iscan[msname][sp] = {}
-
-                        DDs = np.where(DDSC == sp)[0]
-
-                        if len(DDs) > 1:
-                            self._printWarning(f"spw {sp} has more than one Data Description ID!")
-
-                        maskspw = np.zeros(np.shape(crosscorr), dtype=np.bool)
-
-                        for ddi in DDs:
-                            maskspw = np.logical_or(maskspw, SPW == ddi)
-
-                        maskspw *= crosscorr
-
-                        # For the first ms in the list, read the frequencies of the spw.
-                        # All the other mss will be assumed to have the same frequencies:
-                        # if True:
-                        tb.open(os.path.join(msname, 'SPECTRAL_WINDOW'))
-                        origfreqs = tb.getcol('CHAN_FREQ')
-                        self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
-                        nfreq = len(rang)
-                        tb.close()
-                        self._printInfo(f"reading scans for spw {sp}")
-
-                        # Read all scans for this field id:
-                        for sc, scan in enumerate(self.sourscans[vis[1]]):
-                            tb.open(msname)
-
-                            masksc = maskspw * (tb.getcol('SCAN_NUMBER') == int(scan))
-                            fieldids = list(np.sort(np.unique(tb.getcol('FIELD_ID')[masksc])))
-
-                            tb.close()
-
-                            for fieldid in fieldids:
-                                self._printInfo(f"reading scan #{scan} "
-                                                f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
-                                tb.open(msname)
-                                maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
-
-                                if len(maskfld) == 0:
-                                    tb.close()
-                                else:
-                                    tb2 = tb.selectrows(maskfld)
-                                    uvscan = {'uvw': tb2.getcol('UVW'), 'antenna1': tb2.getcol('ANTENNA1'),
-                                              'antenna2': tb2.getcol('ANTENNA2'), 'time': tb2.getcol('TIME')}
-                                    times = np.unique(uvscan['time'])
-                                    if self.takeModel:
-                                        # datascan = ms.getdata([self.column, 'model_data', 'weight', 'flag'],
-                                        #                       ifraxis=True)
-                                        datascan = {self.column: tb2.getcol((self.column).upper()),
-                                                    'model_data': tb2.getcol('MODEL_DATA'),
-                                                    'weight': tb2.getcol('WEIGHT'),
-                                                    'flag': tb2.getcol('FLAG')}
-                                    else:
-                                        # datascan = ms.getdata([self.column, 'weight', 'flag'], ifraxis=True)
-                                        datascan = {self.column: tb2.getcol((self.column).upper()),
-                                                    'weight': tb2.getcol('WEIGHT'), 'flag': tb2.getcol('FLAG')}
-
-                                    tb.close()
-
-                                    # NOTE: There is a bug in np.ma.array that casts complex
-                                    # to float under certain operations (e.g., np.ma.average).
-                                    # That's why we average real and imag separately.
-
-                                    # Compute the polarization product:
-
-                                    # Bad data has zero weight:
-                                    datascan['weight'][np.logical_not(np.isfinite(datascan['weight']))] = 0.0
-
-                                    # All unflagged weights set to equal (if uniform):
-                                    if self.uniform:
-                                        datascan['weight'][datascan['weight'] > 0.0] = 1.0
-
-                                    datascan['weight'][datascan['weight'] < 0.0] = 0.0
-                                    copyweight = np.copy(datascan['weight'])
-
-                                    totalmask = datascan['flag']
-                                    origmasked = np.ma.array(datascan[self.column], mask=totalmask, dtype=np.complex128)
-
-                                    if self.takeModel:
-                                        origmodmasked = np.ma.array(
-                                            datascan['model_data'],
-                                            mask=totalmask, dtype=np.complex128)
-
-                                    # The weights are weighting the RESIDUALS, and not the ChiSq terms.
-                                    # Hence, we divide wgt_power by 2.:
-                                    origweight = np.power(copyweight, self.wgt_power / 2.)
-
-                                    # Completely flagged times/baselines:
-                                    origweight[np.sum(np.logical_not(totalmask), axis=1) == 0] = 0.0
-
-                                    datamask = 0.0
-                                    weightmask = 0.0
-                                    flagmask = 0.0
-                                    modelmask = 0.0
-
-                                    # Construct the required polarization from the correlation products:
-                                    polavg = [pol != 0.0 for pol in self.pol2aver[vis[1]]]
-
-                                    if self.polmod[vis[1]] == 2:
-                                        flagmask = np.ma.logical_and(
-                                            totalmask[self.polii[vis[1]][0], :, :],
-                                            totalmask[self.polii[vis[1]][1], :, :])
-                                        datamask = np.ma.average(origmasked[polavg, :].real, axis=0) + \
-                                            1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
-
-                                        if self.takeModel:
-                                            modelmask = np.ma.average(origmodmasked[polavg, :].real, axis=0) + \
-                                                1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
-
-                                        weightmask = np.sum(origweight[polavg, :], axis=0)
-                                    else:
-                                        if self.polmod[vis[1]] == 3:
-                                            flagmask = totalmask[self.polii[vis[1]][0], :, :]
-                                        else:
-                                            flagmask = np.ma.logical_or(totalmask[self.polii[vis[1]][0], :, :],
-                                                                        totalmask[self.polii[vis[1]][1], :, :])
-
-                                        for pol in self.polii[vis[1]]:
-                                            datamask += origmasked[pol, :] * self.pol2aver[vis[1]][pol]
-                                            if self.takeModel:
-                                                modelmask += origmodmasked[pol, :] * self.pol2aver[vis[1]][pol]
-                                            weightmask += origweight[pol, :]
-
-                                        if self.polmod[vis[1]] == 1:
-                                            datamask *= 1.j
-                                            if self.takeModel:
-                                                modelmask *= 1.j
-                                                #   weightmask[flagmask] = 0.0
-
-                                    # Free some memory:
-                                    for key in list(datascan):
-                                        del datascan[key]
-                                    del datascan, origmasked, origweight
-                                    del copyweight, totalmask, flagmask
-                                    if self.takeModel:
-                                        del origmodmasked
-
-                                    # Mosaic-related corrections:
-                                    phshift = 3600. * 180. / np.pi * (self.phasedirs[vis[1]][fieldid] - self.refpos)
-                                    strcos = np.cos(self.phasedirs[vis[1]][fieldid][1])
-
-                                    if phshift[0] != 0.0 or phshift[1] != 0.0:
-                                        self._printInfo(f"offset: {phshift[0]/15.0:.2e} RA (tsec) "
-                                                        f"{phshift[1]:.2e} Dec (asec)")
-
-                                    # Average spectral channels:
-                                    _, ndata = np.shape(datamask)
-                                    # ntimes = len(times)
-                                    # ntav = int(max([1, round(float(ntimes) / self.timewidth)]))
-                                    datatemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
-                                    if self.takeModel:
-                                        modeltemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
-                                    weighttemp = np.ma.zeros((nfreq, ndata))
-
-                                    if self.chanwidth == 1:
-                                        concRan = [c[0] for c in rang]
-                                        datatemp[:, :] = datamask[concRan, :]
-                                        if self.takeModel:
-                                            modeltemp[:, :] = modelmask[concRan, :]
-                                        weighttemp[:, :] = weightmask[np.newaxis, :]
-                                    else:
-                                        for nu in range(nfreq):
-                                            datatemp[nu, :] = np.ma.average(
-                                                datamask[rang[nu], :].real, axis=0) + \
-                                                1.j * np.ma.average(datamask[rang[nu], :].imag, axis=0)
-                                            if self.takeModel:
-                                                modeltemp[nu, :] = np.ma.average(
-                                                    modelmask[rang[nu], :].real, axis=0) + \
-                                                    1.j * np.ma.average(modelmask[rang[nu], :].imag, axis=0)
-                                            weighttemp[nu, :] = weightmask
-
-                                    # Average in time and apply uvtaper:
-                                    # GaussWidth = 2. * (self.uvtaper / 1.17741)**2.
-                                    RAoffi = np.zeros(np.shape(uvscan['time']))
-                                    Decoffi = np.copy(RAoffi)
-                                    Stretchi = np.copy(RAoffi)
-
-                                    #  if self.timewidth ==1:
-
-                                    RAoffi[:] = float(phshift[0])
-                                    Decoffi[:] = float(phshift[1])
-                                    Stretchi[:] = float(strcos)
-
-                #########################
-                # CODE FOR TIMEWIDTH>1 HAS TO BE BASED ON TB TOOL. WORK IN PROGRESS
-                #     else:
-
-                #       ant1s = uvscan['antenna1'][crosscorr]
-                #       ant2s = uvscan['antenna2'][crosscorr]
-                #       maskan1 = np.zeros(np.shape(ant1s), dtype=np.bool)
-                #       mask = np.copy(maskan1)
-                #       mask2 = np.copy(mask)
-                #       # Antennas participating in this scan:
-                #       allants1 = np.unique(ant1s)
-                #       allants2 = np.unique(ant2s)
-                #       # Fill in time-averaged visibs:
-                #       for nt in range(ntav):
-                #         t0 = nt*self.timewidth ; t1 = min([ntimes,(nt+1)*self.timewidth])
-                #         mask[:] = (uvscan['time']>=times[t0])*(uvscan['time']<times[t1])*crosscorr
-                #         for an1 in allants1:
-                #           maskan1[:] = (ant1s==an1)*mask
-                #           for an2 in allants2:
-                #             if an2>an1:
-                #                 mask2[:] = maskan1*(ant2s==an2)
-                #                 uu = uvscan['uvw'][0, mask2]
-                #                 vv = uvscan['uvw'][1, mask2]
-                #                 ww = uvscan['uvw'][2, mask2]
-                #                 ui[:, nt] = np.average(uu, axis=1)  # Baseline dimension
-                #                 vi[:, nt] = np.average(vv, axis=1)  # Baseline dimension
-                #                 wi[:, nt] = np.average(ww, axis=1)  # Baseline dimension
-                #                 ant1i[:, nt] = ant1s  # Baseline dimension
-                #                 ant2i[:, nt] = ant2s  # Baseline dimension
-                #                 timei[:, nt] = np.average(uvscan['time'][t0:t1])/86400.
-                #                 tArrayi[nt] = time[0, nt]  # np.average(uvscan['time'][t0:t1])/86400.
-                #                 tIndexi[:, nt] = nt
-                #                 RAoffi[:, nt] = float(phshift[0])
-                #                 Decoffi[:, nt] = float(phshift[1])
-                #                 Stretchi[:, nt] = float(strcos)
-                #
-                #         if self.uvtaper > 0.0:
-                #           GaussFact = np.exp(-(uu*uu + vv*vv)/GaussWidth)
-                #         else:
-                #           GaussFact = np.ones(np.shape(uu))
-                #
-                #       broadwgt = weighttemp[:, :, t0:t1]
-                #       avercompl[:, :, nt] = np.ma.average(datatemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
-                #                             1.j*np.ma.average(datatemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
-                #       if self.takeModel:
-                #         avermodl[:, :, nt] = np.ma.average(modeltemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
-                #                              1.j*np.ma.average(modeltemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
-                #
-                #       if self.uniform:
-                #         averwgt[:, :, nt] = np.ma.sum(np.ones(np.shape(broadwgt))*GaussFact[np.newaxis, :, :], axis=2)
-                #       else:
-                #         averwgt[:, :, nt] = np.ma.sum(broadwgt*GaussFact[np.newaxis, :, :], axis=2)
-                #########################
-
-                                    ant1scan.append(np.copy(uvscan['antenna1'][:]))
-                                    ant2scan.append(np.copy(uvscan['antenna2'][:]))
-                                    uscan.append(np.copy(uvscan['uvw'][0, :]))
-                                    vscan.append(np.copy(uvscan['uvw'][1, :]))
-                                    wscan.append(np.copy(uvscan['uvw'][2, :]))
-                                    tscan.append(np.copy(uvscan['time'][:]))
-                                    tArray.append(np.copy(times))
-
-                                    tIndexi = np.zeros(np.shape(uvscan['time']), dtype=np.int32)
-                                    for tid, tiii in enumerate(times):
-                                        tIndexi[uvscan['time'] == tiii] = tid
-
-                                    if len(tIndex) > 1:
-                                        tIndexi += np.max(tIndex[-1]) + 1
-                                    tIndex.append(tIndexi)
-
-                                    RAscan.append(RAoffi)
-                                    Decscan.append(Decoffi)
-                                    Stretchscan.append(Stretchi)
-
-                                    datascanAv.append(np.transpose(datatemp))
-                                    if self.takeModel:
-                                        modelscanAv.append(np.transpose(modeltemp))
-                                    if self.uniform:
-                                        weightscan.append(np.transpose(np.ones(np.shape(weighttemp))))
-                                    else:
-                                        weightscan.append(np.transpose(weighttemp))
-
-                                    # Useful info for function writeModel() and for pointing correction:
-                                    if scan not in self.iscan[msname][sp].keys():
-                                        self.iscan[msname][sp][scan] = []
-
-                                    self.iscan[msname][sp][scan].append(
-                                        [int(si), int(i0scan), int(ndata), list(rang), np.copy(maskfld)])
-                                    self.iscancoords[si].append([i0scan, i0scan + ndata, phshift[0], phshift[1]])
-
-                                    i0scan += ndata
-
-            # Concatenate all the scans in one single array. Notice that we separate real and imag and save them
-            # as floats. This is because ctypes doesn' t handle complex128.
-            self.averdata[si] = np.require(np.concatenate(datascanAv, axis=0),
-                                           requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
-
-            if self.takeModel:
-                self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0),
-                                              requirements=['C', 'A'])
-
-            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0),
-                                              dtype=np.float64, requirements=['C', 'A'])
-            self.u[si] = np.require(np.concatenate(uscan, axis=0),
-                                    dtype=np.float64, requirements=['C', 'A'])
-            self.v[si] = np.require(np.concatenate(vscan, axis=0),
-                                    dtype=np.float64, requirements=['C', 'A'])
-            self.w[si] = np.require(np.concatenate(wscan, axis=0),
-                                    dtype=np.float64, requirements=['C', 'A'])
-            self.t[si] = np.require(np.concatenate(tscan, axis=0),
-                                    dtype=np.float64, requirements=['C', 'A'])
-            self.tArr[si] = np.require(np.concatenate(tArray, axis=0),
-                                       dtype=np.float64, requirements=['C', 'A'])
-            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0),
-                                       dtype=np.int32, requirements=['C', 'A'])
-            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0),
-                                          dtype=np.float64, requirements=['C', 'A'])
-            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0),
-                                           dtype=np.float64, requirements=['C', 'A'])
-            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0),
-                                          dtype=np.float64, requirements=['C', 'A'])
-            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0),
-                                       dtype=np.int32, requirements=['C', 'A'])
-            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0),
-                                       dtype=np.int32, requirements=['C', 'A'])
-
-            # Free some memory:
-            #   del uu, vv, ww, avercomplflat, weightflat
-            del datatemp, weighttemp, uvscan  # , avercompl, averwgt
-            for dda in datascanAv:
-                del dda
-            #   for dda in datascanim:
-            #     del dda
-            if self.takeModel:
-                for dda in modelscanAv:
-                    del dda
-            for dda in weightscan:
-                del dda
-            for dda in tscan:
-                del dda
-            for dda in uscan:
-                del dda
-            for dda in vscan:
-                del dda
-            for dda in wscan:
-                del dda
-            for dda in RAscan:
-                del dda
-            for dda in Decscan:
-                del dda
-            for dda in Stretchscan:
-                del dda
-            for dda in ant1scan:
-                del dda
-            for dda in ant2scan:
-                del dda
-            for dda in tArray:
-                del dda
-            for dda in tIndex:
-                del dda
-
-            del datascanAv  # , datascanim
-            del weightscan, tscan, uscan, vscan, wscan, tArray, tIndex
-            del RAscan, Decscan, Stretchscan, ant1scan, ant2scan
-            if self.takeModel:
-                del modelscanAv
-
-            # try:
-            #     del GaussFact
-            # except Exception:
-            #     pass
-            gc.collect()
-
-        # Initial and final times of observations (time reference for proper motions):
-        self.t0 = np.min([np.min(ti) for ti in self.t])
-        self.t1 = np.max([np.max(ti) for ti in self.t])
-
-        tac = time.time()
-        self._printInfo(f"reading took {(tac - tic):.2f} seconds")
-
-        self.success = True
-
-        NIFs = len(self.averdata)
-        self.Nspw = NIFs
-
-        for i in range(self.Nspw):
-            self._printInfo(f"there are {len(self.tArr[i])} integrations ({len(self.t[i])} visibs.) in spw {i}")
-
-        #  import pickle as pk
-        #  kk = open('DEBUG.dat', 'w')
-        #  pk.dump([self.tIdx, self.tArr, self.t, self.ant1, self.ant2, self.u, self.v, self.w, self.averdata], kk)
-        #  kk.close()
-        #  raw_input('INPUT')
-
-        #  self.clearPointers(0)
-
-        # Set pointers to data, model, etc.:
-        # self.initData(del_data=del_data)
-        # self._printDebug("leaving readData")
-
-        return True
-
-    ############################################
-    #
     #  COMPUTE MODELS TO BE DIRECTLY SUBTRACTED FROM THE DATA
     #
     def computeFixedModel(self):
@@ -2182,151 +1330,6 @@ class uvmultifit():
         List of parameter values where the Chi square will be computed."""
 
         return self.mymodel.residuals(p, mode=-2)
-
-    ############################################
-    #
-    #  SET SOME DATA (AND MODEL) ARRAYS
-    #
-    def initData(self):
-        """ Initiates the data pointers of the 'modeler' instance.
-
-        The 'modeler' instance stores pointers to the data and metadata, the compiled model (and
-        fixedmodel), the parameter values, and all the methods to compute residuals, Chi Squared, etc."""
-
-        self._printDebug("uvmultifit::initData")
-        # Reset pointers for the modeler:
-        # self.mymodel.deleteData()
-
-        # Set number of spectral windows:
-        gooduvm = uvmod.setNspw(int(self.Nspw))
-
-        if gooduvm != self.Nspw:
-            self._printError("Error in the C++ extension!")
-            return False
-
-        # Maximum number of frequency channels (i.e., the maximum from all the selected spws):
-        self.maxnfreq = 0
-
-        # Fill in data pointers for each spw:
-        for spidx in range(self.Nspw):
-            self.mymodel.data.append([])
-            self.mymodel.dt.append([])
-            self.mymodel.dtArr.append([])
-            self.mymodel.dtIdx.append([])
-            self.mymodel.wgt.append([])
-            self.mymodel.wgtcorr.append([])
-            self.mymodel.uv.append([])
-            self.mymodel.offset.append([])
-            self.mymodel.output.append([])
-            self.mymodel.fixedmodel.append([])
-            self.mymodel.ants.append([])
-
-            self.mymodel.fittable.append([])
-            self.mymodel.fittablebool.append([])
-            self.mymodel.isGain.append([])
-
-            self.mymodel.iscancoords = self.iscancoords
-
-            self.mymodel.freqs.append(np.require(self.averfreqs[spidx], requirements=['C', 'A']))
-            self.maxnfreq = max(self.maxnfreq, len(self.averfreqs[spidx]))
-
-            # Only have to multiply by freq, to convert these into lambda units:
-            ulambda = np.require(self.FOURIERFACTOR * self.u[spidx] / self.LIGHTSPEED, requirements=['C', 'A'])
-            vlambda = np.require(self.FOURIERFACTOR * self.v[spidx] / self.LIGHTSPEED, requirements=['C', 'A'])
-            wlambda = np.require(self.FOURIERFACTOR * self.w[spidx] / self.LIGHTSPEED, requirements=['C', 'A'])
-
-            # Data, uv coordinates, and weights:
-
-            # Data are saved in two float arrays (i.e., for real and imag):
-            self.mymodel.data[-1] = self.averdata[spidx]  # [0], self.averdata[spidx][1]]
-            self.mymodel.wgt[-1] = self.averweights[spidx]
-            self.mymodel.uv[-1] = list([ulambda, vlambda, wlambda])
-            self.mymodel.offset[-1] = list([self.RAshift[spidx], self.Decshift[spidx], self.Stretch[spidx]])
-            self.mymodel.ants[-1] = list([self.ant1[spidx], self.ant2[spidx]])
-
-            PBFactor = -np.sqrt(self.mymodel.KfacWgt[self.ant1[spidx]] * self.mymodel.KfacWgt[self.ant2[spidx]])
-
-            # Set number of antennas and whether each one has a fittable gain:
-            self.mymodel.Nants = self.Nants
-            self.mymodel.isGain[-1] = np.require(np.zeros(len(self.t[spidx]), dtype=np.int8), requirements=['C', 'A'])
-            for i in self.useGains:
-                mask0 = self.mymodel.ants[-1][0] == i
-                mask1 = self.mymodel.ants[-1][1] == i
-                self.mymodel.isGain[-1][np.logical_or(mask0, mask1)] = True
-
-            # Release memory:
-            del ulambda, vlambda, wlambda
-
-            # Time spent on observation:
-            self.mymodel.dt[-1] = np.require(self.t[spidx] - self.t0, requirements=['C', 'A'])
-            self.mymodel.t0 = self.t0
-            self.mymodel.t1 = self.t1
-            self.mymodel.dtArr[-1] = np.require(self.tArr[spidx] - self.t0, requirements=['C', 'A'])
-            self.mymodel.dtIdx[-1] = np.require(self.tIdx[spidx], requirements=['C', 'A'])
-
-            # Array to save the residuals (or model, or any output from the C++ library):
-            self.mymodel.output[-1] = np.require(np.zeros(np.shape(self.averdata[spidx]),
-                                                          dtype=np.complex128), requirements=['C', 'A'])
-            if self.takeModel:
-                try:
-                    self.mymodel.output[-1][:] = self.avermod[spidx]
-                except Exception:
-                    self._printError("You already used the model column! Should read it again!")
-
-            ########
-            # Array of booleans, to determine if a datum enters the fit:
-            self.mymodel.fittable[-1] = self.mymodel.wgt[-1][:, 0] > 0.0
-            # self.mymodel.wgtcorr[-1] = np.require(np.copy(np.tile(PBFactor,(len(self.model), 1))),
-            #                                       requirements=['C', 'A'])
-            self.mymodel.wgtcorr[-1] = np.require(np.copy(PBFactor), requirements=['C', 'A'])
-
-            del PBFactor
-
-            self.mymodel.fittablebool[-1] = np.require(np.copy(self.mymodel.fittable[-1]
-                                                               ).astype(np.bool), requirements=['C', 'A'])
-
-            # print("calling setData")
-            # print(f"spidx: {spidx}")
-            # print(f"self.mymodel.uv[-1][0]: {self.mymodel.uv[-1][0]}")
-            # print(f"self.mymodel.uv[-1][1]: {self.mymodel.uv[-1][1]}")
-            # print(f"self.mymodel.uv[-1][2]: {self.mymodel.uv[-1][2]}")
-            # print(f"self.mymodel.wgt[-1]: {self.mymodel.wgt[-1]}")
-            # print(f"self.mymodel.data[-1]: {self.mymodel.data[-1]}")
-            # print(f"self.mymodel.output[-1]: {self.mymodel.output[-1]}")
-            # print(f"self.mymodel.freqs[-1]: {self.mymodel.freqs[-1]}")
-            # print(f"self.mymodel.fittable[-1]: {self.mymodel.fittable[-1]}")
-            # print(f"self.mymodel.wgtcorr[-1]: {self.mymodel.wgtcorr[-1]}")
-            # print(f"self.mymodel.dt[-1]: {self.mymodel.dt[-1]}")
-            # print(f"self.mymodel.dtArr[-1]: {self.mymodel.dtArr[-1]}")
-            # print(f"self.mymodel.dtIdx[-1]: {self.mymodel.dtIdx[-1]}")
-            # print(f"self.mymodel.offset[-1][0]: {self.mymodel.offset[-1][0]}")
-            # print(f"self.mymodel.offset[-1][1]: {self.mymodel.offset[-1][1]}")
-            # print(f"self.mymodel.offset[-1][2]: {self.mymodel.offset[-1][2]}")
-            # print(f"self.mymodel.ants[-1][0]: {self.mymodel.ants[-1][0]}")
-            # print(f"self.mymodel.ants[-1][1]: {self.mymodel.ants[-1][1]}")
-            # print(f"self.mymodel.isGain[-1]: {self.mymodel.isGain[-1]}")
-            # print(f"self.mymodel.Nants: {self.mymodel.Nants}")
-            gooduvm = uvmod.setData(spidx, self.mymodel.uv[-1][0], self.mymodel.uv[-1][1], self.mymodel.uv[-1][2],
-                                    self.mymodel.wgt[-1], self.mymodel.data[-1],
-                                    self.mymodel.output[-1], self.mymodel.freqs[-1],
-                                    self.mymodel.fittable[-1], self.mymodel.wgtcorr[-1], self.mymodel.dt[-1],
-                                    self.mymodel.dtArr[-1], self.mymodel.dtIdx[-1],
-                                    self.mymodel.offset[-1][0], self.mymodel.offset[-1][1], self.mymodel.offset[-1][2],
-                                    self.mymodel.ants[-1][0], self.mymodel.ants[-1][1],
-                                    self.mymodel.isGain[-1], self.Nants)
-
-            # if not gooduvm:
-            #     self._printError("Error in the C++ extension!")
-            #     return False
-            #
-            # try:
-            #     for spidx in range(self.Nspw - 1, -1, -1):
-            #         del self.avermod[spidx]
-            # except Exception:
-            #     pass
-            # gc.collect()
-        # self._printDebug("leaving initData")
-        return True
 
     ############################################
     #
@@ -2754,8 +1757,8 @@ class uvmultifit():
         N = len(self.p_ini)
         parshead = [n for n in range(N) for i in range(2)]
 
-        headstr = (
-            "# Frequency (Hz)     " + "  p[%i]       err[%i]   " * len(self.p_ini) + "   red. ChiSq\n") % tuple(parshead)
+        headstr = ("# Frequency (Hz)     " + "  p[%i]       err[%i]   " * len(self.p_ini) + "   red. ChiSq\n") \
+            % tuple(parshead)
         outf.write(headstr)
 
         formatting = "%.12e   " + "%.4e " * (2 * npars) + "   %.4e \n"

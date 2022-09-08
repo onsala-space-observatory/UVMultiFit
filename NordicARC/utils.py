@@ -46,17 +46,17 @@ def is_list_of_int(param):
 
 def get_list_of_strings(param):
     logging.debug(f"get_list_of_strings({param})")
-    if type(param) == str:
+    if isinstance(param, str):
         if len(param) == 0:
             return None
         return [param]
 
-    if type(param) == list:
+    if isinstance(param, list):
         if len(param) == 0:
             logging.warning("param is list of length zero")
             return None
         for i, p in enumerate(param):
-            if type(p) != str:
+            if not isinstance(p, str):
                 logging.warning(f"element {i} is not a string")
                 return None
         return param
@@ -104,7 +104,7 @@ def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
                     return [False, errstr]
                 ch2 = min([ch2, maxchans[sp] - 1])
                 for i in range(ch1, ch2 + 1, width):
-                    ranges.append(range(i, min([(i + width), ch2 + 1])))
+                    ranges.append(list(range(i, min([(i + width), ch2 + 1]))))
 
             output[sp] = ranges
     return [True, output]
