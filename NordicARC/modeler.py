@@ -333,7 +333,6 @@ class Modeler():
 
         indices += self.get_parameter_indices(self.scalefix)
         maxpar = max(indices)
-        print(f"maxpar = {maxpar}, len(p_ini) = {len(self.p_ini)}")
         if len(self.p_ini) != maxpar + 1:
             self.logger.error(f"'p_ini' is of length {len(self.p_ini)}, but {maxpar + 1} parameters are used")
 
@@ -371,7 +370,6 @@ class Modeler():
         except Exception:
             return False
 
-    #  print self.gainFunction
     def _compile_mixed_gain_function(self, gainFunction, which):
         self.logger.debug("Modeler::_compile_mixed_gain_function")
         n = ["phase", "amp"].index(which)
@@ -467,8 +465,6 @@ class Modeler():
         self.varfunc = [0.0 for component in self.model]
 
         for ii, component in enumerate(self.model):
-            # print(ii, component, self.var[ii])
-            # print(self.freqs)
             tempstr = self.var[ii].replace(
                 'LorentzLine(', 'self.LorentLine(nu, ').replace(
                     'GaussLine(', 'self.GaussLine(nu, ').replace(
@@ -482,7 +478,6 @@ class Modeler():
                     else:
                         self.strucvar.append(list(map(float, tempstr2[:2])))
                 except Exception:
-                    print(tempstr.split(','))
                     self.logger.error("if only_flux=True, all variables but the flux must be constants")
                     return False
 
