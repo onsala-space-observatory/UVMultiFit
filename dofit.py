@@ -4,20 +4,30 @@ import numpy as np
 from casatools import image
 
 from NordicARC import uvmultifit as uvm
+from simulation import Simulation
 
 import matplotlib.pyplot as plt
 
+sim = Simulation(array_config="alma.out10.cfg", center_freq=50.0, pixels=1000, cell_size=0.01,
+                 freq_channels=100, channel_width=0.01, image_name="Disc", total_time=300)
+Nu = f"{sim.center_freq}GHz"
+
 vis = 'Disc/Disc.alma.out10.noisy.ms'
 model = ['disc']
-Nu = '50.0GHz'
 NuF = float(Nu.split('G')[0])*1.e9
-modvars = "0,0, p[0]*(nu/%.4e)**p[1], p[2], p[3], p[4]" % NuF
+modvars = f"0,0, p[0]*(nu/{sim.center_freq*1.0e9:.4e})**p[1], p[2], p[3], p[4]"
 modbounds = [[0.0, None], [-2.0, 2.0], [0.0, None], [0.1, 0.9], [0.0, 180.0]]
 
-si = ['disc', 1.0, '0.2arcsec', '0.1arcsec', '60.0deg',
-      Nu, 1.0, "J2000 10h00m00.0s -30d00m00.0s"]
-size = float(si[2].split('a')[0])
-minor = float(si[3].split('a')[0])
+
+si = {"type": model[0], "flux": 1.0,
+      "major": "0.2arcsec",  "minor": "0.1arcsec", "PA": "60.0deg",
+      "freq": Nu, "spectral_index": 1.0,
+      "direction": "J2000 10h00m00.0s -30d00m00.0s"}
+
+# si = ['disc', 1.0, '0.2arcsec', '0.1arcsec', '60.0deg',
+#       Nu, 1.0, "J2000 10h00m00.0s -30d00m00.0s"]
+size = float(si["major"].split('a')[0])
+minor = float(si["minor"].split('a')[0])
 initial = [0.8, 0.0, size*1.2, minor/size*0.8, 45.0]
 
 if False:
