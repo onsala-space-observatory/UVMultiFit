@@ -36,14 +36,12 @@ class Modeler():
                           'GaussianRing': 7}
 
     def __init__(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
-                 bounds=None, OneFitPerChannel=False,
+                 bounds=None, OneFitPerChannel=False, only_flux=False,
                  fixed=[], fixedvar=[], scalefix='1.0', phase_gains={}, amp_gains={},
-                 method="levenberg",
+                 method="levenberg", HankelOrder=80,
                  LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200],
-                 proper_motion=0.0):
+                 NCPU=4, proper_motion=0.0):
         """ Just the constructor of the 'modeler' class."""
-        logging.basicConfig(level=logging.DEBUG,
-                            format='%(name)s - %(levelname)s - %(message)s')
         self.logger.debug("modeler::__init__")
         self.model = get_list_of_strings(model)
 
@@ -58,7 +56,7 @@ class Modeler():
 
         self.var = get_list_of_strings(var)  # variables of the model components.
         self.scalefix = scalefix
-        self._hankelOrder = 80 if self.is_numerical_model(self.model) else 0
+        self._hankelOrder = HankelOrder if self.is_numerical_model(self.model) else 0
         self.p_ini = p_ini
         self.bounds = self.check_bounds(bounds, p_ini)
         self.OneFitPerChannel = OneFitPerChannel
@@ -75,16 +73,20 @@ class Modeler():
                 self.proper_motion = [[0., 0.] for i in self.model]
             else:
                 self.proper_motion = []
-                for i, m in enumerate(self.model):
+                for i in range(len(self.model)):
                     if is_list_of_floats(proper_motion[i]):
                         self.proper_motion.append(proper_motion[i])
                     else:
                         self.logger.error("each element of 'proper_motion' must be a list of two floats")
                         self.proper_motion.append([0., 0.])
-        self._NCPU = 4
+        self._NCPU = NCPU
         self.t0 = 0.0
         self.t1 = 1.e12
-        self._only_flux = False
+        if not isinstance(only_flux, bool):
+            self.logger.error("'only_flux' must be boolean")
+            self._only_flux = False
+        else:
+            self._only_flux = only_flux
 
         self.Nants = 0
         self.initiated = False
@@ -300,8 +302,8 @@ class Modeler():
         return bounds
 
     def check_model_consistency(self):
-        self.logger.debug("Modeler::check_model_consistency")
         """Get the number of parameters and check the model consistency"""
+        self.logger.debug("Modeler::check_model_consistency")
 
         indices = []
         # Typical function that can be used.
@@ -355,8 +357,8 @@ class Modeler():
         """ Compile all models (fixed, variable, and fixed-scale. Not to be called directly by the user. """
         self.logger.debug("Modeler::compile_all_models")
         ok = self._compile_model()
-        ok = ok and self._compileFixedModel()
-        ok = ok and self._compileScaleFactor()
+        ok = ok and self._compile_fixed_model()
+        ok = ok and self._compile_scale_factor()
         ok = ok and self._compile_gains()
         return ok
 
@@ -495,10 +497,10 @@ class Modeler():
             self.imod[ii] = self.allowedmod.index(component)
         return True
 
-    def _compileFixedModel(self):
+    def _compile_fixed_model(self):
         """ Compiles the fixed model, according to the contents of the 'fixed' and 'fixedpars' lists."""
 
-        self.logger.debug("Modeler::_compileFixedModels")
+        self.logger.debug("Modeler::_compile_fixed_model")
         if len(self.fixed) > 0 and 'model_column' in self.fixed:
             return True
 
@@ -524,10 +526,10 @@ class Modeler():
             self.ifixmod[ii] = self.allowedmod.index(component)
         return True
 
-    def _compileScaleFactor(self):
+    def _compile_scale_factor(self):
         """ Compiles the scaling factor for the fixed model """
 
-        self.logger.debug("Modeler::_compileScaleFactor")
+        self.logger.debug("Modeler::_compile_scale_factor")
         tempstr = self.scalefix.replace(
             'LorentzLine(', 'self.LorentzLine(nu, ').replace(
                 'GaussLine(', 'self.GaussLine(nu, ').replace(
@@ -600,8 +602,8 @@ class Modeler():
     #  LEVENBERG-MARQUARDT LEAST-SQUARE MINIMIZATION
     #
     def LMMin(self, pars):
-        """ Implementation of the Levenberg-Marquardt algorithm. Not to be called directly by the user. """
-
+        """ Implementation of the Levenberg-Marquardt algorithm.
+            Not to be called directly by the user. """
         self.logger.debug("Modeler::LMMin")
         NITER = int(self.LMtune[3] * len(pars))
         self.calls = 0
@@ -733,19 +735,19 @@ class Modeler():
         self.getPar2(mode=1)
 
         try:
-            return [self.par2[2, :], np.linalg.pinv(self.Hessian), Chi2]
-        except Exception:
-            return False
+            return True, [self.par2[2, :], np.linalg.pinv(self.Hessian), Chi2]
+        except np.linalg.LinAlgError:
+            return False, []
 
     ############################################
     #
     #  NON-ALGEBRAIC MODELS
     #
     # Compute elements of Taylor expansion of the source's Hankel transform:
-    def grid_model(self, imod, tempvar):
+    def _grid_model(self, imod, tempvar):
         """ Compute elements of Taylor expansion of the source's Hankel transform."""
 
-        self.logger.debug("Modeler::grid_model")
+        self.logger.debug("Modeler::_grid_model")
         n = self._hankelOrder - 1
 
         if imod == 'GaussianRing':   # Gaussian Ring
@@ -820,8 +822,8 @@ class Modeler():
                                 self.ampAntsFuncT[i](self.dtArr[spw], ptemp) * \
                                 np.exp(1.j * self.phaseAntsFuncT[i](self.dtArr[spw], ptemp))
 
-    def _computeFixedModel(self, pars, spwrange, nui):
-        self.logger.debug("Modeler::_computeFixedModel")
+    def _compute_fixed_model(self, pars, spwrange, nui):
+        self.logger.debug("Modeler::_compute_fixed_model")
         self.removeFixed = True
         # isfixed = True
         modbackup = self.imod[0]
@@ -831,7 +833,7 @@ class Modeler():
                 tempvar = self.fixedvarfunc[midx](pars, self.freqs[spw])
                 self.imod[0] = mi
                 if self.imod[0] in self.isNumerical:
-                    tempvar = self.grid_model(self.imod[0], tempvar)
+                    tempvar = self._grid_model(self.imod[0], tempvar)
                 for i, tv in enumerate(tempvar):
                     nnu = len(self.freqs[spw])
                     self.varbuffer[0][0, i, :nnu] = tv
@@ -862,21 +864,12 @@ class Modeler():
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
         self.logger.debug("Modeler::residuals")
+
         #  varsize = self.maxNvar + self._hankelOrder
         if mode in [0, -3]:
             self.calls = 0
         else:
             self.calls += 1
-
-        if self.currchan < 0:  # Continuum (i.e., all data modelled at once)
-            nui = -1
-        else:  # Spectral mode (i.e., model only the current channel of the current spw)
-            nui = int(self.currchan)
-
-        if self.currspw < 0:  # Continuum (i.e., all data modelled at once)
-            spwrange = range(len(self.freqs))
-        else:  # Spectral mode (i.e., model only the current channel of the current spw)
-            spwrange = [int(self.currspw)]
 
         # DELTA FOR DERIVATIVES:
         for j, p in enumerate(pars):
@@ -886,11 +879,12 @@ class Modeler():
             else:
                 self.dpar[j] = np.abs(p) * self.minnum
 
+        nui, spwrange = self.fit_range(self.currchan, self.currspw, self.freqs)
         if len(self.useGains) > 0 and mode != 0:
             self._compute_antenna_gain_corrections(pars, spwrange, nui)
 
         if mode == 0:  # Just compute the fixed model and return
-            self._computeFixedModel(pars, spwrange, nui)
+            self._compute_fixed_model(pars, spwrange, nui)
             return 0
 
         currmod = self.model
@@ -928,7 +922,7 @@ class Modeler():
                     # Variables of current component
                     tempvar = currvar[midx](pars, freqs)
                     if modi in self.isNumerical:
-                        tempvar = self.grid_model(modi, tempvar)
+                        tempvar = self._grid_model(modi, tempvar)
 
                     for i, tv in enumerate(tempvar):
                         self.varbuffer[0][midx, i, idx] = tv
@@ -943,7 +937,7 @@ class Modeler():
                         # Variables of current component
                         tempvar = currvar[midx](ptemp, freqs)
                         if modi in self.isNumerical:
-                            tempvar = self.grid_model(modi, tempvar)
+                            tempvar = self._grid_model(modi, tempvar)
                         for i, tv in enumerate(tempvar):
                             self.varbuffer[j + 1][midx, i, idx] = tv
 
@@ -975,7 +969,7 @@ class Modeler():
 
     ############################################
     #
-    #  COMPUTE QUI SQUARE FOR A MODEL REALIZATION (NO DERIVATIVES)
+    #  COMPUTE CHI SQUARE FOR A MODEL REALIZATION (NO DERIVATIVES)
     #
     def chi_square(self, p, bounds=None, p_ini=[]):
         """ Just a wrapper of the 'residuals' function, usually called by simplex."""
@@ -1076,7 +1070,7 @@ class Modeler():
 
             # Array to save the residuals (or model, or any output from the C++ library):
             self.output[-1] = np.require(np.zeros(np.shape(ms.averdata[spidx]),
-                                                          dtype=np.complex128), requirements=['C', 'A'])
+                                                  dtype=np.complex128), requirements=['C', 'A'])
             if self.takeModel:
                 try:
                     self.output[-1][:] = ms.avermod[spidx]
@@ -1117,7 +1111,7 @@ class Modeler():
         # self.logger.debug("leaving init_data")
         return True
 
-    def init_model(self, nspw, only_flux, refpos):
+    def init_model(self, nspw, tArr, averfreqs, refpos):
         """ Allocates memory for the modeler data, which will be used by the C++ extension.
 
         Also compiles the model variables. It is a good idea to run this method everytime that
@@ -1138,10 +1132,6 @@ class Modeler():
         if gooduvm != ncpu:
             self.logger.error("Error in the C++ extension!")
             return False
-
-        # if self.failed:
-        #     self.logger.error(self.resultstring)
-        #     return False
 
         # Fill-in proper motions (in as/day)
         for i in range(len(self.model)):
@@ -1177,12 +1167,12 @@ class Modeler():
             for AI in range(self.Nants):
                 if self.isMixed:
                     self.GainBuffer[spidx][AI] = [np.ones(
-                        (len(self.tArr[spidx]),
-                         len(self.averfreqs[spidx])),
+                        (len(tArr[spidx]),
+                         len(averfreqs[spidx])),
                         dtype=np.complex128) for i in range(len(self.parDependence[AI]))]
                 else:
                     self.GainBuffer[spidx][AI] = [np.ones(
-                        len(self.tArr[spidx]) + len(self.averfreqs[spidx]),
+                        len(tArr[spidx]) + len(averfreqs[spidx]),
                         dtype=np.complex128) for i in range(len(self.parDependence[AI]))]
 
         compFixed = len(self.fixed) > 0
@@ -1210,17 +1200,38 @@ class Modeler():
 
         return True
 
-    def fit(self, ms, write_model, cov_return, redo_fixed=True,
-            reinit_model=False, save_file=True, reset_flags=False):
-        """ Fits the data, using the models previously compiled with ``initModel()``.
+    @classmethod
+    def fit_range(cls, currchan, currspw, freqs):
+        cls.logger.debug("Modeler::fit_range")
+        nui = -1 if currchan < 0 else int(currchan)
+        spwrange = list(range(len(freqs))) if currspw < 0 else [int(currspw)]
+        return (nui, spwrange)
+
+    def _perform_fit(self, write_model):
+        self.logger.debug("Modeler::_perform_fit")
+        if self.method == 'simplex':
+            fitsimp = _mod_simplex(self.chi_square, self.p_ini,
+                                   args=(self.bounds, self.p_ini),
+                                   relxtol=self.SMPtune[0], relstep=self.SMPtune[1],
+                                   maxiter=self.SMPtune[2] * len(self.p_ini))
+            fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
+        else:
+            converged, fit = self.LMMin(self.p_ini)
+            if converged:
+                # Estimate the parameter uncertainties and save the model in the output array:
+                if write_model == 1:
+                    _ = self.residuals(fit[0], mode=-3)
+                elif write_model == 2:
+                    _ = self.residuals(fit[0], mode=-4)
+                elif write_model == 3:
+                    _ = self.residuals(fit[0], mode=-5)
+        return fit
+
+    def fit(self, ms, write_model, cov_return, redo_fixed=True, reset_flags=False):
+        """ Fits the data, using the models previously compiled with ``init_model()``.
 
         Parameters
         ----------
-
-        **reinit_model** : `bool`
-          It is False by default. If False, the models used are those already compiled. If True,
-          the models are *recompiled*, according to the contents of the ``model, var, fixed,
-          fixedvar`` properties, and all the references to the data arrays are refreshed.
 
         **redo_fixed** : `bool`
           It is True by default. If False, the fixed model will **not** be recomputed throughout
@@ -1231,13 +1242,9 @@ class Modeler():
              fractional bandwidth), since the UV coordinates will **not** be re-projected in that
              case.
 
-        **save_file** : `bool`
-          It is True by default. If False, the external ascii file with the fitting results will
-          not be created.
-
         **reset_flags** : `bool`
           Default is False. This is used to clear out the status of *bad data* that may have been
-          set by spetial routines of **UVMultiFit** (e.g., the Quinn Fringe Fitter). Default is
+          set by special routines of **UVMultiFit** (e.g., the Quinn Fringe Fitter). Default is
           to NOT reset flags (this option should be OK most of the time)."""
 
         self.logger.debug("Modeler::fit")
@@ -1277,8 +1284,8 @@ class Modeler():
             # ntot = np.sum(self.fittablebool[si])
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
-                    self.logger.error("not enough data for this time range! Channels: "
-                                      + str(list(np.where(unflagged == 0.0))))
+                    ch = list(np.where(unflagged == 0.0))
+                    self.logger.error(f"not enough data for this time range, channels: {ch}")
                     self.allflagged = True
                     notfit[si] = list(np.where(unflagged == 0.0)[0])
             else:
@@ -1295,12 +1302,13 @@ class Modeler():
         self.logger.info("now fitting model")
 
         # Initialize model:
-        if reinit_model:
-            if self.initiated:
-                goodinit = self.initModel()
-            if self.failed or goodinit is False:
-                self.logger.error(f"bad model (re)initialization! {self.resultstring}")
-                return None
+        # TODO test re-initialization of model by direct call of init_model
+        # if reinit_model:
+        #     if self.initiated:
+        #         goodinit = self.init_model()
+        #         if not goodinit:
+        #             self.logger.error(f"bad model (re)initialization")
+        #             return None
 
         for i in range(len(self.p_ini) + 1):
             self.varbuffer[i][:] = 0.0
@@ -1311,8 +1319,9 @@ class Modeler():
 
         ##################
         # CASE OF SPECTRAL-MODE FIT:
-        self.logger.debug(f"one fit per channel: {str(self.OneFitPerChannel)}")
         if self.OneFitPerChannel:
+            self.logger.debug(f"spectral mode fit")
+
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
             covariance = [[] for j in range(nspwtot)]
@@ -1322,40 +1331,22 @@ class Modeler():
             # Fit channel-wise for each spw:
             for si in range(nspwtot):
                 rang = np.shape(self.wgt[si])[1]
-
                 for nuidx in range(rang):
-                    self.logger.info("fitting channel " + str(nuidx+1) + " of " + str(rang) + " in spw " + str(si))
-
+                    self.logger.info(f"fitting channel {nuidx+1} of {rang} in spw {si}")
                     self.currspw = si
                     self.currchan = nuidx
 
                     # Compute fixed model:
                     if redo_fixed and len(self.fixed) > 0 and not self.takeModel:
-                        self.computeFixedModel()
+                        nui, spwrange = self.fit_range(self.currchan, self.currspw, self.freqs)
+                        self._compute_fixed_model(self.par2[2, :], spwrange, nui)
 
                     # Fit with simplex (if asked for):
 
                     if nuidx not in notfit[si]:
-
-                        if self.method == 'simplex':
-                            fitsimp = _mod_simplex(self.chis_quare, self.p_ini,
-                                                   args=(self.bounds, self.p_ini),
-                                                   relxtol=self.SMPtune[0], relstep=self.SMPtune[1],
-                                                   maxiter=self.SMPtune[2] * len(self.p_ini))
-                            fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
-                        else:
-                            fit = self.LMMin(self.p_ini)
-                            if not fit:
-                                return None
-                        # Estimate the parameter uncertainties and save the model in the output array:
-                        if write_model == 1:
-                            _ = self.residuals(fit[0], mode=-3)
-                        elif write_model == 2:
-                            _ = self.residuals(fit[0], mode=-4)
-                        elif write_model == 3:
-                            _ = self.residuals(fit[0], mode=-5)
-
-                    # DON'T FIT THIS CHANNEL (ALL DATA FLAGGED)
+                        fit = self._perform_fit(write_model)
+                        if not fit:
+                            return None
                     else:
                         fit = [[0.0 for pi in self.p_ini], np.zeros((len(self.p_ini), len(self.p_ini))), 0]
 
@@ -1380,7 +1371,7 @@ class Modeler():
         ##################
         # CASE OF CONTINUUM-MODE FIT:
         else:
-            self.logger.info("fitting to all frequencies at once")
+            self.logger.info("continuum mode fit")
 
             # This will tell the modeller to solve in continuum mode:
             self.currspw = -1
@@ -1389,32 +1380,12 @@ class Modeler():
             # Compute fixed model:
             if redo_fixed and len(self.fixed) > 0 and not self.takeModel:
                 self.logger.debug("Generating fixed model. May take some time")
-                self.computeFixedModel()
-                self.logger.debug("Done!")
+                nui, spwrange = self.fit_range(self.currchan, self.currspw, self.freqs)
+                self._compute_fixed_model(self.par2[2, :], spwrange, nui)
 
-            # Pre-fit with simplex:
-            if self.method == 'simplex':
-                fitsimp = _mod_simplex(self.ChiSquare, self.p_ini,
-                                       args=(self.bounds, self.p_ini), relxtol=self.SMPtune[0],
-                                       relstep=self.SMPtune[1], maxiter=self.SMPtune[2] * len(self.p_ini))
-                fit = [fitsimp[0], np.zeros((len(self.p_ini), len(self.p_ini))), fitsimp[1]]
-            else:
-                # Bound least-squares fitting:
-                fit = self.LMMin(self.p_ini)
-                if not fit:
-                    return None
-
-            # self.logger.info("fit results")
-            # for x in fit:
-            #     print(x)
-
-            # Estimate the parameter uncertainties and save the model in the output array:
-            if write_model == 1:
-                _ = self.residuals(fit[0], mode=-3)
-            elif write_model == 2:
-                _ = self.residuals(fit[0], mode=-4)
-            elif write_model == 3:
-                _ = self.residuals(fit[0], mode=-5)
+            fit = self._perform_fit(write_model)
+            if not fit:
+                return None
 
             fitparams = fit[0]
             for si in range(nspwtot):
