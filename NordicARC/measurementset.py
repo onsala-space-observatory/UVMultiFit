@@ -9,7 +9,7 @@ from casatools import table
 from casatools import coordsys
 
 from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats
-from .utils import is_casa_position, channeler, is_valid_stokes
+from .utils import is_casa_position, is_valid_stokes
 
 class MeasurementSet():
     """ Class to deal with model equations and fitting procedures.
@@ -26,10 +26,8 @@ class MeasurementSet():
 
     def __init__(self, vis, spw='0', field=0, scans=[], corrected=False,
                  uniform=False, uvtaper=0.0, chanwidth=1, timewidth=1, stokes='I',
-                 MJDrange=[-1.0, -1.0], phase_center='', pbeam=False, wgt_power=1.0,
-                 dish_diameter=0.0):
-        logging.basicConfig(level=logging.DEBUG,
-                            format='%(name)s - %(levelname)s - %(message)s')
+                 MJDrange=[-1.0, -1.0], ldfac=1.22, phase_center='', pbeam=False,
+                 wgt_power=1.0, dish_diameter=0.0):
         self.vis = get_list_of_strings(vis)
         self.spw = get_list_of_strings(spw)
         if len(self.spw) > 1 and len(self.vis) != len(self.spw):
@@ -73,6 +71,7 @@ class MeasurementSet():
             self.MJDrange = [-1.0, -1.0]
         self.Nants = 0
         self.refpos = self.check_phase_center(phase_center)
+        self.ldfac = ldfac
         self.pbeam = pbeam
         self.spwlist = []
         self.pol2aver = []
@@ -225,7 +224,7 @@ class MeasurementSet():
             # freqdic = ms.getspectralwindowinfo()
             spwchans = self.ms.range(['num_chan'])['num_chan']
 
-            aux = channeler(self.spw[j], width=self.chanwidth, maxchans=spwchans)
+            aux = MeasurementSet.channeler(self.spw[j], width=self.chanwidth, maxchans=spwchans)
             if aux[0]:
                 ranges = list(aux[1])
             else:
@@ -913,6 +912,54 @@ class MeasurementSet():
 
         return True
 
+    @staticmethod
+    def channeler(spw, width=1, maxchans=[3840, 3840, 3840, 3840]):
+        """ Function to convert a string with spw selection into lists of channels to select/average."""
+        logging.debug(f"channeler({spw})")
+
+        if spw == '':
+            spw = ','.join(list(map(str, range(len(maxchans)))))
+
+        entries = spw.split(',')
+        output = [[] for i in maxchans]
+
+        for entry in entries:
+            check = entry.split(':')
+            if check[0] == '*':
+                check[0] = f"0~{len(maxchans)-1}"
+
+            spws = list(map(int, check[0].split('~')))
+            if len(spws) == 1:
+                selspw = [spws[0]]
+            else:
+                selspw = list(range(spws[0], spws[1] + 1))
+
+            for sp in selspw:
+                if sp + 1 > len(maxchans):
+                    errstr = f"there are only {len(maxchans)} spw in the data, please revise the 'spw' parameter"
+                    logging.error(errstr)
+                    return [False, errstr]
+
+                if len(check) == 1:
+                    channel_ranges = [f"0~{maxchans[sp] - 1}"]
+                else:
+                    chans = check[1]
+                    channel_ranges = chans.split(';')
+                logging.debug(f"channel_range {sp}: {channel_ranges}")
+                ranges = []
+                for channel_range in channel_ranges:
+                    ch1, ch2 = list(map(int, channel_range.split('~')))
+                    if ch1 > ch2:
+                        errstr = f"{ch1} is larger than {ch2}, revise channels for spw {sp}"
+                        logging.error(errstr)
+                        return [False, errstr]
+                    ch2 = min([ch2, maxchans[sp] - 1])
+                    for i in range(ch1, ch2 + 1, width):
+                        ranges.append(list(range(i, min([(i + width), ch2 + 1]))))
+
+                output[sp] = ranges
+        return [True, output]
+
 if __name__ == "__main__":
     # data = MeasurementSet('foo', spw=['0'])
     # data.check_measurementset()
@@ -921,6 +968,14 @@ if __name__ == "__main__":
     data = MeasurementSet('../test-cases/Disc/Disc.alma.out10.noisy.ms')  # , stokes='YY')
     data.check_measurementset()
     data.read_data()
+    # print(data.channeler('')[0])
+    # print(data.channeler('0')[0])
+    # print(data.channeler('1')[0])
+    # print(data.channeler('0~3')[0])
+    # print(data.channeler('0,2,3')[0])
+    # print(data.channeler('1,3,5')[0])
+    # print(data.channeler('*:10~50')[0])
+    # print(data.channeler('1~3:30~40')[0])
     # data.dump()
     # print(data)
 
