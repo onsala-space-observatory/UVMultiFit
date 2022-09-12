@@ -1,9 +1,8 @@
-CASADIR=/home/data/casa-6.4.0-16/lib/py
-# PYTHON=$(CASADIR)/bin/python3
-PYTHON=/usr/bin/python3
+CASADIR=/home/data/casa-6.4.0-16
+PYTHON=$(CASADIR)/bin/python3
 
 install:
-	$(PYTHON) setup.py install --prefix=$(CASADIR)
+	$(PYTHON) setup.py install --prefix=$(CASADIR)/lib/py
 
 user:
 	$(PYTHON) setup.py install --user
