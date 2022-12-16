@@ -13,10 +13,8 @@ from .simplex import _mod_simplex
 class Modeler():
     """ Class to deal with model equations and fitting procedures.
 
-    If convert strings representing models and parameters into compiled equations, to be used in a ChiSq
-    visibility fitting. It also interacts with the C++ extension of UVMultiFit.
-
-    This class should NOT be instantiated by the user (it is called from the UVMultiFit class."""
+    It convert strings representing models and parameters into compiled equations, to be used in a ChiSq
+    visibility fitting. It also interacts with the C++ extension of UVMultiFit."""
 
     LIGHTSPEED = 2.99792458e+8
     FOURIERFACTOR = (2.0 * np.pi) * np.pi / 180.0 / 3600.0
@@ -163,8 +161,7 @@ class Modeler():
         self.wgtEquation = lambda D, Kf: -D * Kf
 
         # List of currently-supported model components:
-        self.allowedmod = ['delta', 'Gaussian', 'disc', 'ring', 'sphere',
-                           'bubble', 'expo', 'power-2', 'power-3', 'GaussianRing']
+        self.allowedmod = list(self.implemented_models.keys())
         self.phase_gains = phase_gains
         self.amp_gains = amp_gains
 
@@ -205,6 +202,16 @@ class Modeler():
 
     @classmethod
     def is_numerical_model(cls, model):
+        """Test if the model is numeric.
+
+        Checks whether any of the numerical models (currently only "GaussianRing") is used by the actual model.
+
+        Args:
+            model (str): the actual model
+
+        Returns:
+            bool: True if model contains a numerical model.
+        """
         cls.logger.debug("Modeler::is_numerical_model")
         for mods in cls.isNumerical:
             if mods in model:
