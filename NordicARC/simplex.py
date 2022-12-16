@@ -70,6 +70,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
     """
 
     maxfun = maxfev
+    allvecs = []
 
     fcalls, func = wrap_function(func, args)
     x0 = np.asfarray(x0).flatten()
@@ -95,7 +96,7 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
     fsim = np.zeros((N + 1,), float)
     sim[0] = x0
     if return_all:
-        allvecs = [sim[0]]
+        allvecs.append(sim[0])
     fsim[0] = func(x0)
     nonzdelt = relstep
     zdelt = 0.00025
