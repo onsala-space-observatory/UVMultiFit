@@ -9,10 +9,10 @@ def is_valid_python(param):
     """Check if passed string is valied Python code.
 
     Args:
-        param (str): the string of code to check
+        param (str): The string of code to check.
 
     Returns:
-        bool: True if string is valid code
+        bool: True if string is valid code.
     """
     logging.debug(f"is_valid_python('{param}')")
     try:
@@ -25,10 +25,10 @@ def is_casa_position(param):
     """Check if string defines a valid casa position.
 
     Args:
-        param (str): string to check
+        param (str): The string to check.
 
     Returns:
-        bool: True if string is a valid casa position
+        bool: True if string is a valid casa position.
     """
     logging.debug(f"is_casa_position('{param}')")
 
@@ -40,10 +40,10 @@ def is_valid_stokes(param):
     """Check if string is one of the allowed Stokes parameters.
 
     Args:
-        param (str): string to check
+        param (str): The string to check.
 
     Returns:
-        bool: True if string is a valid Stokes parameter
+        bool: True if string is a valid Stokes parameter.
     """
     logging.debug(f"is_valid_stokes({param})")
     allowed = ['PI', 'I', 'Q', 'U', 'V',
@@ -55,8 +55,8 @@ def is_list_of_floats(param, length=2):
     """Check if passed argument is a list of floats.
 
     Args:
-        param (list): a list of floats
-        length (int, optional): the length of the required list. Defaults to 2.
+        param (list): A list of floats.
+        length (int, optional): The length of the required list. Defaults to 2.
 
     Returns:
         bool: True if all elements in the list are floats and the length is correct.
@@ -68,10 +68,10 @@ def is_list_of_int(param):
     """Check if passed argument is a list of integers.
 
     Args:
-        param (list): a list of integers
+        param (list): A list of integers.
 
     Returns:
-        bool: True if passed argument is a list of integers or a list of lists of integers.
+        bool: True if the passed argument is a list of integers or a list of lists of integers.
     """
     logging.debug(f"is_list_of_int({param}")
     if not isinstance(param, list):
@@ -89,10 +89,10 @@ def get_list_of_strings(param):
     """Turn string argument into list of strings, if necessary.
 
     Args:
-        param (str): a string or list of strings
+        param (str): A string or list of strings.
 
     Returns:
-        list: a list of strings or None
+        list: A list of strings or None.
     """
     logging.debug(f"get_list_of_strings({param})")
     if isinstance(param, str):

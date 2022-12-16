@@ -67,7 +67,6 @@ def _mod_simplex(func, x0, args=(), callback=None, relstep=1.e-1,
             Maximum number of iterations to perform.
         maxfev : int
             Maximum number of function evaluations to make.
-
     """
 
     maxfun = maxfev
