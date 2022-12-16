@@ -111,8 +111,27 @@ def get_list_of_strings(param):
         return param
     return None
 
+def check_proper_motion(pm, model):
+    result = [[0.0, 0.0] for i in model]
+    if pm != 0.0:
+        if len(pm) != len(model):
+            logging.error("'proper_motion' must be a list of the same length as model")
+        else:
+            result = []
+            for i in range(len(model)):
+                if not is_list_of_floats(pm[i]):
+                    logging.error("each element of 'proper_motion' must be a list of two floats")
+                else:
+                    result.append(pm[i])
+    return result
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG,
                         format='%(levelname)s - %(message)s')
     pos = "J2000 12h34m56.0s -01d02m03.0s"
     print(is_casa_position(pos))
+    proper_motion = check_proper_motion(0.0, ['delta'])
+    print(proper_motion)
+    proper_motion = check_proper_motion([[1.0, 2.0], [3.0, 4.0]], ['delta', 'disc'])
+    print(proper_motion)

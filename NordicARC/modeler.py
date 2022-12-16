@@ -7,7 +7,7 @@ from scipy import special
 
 import uvmultimodel as uvmod
 
-from .utils import get_list_of_strings, is_list_of_floats
+from .utils import get_list_of_strings, is_list_of_floats, check_proper_motion
 from .simplex import _mod_simplex
 
 class Modeler():
@@ -63,20 +63,7 @@ class Modeler():
         # These will take p and nu and return the variables of the model:
 
         self.varfunc = [0.0 for component in model]
-        if proper_motion == 0.0:
-            self.proper_motion = [[0., 0.] for i in self.model]
-        else:
-            if len(proper_motion) != len(self.model):
-                self.logger.error("'proper_motion' must be a list of the same length as model")
-                self.proper_motion = [[0., 0.] for i in self.model]
-            else:
-                self.proper_motion = []
-                for i in range(len(self.model)):
-                    if is_list_of_floats(proper_motion[i]):
-                        self.proper_motion.append(proper_motion[i])
-                    else:
-                        self.logger.error("each element of 'proper_motion' must be a list of two floats")
-                        self.proper_motion.append([0., 0.])
+        self.proper_motion = check_proper_motion(proper_motion, self.model)
         self._NCPU = NCPU
         self.t0 = 0.0
         self.t1 = 1.e12
