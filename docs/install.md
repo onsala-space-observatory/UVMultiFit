@@ -18,7 +18,7 @@ this information during the installation of `UVMultiFit`.
 ### For Linux (Ubuntu-like), in a terminal:
 
 ``` bash
-sudo apt-get install libgsl-dev libfftw3-dev
+$ sudo apt-get install libgsl-dev libfftw3-dev
 ```
 
 ### For Mac OS, in a terminal:
@@ -26,13 +26,13 @@ sudo apt-get install libgsl-dev libfftw3-dev
 If using Mac Ports:
 
 ``` bash
-sudo port install gsl fftw-3
+$ sudo port install gsl fftw-3
 ```
 
 If using Homebrew:
 
 ``` bash
-brew install gsl fftw
+$ brew install gsl fftw
 ```
 
 ## Clone the repository or update your installation
@@ -50,7 +50,7 @@ $ cd UVMultiFit
 If you already had a `git` based version installed, pull in the latest changes:
 
 ``` bash
-git pull
+$ git pull
 ```
 
 ## Compile the C++ module
@@ -66,7 +66,7 @@ write access to the directories underneath `$CASADIR`, you may then
 run
 
 ``` bash
-make install
+$ make install
 ```
 
 This should make `uvmultifit` available also to other users, running
@@ -75,7 +75,7 @@ from the same casa installation.
 Alternatively, you can install to your local user `PYTHONPATH` by running
 
 ``` bash
-make user
+$ make user
 ```
 
 You may check that you can load the module and execute some of its
