@@ -4,17 +4,19 @@ import time
 import logging
 from contextlib import contextmanager
 
+from typing import List
+
 import numpy as np
 
-from casatools import ms
-from casatools import table
-from casatools import coordsys
+from casatools import ms             # type: ignore
+from casatools import table          # type: ignore
+from casatools import coordsys       # type: ignore
 
-from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats
-from .utils import is_casa_position, is_valid_stokes
+from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats    # type: ignore
+from .utils import is_casa_position, is_valid_stokes                         # type: ignore
 
 @contextmanager
-def open_ms(msname):
+def open_ms(msname: str):
     """A context manager to reattach to a measurement set table."""
 
     mstool = ms()
@@ -27,7 +29,7 @@ def open_ms(msname):
         mstool.close()
 
 @contextmanager
-def open_tb(msname):
+def open_tb(msname: str):
     """A context manager to open a disk file containing an existing casa table."""
 
     tbtool = table()
@@ -54,25 +56,28 @@ class MeasurementSet():
 
     logger = logging.getLogger("measurement")
 
-    def __init__(self, vis, spw='0', field=0, scans=[], corrected=False,
-                 uniform=False, uvtaper=0.0, chanwidth=1, timewidth=1, stokes='I',
-                 MJDrange=[-1.0, -1.0], ldfac=1.22, phase_center='', pbeam=False,
-                 wgt_power=1.0, dish_diameter=0.0):
+    def __init__(self, vis: str, spw: str = '0', field: int = 0, scans: List = [],
+                 corrected: bool = False, uniform: bool = False, uvtaper: float = 0.0,
+                 chanwidth: int = 1, timewidth: int = 1, stokes: str = 'I',
+                 MJDrange: List[float] = [-1.0, -1.0], ldfac: float = 1.22,
+                 phase_center: str = '', pbeam: bool = False, wgt_power: float = 1.0,
+                 dish_diameter: float = 0.0) -> None:
         self.vis = get_list_of_strings(vis)
         self.spw = get_list_of_strings(spw)
         if len(self.spw) > 1 and len(self.vis) != len(self.spw):
             self.logger.error("the length of 'spw' is not equal to the length of 'vis'!")
 
-        if not isinstance(field, (int, str)):
+        self.field = 0
+        if isinstance(field, (int, str)):
+            self.field = field
+        else:
             self.logger.warning("parameter 'field' needs to be an integer or string, resetting to 0!")
             self.field = 0
-        else:
-            self.field = field
         if isinstance(self.field, str) and self.field.isdigit():
             self.field = int(self.field)
-        self.field_id = []
-        self.pointing = []
-        self.sourscans = []
+        self.field_id = []                       # type: List
+        self.pointing = []                       # type: List
+        self.sourscans = []                      # type: List
         if is_list_of_int(scans):
             self.scans = scans
         else:
@@ -103,10 +108,10 @@ class MeasurementSet():
         self.refpos = self.check_phase_center(phase_center)
         self.ldfac = ldfac
         self.pbeam = pbeam
-        self.spwlist = []
-        self.pol2aver = []
-        self.polmod = []
-        self.polii = []
+        self.spwlist = []                        # type: List
+        self.pol2aver = []                       # type: List
+        self.polmod = []                         # type: List
+        self.polii = []                          # type: List
 
     def dump(self):
         temp = vars(self)
