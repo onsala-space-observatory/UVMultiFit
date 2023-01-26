@@ -8,10 +8,9 @@ Fit results will be written to an output file using method ``save_results``.
 
 """
 import sys
-import numpy as np
 import logging
 
-from typing import Union
+import numpy as np
 
 from .measurementset import MeasurementSet
 from .modeler import Modeler
