@@ -36,22 +36,7 @@ else:
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setup(
-    name="NordicARC",
-    version="3.0.5",
-    author="Ivan Marti-Vidal",
-    author_email="i.marti-vidal@uv.es",
-    description="Fit models directly to visibility data.",
-    long_description=long_description,
-    packages=find_packages(include=["NordicARC"]),
-    url="https://github.com/onsala-space-observatory/UVMultiFit.git",
-    ext_modules=[c_ext],
-    include_dirs=[include_gsl_dir],
-    classifiers=[
-        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Scientific/Engineering',
-    ],
-)
+setup(packages=find_packages(include=["NordicARC"]),
+      ext_modules=[c_ext],
+      include_dirs=[include_gsl_dir],
+      long_description=long_description)
