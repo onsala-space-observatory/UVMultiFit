@@ -7,7 +7,7 @@ from scipy import special
 
 import uvmultimodel as uvmod
 
-from .utils import get_list_of_strings, is_list_of_floats, check_proper_motion
+from .utils import get_list_of_strings, check_proper_motion
 from .simplex import _mod_simplex
 
 class Modeler():
@@ -21,7 +21,8 @@ class Modeler():
     logger = logging.getLogger("modeler")
     isNumerical = ['GaussianRing']
 
-    # the following models are implemented, the integer values are the number of parameters used
+    # the following models are implemented,
+    # the integer values are the number of parameters used
     implemented_models = {'delta': 3,
                           'disc': 6,
                           'ring': 6,
@@ -100,7 +101,6 @@ class Modeler():
         self.dt = []
         self.dtArr = []
         self.dtIdx = []
-        self.imod = []
         self.par2 = []
         # Arrays of data and pointers (to share access with C library):
         self.data = []

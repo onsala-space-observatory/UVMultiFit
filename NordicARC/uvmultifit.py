@@ -119,7 +119,7 @@ def save_results(outfile, results, mdl, ms):
                         toprint = tuple([freq] + prtpars[k][nu] + [ChiSq[k][nu]])
                         outf.write(formatting % toprint)
 
-def uvmultifit(vis, spw = 0, field = 0, scans = [], column = 'data', uniform=False,
+def uvmultifit(vis, spw=0, field=0, scans=[], column='data', uniform=False,
                uvtaper=0.0, chanwidth=1, timewidth=1, stokes='I',
                MJDrange=[-1.0, -1.0], ldfac=1.22,
                phase_center='', pbeam=False, wgt_power=1.0, dish_diameter=0.0,
