@@ -2,13 +2,16 @@ import sys
 import re
 import time
 import logging
+
+from typing import List, Dict
+
 import numpy as np
-from scipy import special
+from scipy import special        # type: ignore
 
-import uvmultimodel as uvmod
+import uvmultimodel as uvmod     # type: ignore
 
-from .utils import get_list_of_strings, check_proper_motion
-from .simplex import _mod_simplex
+from .utils import get_list_of_strings, check_proper_motion         # type: ignore
+from .simplex import _mod_simplex                                   # type: ignore
 
 class Modeler():
     """ Class to deal with model equations and fitting procedures.
@@ -34,12 +37,15 @@ class Modeler():
                           'power-3': 6,
                           'GaussianRing': 7}
 
-    def __init__(self, model=['delta'], var=['p[0], p[1], p[2]'], p_ini=[0.0, 0.0, 1.0],
-                 bounds=None, OneFitPerChannel=False, only_flux=False,
-                 fixed=[], fixedvar=[], scalefix='1.0', phase_gains={}, amp_gains={},
-                 method="levenberg", HankelOrder=80,
-                 LMtune=[1.e-3, 10., 1.e-5, 200, 1.e-3], SMPtune=[1.e-4, 1.e-1, 200],
-                 NCPU=4, proper_motion=0.0):
+    def __init__(self, model: List[str] = ['delta'], var: List[str] = ['p[0], p[1], p[2]'],
+                 p_ini: List[float] = [0.0, 0.0, 1.0], bounds: List = None,
+                 OneFitPerChannel: bool = False, only_flux: bool = False,
+                 fixed: List = [], fixedvar: List = [], scalefix: str = '1.0',
+                 phase_gains: Dict = {}, amp_gains: Dict = {},
+                 method: str = "levenberg", HankelOrder: int = 80,
+                 LMtune: List[float] = [1.e-3, 10., 1.e-5, 200, 1.e-3],
+                 SMPtune: List[float] = [1.e-4, 1.e-1, 200],
+                 NCPU: int = 4, proper_motion: float = 0.0) -> None:
         """ Just the constructor of the 'modeler' class."""
         self.logger.debug("modeler::__init__")
         self.model = get_list_of_strings(model)
@@ -68,11 +74,11 @@ class Modeler():
         self._NCPU = NCPU
         self.t0 = 0.0
         self.t1 = 1.e12
-        if not isinstance(only_flux, bool):
-            self.logger.error("'only_flux' must be boolean")
-            self._only_flux = False
-        else:
+        self._only_flux = False
+        if isinstance(only_flux, bool):
             self._only_flux = only_flux
+        else:
+            self.logger.error("'only_flux' must be boolean")
 
         self.Nants = 0
         self.initiated = False
@@ -87,40 +93,33 @@ class Modeler():
         self.minnum = np.sqrt(np.finfo(np.float64).eps)
         # Tells us if the fixedmodel array exists and should be used.
         self.removeFixed = False
-        self.varfixed = []
-        self.dpar = []
+        self.varfixed = []     # type: List
+        self.dpar = []         # type: List
         self.method = method
         self.Hessian = np.zeros((1, 1), dtype=np.float64)
-        self.Gradient = []
-        self.iscancoords = []
-        self.varbuffer = []
-        self.isGain = []
-        self.fittablebool = []
-        self.fittable = []
-        self.wgtcorr = []
-        self.dt = []
-        self.dtArr = []
-        self.dtIdx = []
-        self.par2 = []
+        self.Gradient = []         # type: List
+        self.iscancoords = []      # type: List
+        self.varbuffer = []        # type: List
+        self.isGain = []           # type: List
+        self.fittablebool = []     # type: List
+        self.fittable = []         # type: List
+        self.wgtcorr = []          # type: List
+        self.dt = []               # type: List
+        self.dtArr = []            # type: List
+        self.dtIdx = []            # type: List
+        self.par2 = []             # type: List
         # Arrays of data and pointers (to share access with C library):
-        self.data = []
-        self.dt = []
-        self.dtArr = []
-        self.dtIdx = []
-        self.wgt = []
-        self.wgtcorr = []
-        self.iscancoords = []
-        self.uv = []
-        self.offset = []
-        self.output = []
-        self.freqs = []
-        self.fixedmodel = []
-        self.fittable = []
-        self.fittablebool = []
-        self.ants = []
+        self.data = []             # type: List
+        self.wgt = []              # type: List
+        self.uv = []               # type: List
+        self.offset = []           # type: List
+        self.output = []           # type: List
+        self.freqs = []            # type: List
+        self.fixedmodel = []       # type: List
+        self.ants = []             # type: List
         # Model indices (to let the C++ library know which model is which component):
-        self.imod = []
-        self.ifixmod = []
+        self.imod = []             # type: List
+        self.ifixmod = []          # type: List
         # spw and channel to fit (-1 means fit to the continuum):
         self.currspw = 0
         self.currchan = 0
@@ -132,11 +131,10 @@ class Modeler():
         self.LMtune = LMtune
         self.SMPtune = SMPtune
         # Gains:
-        self.GainBuffer = []
+        self.GainBuffer = []       # type: List
         #   self.phaseGainBuffer = []
-        self.parDependence = []
-        self.isGain = []
-        self.strucvar = []
+        self.parDependence = []    # type: List
+        self.strucvar = []         # type: List
         KGaus = np.sqrt(1. / (4. * np.log(2.)))
         # Some useful functions:
         self.compiledScaleFixed = lambda p, nu: 1.0 + 0.0
@@ -1427,7 +1425,7 @@ class Modeler():
         return fit_results
 
 if __name__ == "__main__":
-    mod = Modeler('delta')
+    mod = Modeler(['delta'])
     mod.logger.info("logged by modeler")
     print(mod)
 
