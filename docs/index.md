@@ -11,5 +11,4 @@ deconvolved images. We give some illustrative examples in the software
 documentation and in Marti-Vidal et al. (2014),
 [A&A 563, 136, arXiv:1401.4984](http://arxiv.org/abs/1401.4984).
 
-
-::: NordicARC.uvmultifit
+  ::: NordicARC.uvmultifit

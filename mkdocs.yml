@@ -9,3 +9,4 @@ theme:
 
 plugins:
    - mkdocstrings
+
