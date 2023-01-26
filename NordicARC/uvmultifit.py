@@ -10,12 +10,14 @@ Fit results will be written to an output file using method ``save_results``.
 import sys
 import logging
 
+from typing import List, Dict
+
 import numpy as np
 
-from .measurementset import MeasurementSet
-from .modeler import Modeler
+from .measurementset import MeasurementSet    # type: ignore
+from .modeler import Modeler                  # type: ignore
 
-def save_results(outfile, results, mdl, ms):
+def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) -> None:
     """Save fit results to file.
 
     Given the results of the fit, and the instances of the ``Modeler`` and
@@ -118,16 +120,20 @@ def save_results(outfile, results, mdl, ms):
                         toprint = tuple([freq] + prtpars[k][nu] + [ChiSq[k][nu]])
                         outf.write(formatting % toprint)
 
-def uvmultifit(vis, spw=0, field=0, scans=[], column='data', uniform=False,
-               uvtaper=0.0, chanwidth=1, timewidth=1, stokes='I',
-               MJDrange=[-1.0, -1.0], ldfac=1.22,
-               phase_center='', pbeam=False, wgt_power=1.0, dish_diameter=0.0,
-               model=['delta'], var=['p[0],p[1],p[2]'], p_ini=[0.0, 0.0, 1.0], bounds=None,
-               OneFitPerChannel=True, only_flux=False, fixed=[], fixedvar=[], scalefix='1.0',
-               amp_gains={}, phase_gains={}, method='levenberg', HankelOrder=80,
-               LMtune=[1.0e-3, 10.0, 1.0e-5, 200, 1.0e-3], SMPtune=[1.0e-4, 1.0e-1, 200],
-               NCPU=4, proper_motion=0.0,
-               write='', outfile='modelfit.dat', cov_return=False, finetune=False):
+def uvmultifit(vis: str, spw: int = 0, field: int = 0, scans: List = [],
+               column: str = 'data', uniform: bool = False,
+               uvtaper: float = 0.0, chanwidth: int = 1, timewidth: int = 1,
+               stokes: str = 'I', MJDrange: List[float] = [-1.0, -1.0], ldfac: float = 1.22,
+               phase_center: str = '', pbeam: bool = False, wgt_power: float = 1.0,
+               dish_diameter: float = 0.0, model: List[str] = ['delta'],
+               var: List[str] = ['p[0],p[1],p[2]'], p_ini: List[float] = [0.0, 0.0, 1.0],
+               bounds: List = None, OneFitPerChannel: bool = True, only_flux: bool = False,
+               fixed: List = [], fixedvar: List = [], scalefix: str = '1.0',
+               amp_gains: Dict = {}, phase_gains: Dict = {}, method: str = 'levenberg', HankelOrder: int = 80,
+               LMtune: List[float] = [1.0e-3, 10.0, 1.0e-5, 200, 1.0e-3],
+               SMPtune: List[float] = [1.0e-4, 1.0e-1, 200], NCPU: int = 4, proper_motion: float = 0.0,
+               write: str = '', outfile: str = 'modelfit.dat', cov_return: bool = False,
+               finetune: bool = False) -> Dict:
     """Create instances of ``Modeler`` and ``MeasurementSet`` and perform a fit.
 
     The first group of arguments (``vis`` to ``dish_diameter``) are used to instantiate a
