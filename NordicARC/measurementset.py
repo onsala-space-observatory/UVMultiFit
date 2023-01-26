@@ -328,31 +328,36 @@ class MeasurementSet():
 
         return True
 
-    def get_cross_correlations(self, msname):
+    @staticmethod
+    def get_cross_correlations(msname):
         with open_tb(msname) as tb:
             SPW = tb.getcol('DATA_DESC_ID')
-            crosscorr = tb.getcol('ANTENNA1') != self.tb.getcol('ANTENNA2')
+            crosscorr = tb.getcol('ANTENNA1') != tb.getcol('ANTENNA2')
         return SPW, crosscorr
 
-    def get_data_description(self, msname):
+    @staticmethod
+    def get_data_description(msname):
         subdir = os.path.join(msname, 'DATA_DESCRIPTION')
         with open_tb(subdir) as tb:
             DDSC = tb.getcol('SPECTRAL_WINDOW_ID')
         return DDSC
 
-    def get_spectral_window(self, msname):
+    @staticmethod
+    def get_spectral_window(msname):
         subdir = os.path.join(msname, 'SPECTRAL_WINDOW')
         with open_tb(subdir) as tb:
             origfreqs = tb.getcol('CHAN_FREQ')
         return origfreqs
 
-    def get_scan_mask(self, msname, scan, maskspw):
+    @staticmethod
+    def get_scan_mask(msname, scan, maskspw):
         with open_tb(msname) as tb:
             masksc = maskspw * (tb.getcol('SCAN_NUMBER') == int(scan))
             fieldids = list(np.sort(np.unique(tb.getcol('FIELD_ID')[masksc])))
         return masksc, fieldids
 
-    def get_field_id(self, msname, masksc, fieldid, takeModel):
+    @staticmethod
+    def get_field_id(msname, masksc, fieldid, takeModel, column):
         with open_tb(msname) as tb:
             maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
             uvscan = None
@@ -366,12 +371,12 @@ class MeasurementSet():
                           'time': tb2.getcol('TIME')}
                 times = np.unique(uvscan['time'])
                 if takeModel:
-                    datascan = {self.column: tb2.getcol((self.column).upper()),
+                    datascan = {column: tb2.getcol((column).upper()),
                                 'model_data': tb2.getcol('MODEL_DATA'),
                                 'weight': tb2.getcol('WEIGHT'),
                                 'flag': tb2.getcol('FLAG')}
                 else:
-                    datascan = {self.column: tb2.getcol((self.column).upper()),
+                    datascan = {column: tb2.getcol((column).upper()),
                                 'weight': tb2.getcol('WEIGHT'),
                                 'flag': tb2.getcol('FLAG')}
 
@@ -487,7 +492,7 @@ class MeasurementSet():
                             for fieldid in fieldids:
                                 self.logger.info(f"reading scan #{scan} "
                                                  f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
-                                F = self.get_field_id(msname, masksc, fieldid, takeModel)
+                                F = self.get_field_id(msname, masksc, fieldid, takeModel, self.column)
                                 maskfld, uvscan, times, datascan = F
                                 if len(maskfld) != 0:
                                     # NOTE: There is a bug in np.ma.array that casts complex
@@ -510,9 +515,9 @@ class MeasurementSet():
                                     origmasked = np.ma.array(datascan[self.column], mask=totalmask, dtype=np.complex128)
 
                                     if takeModel:
-                                        origmodmasked = np.ma.array(
-                                            datascan['model_data'],
-                                            mask=totalmask, dtype=np.complex128)
+                                        origmodmasked = np.ma.array(datascan['model_data'],
+                                                                    mask=totalmask,
+                                                                    dtype=np.complex128)
 
                                     # The weights are weighting the RESIDUALS, and not the ChiSq terms.
                                     # Hence, we divide wgt_power by 2.:
@@ -751,7 +756,6 @@ class MeasurementSet():
 
     def set_weight_equation(self, primary_beam_correction):
         self.logger.debug("MeasurementSet::set_weight_equation")
-        tempfloat = 0.0
 
         if not isinstance(self.dish_diameter, dict):
             try:
