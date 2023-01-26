@@ -2,6 +2,8 @@ import os
 import re
 import time
 import logging
+from contextlib import contextmanager
+
 import numpy as np
 
 from casatools import ms
@@ -11,17 +13,46 @@ from casatools import coordsys
 from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats
 from .utils import is_casa_position, is_valid_stokes
 
+@contextmanager
+def open_ms(msname):
+    """A context manager to reattach to a measurement set table."""
+
+    mstool = ms()
+    try:
+        logging.debug(f"open measurementset {msname}")
+        mstool.open(msname)
+        yield mstool
+    finally:
+        logging.debug(f"close measurementset {msname}")
+        mstool.close()
+
+@contextmanager
+def open_tb(msname):
+    """A context manager to open a disk file containing an existing casa table."""
+
+    tbtool = table()
+    try:
+        logging.debug(f"open measurementset {msname}")
+        tbtool.open(msname)
+        yield tbtool
+    finally:
+        logging.debug(f"close measurementset {msname}")
+        tbtool.close()
+
+
 class MeasurementSet():
-    """ Class to deal with model equations and fitting procedures.
+    """Class to deal with model equations and fitting procedures.
 
-    If convert strings representing models and parameters into compiled equations, to be used in a ChiSq
-    visibility fitting. It also interacts with the C++ extension of UVMultiFit.
+    It convert strings representing models and parameters into
+    compiled equations, to be used in a ChiSq visibility fitting. It
+    also interacts with the C++ extension of UVMultiFit.
 
-    This class should NOT be instantiated by the user (it is called from the UVMultiFit class."""
+    This class should NOT be instantiated by the user (it is called
+    from the UVMultiFit class.
+
+    """
 
     logger = logging.getLogger("measurement")
-    tb = table()
-    ms = ms()
     cs = coordsys()
 
     def __init__(self, vis, spw='0', field=0, scans=[], corrected=False,
@@ -122,29 +153,11 @@ class MeasurementSet():
         refpos = np.copy(csys.torecord()['direction0']['crval'])
         return refpos
 
-    def check_measurementset(self):
-        self.logger.debug("MeasurementSet::check_measurementset")
-        for v in self.vis:
-            if not os.path.exists(v):
-                self.logger.error(f"measurement set '{v}' does not exist!")
-                return False
-        phasedirs = [{} for v in self.vis]
-
-        # Get number of antennas:
-        self.tb.open(os.path.join(self.vis[0], 'ANTENNA'))
-        self.Nants = len(self.tb.getcol('NAME'))
-        self.logger.info(f"number of antennas = {self.Nants}")
-        self.tb.close()
-
-        # Open MS and look for the selected data:
-        for vi, v in enumerate(self.vis):
-            self.field_id.append([])
-            success = self.ms.open(v)
-            if not success:
-                self.logger.error(f"failed to open measurement set '{v}'!")
-                return False
-
-            allfields = list(self.ms.range('fields')['fields'])
+    def get_field_index(self, vi, msname):
+        field_index = -1
+        phasedir = None
+        with open_ms(msname) as ms:
+            allfields = list(ms.range('fields')['fields'])
             if isinstance(self.field, int):
                 field_index = self.field
             elif is_list_of_int(self.field):
@@ -158,33 +171,43 @@ class MeasurementSet():
                         field_found = True
                         field_index = f
                         break
-                if not field_found:
-                    self.logger.error(f"field '{self.field[vi]}' is not in '{v}'")
-                    self.ms.close()
-                    return False
+                    if not field_found:
+                        self.logger.error(f"field '{self.field[vi]}' is not in '{msname}'")
+                        return field_index, None
+            phasedir = ms.range('phase_dir')['phase_dir']['direction'][:, field_index]
+        return field_index, phasedir
 
-            self.field_id[-1].append(field_index)
-            phasedirs[vi][field_index] = self.ms.range('phase_dir')['phase_dir']['direction'][:, field_index]
-            self.ms.close()
+    def check_measurementset(self):
+        self.logger.debug("MeasurementSet::check_measurementset")
+        for v in self.vis:
+            if not os.path.exists(v):
+                self.logger.error(f"measurement set '{v}' does not exist!")
+                return False
+        phasedirs = [{} for v in self.vis]
+
+        # Open MS and look for the selected data:
+        for vi, v in enumerate(self.vis):
+            self.field_id.append([])
+            field_index, phasedir = self.get_field_index(vi, v)
+            if field_index != -1:
+                self.field_id[-1].append(field_index)
+                phasedirs[vi][field_index] = phasedir
+            else:
+                return False
         if self.refpos is None:
             self.refpos = phasedirs[0][min(phasedirs[0].keys())]
-        success = self.find_observing_positions(phasedirs)
-        success = success and self.get_spectral_configuration()
-        success = success and self.get_polarization_configuration()
-        success = success and self.set_weight_equation(self.pbeam)
+        success = (self.find_observing_positions(phasedirs)
+                   and self.get_spectral_configuration()
+                   and self.get_polarization_configuration()
+                   and self.set_weight_equation(self.pbeam))
         self.phasedirs = phasedirs
         return success
 
     def find_observing_positions(self, phasedirs):
         self.logger.debug("MeasurementSet::find_observing_positions")
         for vi, v in enumerate(self.vis):
-            success = self.ms.open(v)
-            if not success:
-                self.logger.error(f"failed to open measurement set '{v}'!")
-                return False
-
-            info = self.ms.getscansummary()
-            self.ms.close()
+            with open_ms(v) as ms:
+                info = ms.getscansummary()
 
             self.sourscans.append([])
             self.pointing.append([])
@@ -217,12 +240,9 @@ class MeasurementSet():
         for vi, v in enumerate(self.vis):
             j = vi if len(self.spw) != 1 else 0
 
-            if not self.ms.open(v):
-                self.logger.error(f"failed to open measurement set '{v}'!")
-                return False
-
-            # freqdic = ms.getspectralwindowinfo()
-            spwchans = self.ms.range(['num_chan'])['num_chan']
+            with open_ms(v) as ms:
+                # freqdic = ms.getspectralwindowinfo()
+                spwchans = ms.range(['num_chan'])['num_chan']
 
             aux = MeasurementSet.channeler(self.spw[j], width=self.chanwidth, maxchans=spwchans)
             if aux[0]:
@@ -236,17 +256,13 @@ class MeasurementSet():
             self.spwlist.append([j, vi, selspws, spwi])
             # spwlist[vi][2] es una lista con [spwid, chanranges]
 
-            self.ms.close()
         return True
 
     def get_polarization_configuration(self):
         self.logger.debug("MeasurementSet::get_polarization_configuration")
         for v in self.vis:
-            if not self.ms.open(v):
-                self.logger.error(f"failed to open measurement set '{v}'!")
-                return False
-
-            polprods = [x[0] for x in list(self.ms.range(['corr_names'])['corr_names'])]
+            with open_ms(v) as ms:
+                polprods = [x[0] for x in list(ms.range(['corr_names'])['corr_names'])]
 
             self.pol2aver.append(np.zeros(len(polprods)))
             # 0: normal,   1: multiply by i,   2: pol. independent, 3: just one product
@@ -311,8 +327,56 @@ class MeasurementSet():
                 self.logger.error(f"polarization '{self.stokes}' not understood")
                 return False
 
-            self.ms.close()
         return True
+
+    def get_cross_correlations(self, msname):
+        with open_tb(msname) as tb:
+            SPW = tb.getcol('DATA_DESC_ID')
+            crosscorr = tb.getcol('ANTENNA1') != self.tb.getcol('ANTENNA2')
+        return SPW, crosscorr
+
+    def get_data_description(self, msname):
+        subdir = os.path.join(msname, 'DATA_DESCRIPTION')
+        with open_tb(subdir) as tb:
+            DDSC = tb.getcol('SPECTRAL_WINDOW_ID')
+        return DDSC
+
+    def get_spectral_window(self, msname):
+        subdir = os.path.join(msname, 'SPECTRAL_WINDOW')
+        with open_tb(subdir) as tb:
+            origfreqs = tb.getcol('CHAN_FREQ')
+        return origfreqs
+
+    def get_scan_mask(self, msname, scan, maskspw):
+        with open_tb(msname) as tb:
+            masksc = maskspw * (tb.getcol('SCAN_NUMBER') == int(scan))
+            fieldids = list(np.sort(np.unique(tb.getcol('FIELD_ID')[masksc])))
+        return masksc, fieldids
+
+    def get_field_id(self, msname, masksc, fieldid, takeModel):
+        with open_tb(msname) as tb:
+            maskfld = np.where(masksc * (tb.getcol('FIELD_ID') == int(fieldid)))[0]
+            uvscan = None
+            times = None
+            datascan = None
+            if len(maskfld) != 0:
+                tb2 = tb.selectrows(maskfld)
+                uvscan = {'uvw': tb2.getcol('UVW'),
+                          'antenna1': tb2.getcol('ANTENNA1'),
+                          'antenna2': tb2.getcol('ANTENNA2'),
+                          'time': tb2.getcol('TIME')}
+                times = np.unique(uvscan['time'])
+                if takeModel:
+                    datascan = {self.column: tb2.getcol((self.column).upper()),
+                                'model_data': tb2.getcol('MODEL_DATA'),
+                                'weight': tb2.getcol('WEIGHT'),
+                                'flag': tb2.getcol('FLAG')}
+                else:
+                    datascan = {self.column: tb2.getcol((self.column).upper()),
+                                'weight': tb2.getcol('WEIGHT'),
+                                'flag': tb2.getcol('FLAG')}
+
+        return maskfld, uvscan, times, datascan
 
     def read_data(self, takeModel=False):
         """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
@@ -391,82 +455,42 @@ class MeasurementSet():
             # BEWARE! was sp
             for vis in [x for x in self.spwlist if x[3] <= si]:
                 msname = self.vis[vis[1]]
-
-                self.logger.info(f"opening measurement set '{msname}'")
-                self.tb.open(msname)
-                SPW = self.tb.getcol('DATA_DESC_ID')
-                crosscorr = self.tb.getcol('ANTENNA1') != self.tb.getcol('ANTENNA2')
-                self.tb.close()
-
-                self.tb.open(os.path.join(msname, 'DATA_DESCRIPTION'))
-                DDSC = self.tb.getcol('SPECTRAL_WINDOW_ID')
-                self.tb.close()
+                SPW, crosscorr = self.get_cross_correlations(msname)
+                DDSC = self.get_data_description(msname)
 
                 for spidx, spi in enumerate(vis[2]):
                     if vis[3] + spidx == si:
-
                         sp = spi[0]
                         rang = spi[1]
                         self.iscan[msname][sp] = {}
 
                         DDs = np.where(DDSC == sp)[0]
-
                         if len(DDs) > 1:
                             self.logger.warning(f"spw {sp} has more than one Data Description ID!")
 
                         maskspw = np.zeros(np.shape(crosscorr), dtype=bool)
-
                         for ddi in DDs:
                             maskspw = np.logical_or(maskspw, SPW == ddi)
-
                         maskspw *= crosscorr
 
                         # For the first ms in the list, read the frequencies of the spw.
                         # All the other mss will be assumed to have the same frequencies:
                         # if True:
-                        self.tb.open(os.path.join(msname, 'SPECTRAL_WINDOW'))
-                        origfreqs = self.tb.getcol('CHAN_FREQ')
+                        origfreqs = self.get_spectral_window(msname)
                         self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
                         nfreq = len(rang)
-                        self.tb.close()
-                        self.logger.info(f"reading scans for spw {sp}")
 
+                        self.logger.info(f"reading scans for spw {sp}")
                         # Read all scans for this field id:
                         for sc, scan in enumerate(self.sourscans[vis[1]]):
-                            self.tb.open(msname)
-
-                            masksc = maskspw * (self.tb.getcol('SCAN_NUMBER') == int(scan))
-                            fieldids = list(np.sort(np.unique(self.tb.getcol('FIELD_ID')[masksc])))
-
-                            self.tb.close()
+                            masksc, fieldids = self.get_scan_mask(msname, scan, maskspw)
 
                             for fieldid in fieldids:
                                 self.logger.info(f"reading scan #{scan} "
                                                  f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
-                                self.tb.open(msname)
-                                maskfld = np.where(masksc * (self.tb.getcol('FIELD_ID') == int(fieldid)))[0]
-
-                                if len(maskfld) == 0:
-                                    self.tb.close()
-                                else:
-                                    tb2 = self.tb.selectrows(maskfld)
-                                    uvscan = {'uvw': tb2.getcol('UVW'), 'antenna1': tb2.getcol('ANTENNA1'),
-                                              'antenna2': tb2.getcol('ANTENNA2'), 'time': tb2.getcol('TIME')}
-                                    times = np.unique(uvscan['time'])
-                                    if takeModel:
-                                        # datascan = ms.getdata([self.column, 'model_data', 'weight', 'flag'],
-                                        #                       ifraxis=True)
-                                        datascan = {self.column: tb2.getcol((self.column).upper()),
-                                                    'model_data': tb2.getcol('MODEL_DATA'),
-                                                    'weight': tb2.getcol('WEIGHT'),
-                                                    'flag': tb2.getcol('FLAG')}
-                                    else:
-                                        # datascan = ms.getdata([self.column, 'weight', 'flag'], ifraxis=True)
-                                        datascan = {self.column: tb2.getcol((self.column).upper()),
-                                                    'weight': tb2.getcol('WEIGHT'), 'flag': tb2.getcol('FLAG')}
-
-                                    self.tb.close()
-
+                                F = self.get_field_id(msname, masksc, fieldid, takeModel)
+                                maskfld, uvscan, times, datascan = F
+                                if len(maskfld) != 0:
                                     # NOTE: There is a bug in np.ma.array that casts complex
                                     # to float under certain operations (e.g., np.ma.average).
                                     # That's why we average real and imag separately.
@@ -535,7 +559,6 @@ class MeasurementSet():
                                             datamask *= 1.j
                                             if takeModel:
                                                 modelmask *= 1.j
-                                                #   weightmask[flagmask] = 0.0
 
                                     # Free some memory:
                                     for key in list(datascan):
@@ -591,60 +614,6 @@ class MeasurementSet():
                                     Decoffi[:] = float(phshift[1])
                                     Stretchi[:] = float(strcos)
 
-                #########################
-                # CODE FOR TIMEWIDTH>1 HAS TO BE BASED ON TB TOOL. WORK IN PROGRESS
-                #     else:
-
-                #       ant1s = uvscan['antenna1'][crosscorr]
-                #       ant2s = uvscan['antenna2'][crosscorr]
-                #       maskan1 = np.zeros(np.shape(ant1s), dtype=np.bool)
-                #       mask = np.copy(maskan1)
-                #       mask2 = np.copy(mask)
-                #       # Antennas participating in this scan:
-                #       allants1 = np.unique(ant1s)
-                #       allants2 = np.unique(ant2s)
-                #       # Fill in time-averaged visibs:
-                #       for nt in range(ntav):
-                #         t0 = nt*self.timewidth ; t1 = min([ntimes,(nt+1)*self.timewidth])
-                #         mask[:] = (uvscan['time']>=times[t0])*(uvscan['time']<times[t1])*crosscorr
-                #         for an1 in allants1:
-                #           maskan1[:] = (ant1s==an1)*mask
-                #           for an2 in allants2:
-                #             if an2>an1:
-                #                 mask2[:] = maskan1*(ant2s==an2)
-                #                 uu = uvscan['uvw'][0, mask2]
-                #                 vv = uvscan['uvw'][1, mask2]
-                #                 ww = uvscan['uvw'][2, mask2]
-                #                 ui[:, nt] = np.average(uu, axis=1)  # Baseline dimension
-                #                 vi[:, nt] = np.average(vv, axis=1)  # Baseline dimension
-                #                 wi[:, nt] = np.average(ww, axis=1)  # Baseline dimension
-                #                 ant1i[:, nt] = ant1s  # Baseline dimension
-                #                 ant2i[:, nt] = ant2s  # Baseline dimension
-                #                 timei[:, nt] = np.average(uvscan['time'][t0:t1])/86400.
-                #                 tArrayi[nt] = time[0, nt]  # np.average(uvscan['time'][t0:t1])/86400.
-                #                 tIndexi[:, nt] = nt
-                #                 RAoffi[:, nt] = float(phshift[0])
-                #                 Decoffi[:, nt] = float(phshift[1])
-                #                 Stretchi[:, nt] = float(strcos)
-                #
-                #         if self.uvtaper > 0.0:
-                #           GaussFact = np.exp(-(uu*uu + vv*vv)/GaussWidth)
-                #         else:
-                #           GaussFact = np.ones(np.shape(uu))
-                #
-                #       broadwgt = weighttemp[:, :, t0:t1]
-                #       avercompl[:, :, nt] = np.ma.average(datatemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
-                #                             1.j*np.ma.average(datatemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
-                #       if takeModel:
-                #         avermodl[:, :, nt] = np.ma.average(modeltemp[:, :, t0:t1].real, axis=2, weights=broadwgt)+
-                #                              1.j*np.ma.average(modeltemp[:, :, t0:t1].imag, axis=2, weights=broadwgt)
-                #
-                #       if self.uniform:
-                #         averwgt[:, :, nt] = np.ma.sum(np.ones(np.shape(broadwgt))*GaussFact[np.newaxis, :, :], axis=2)
-                #       else:
-                #         averwgt[:, :, nt] = np.ma.sum(broadwgt*GaussFact[np.newaxis, :, :], axis=2)
-                #########################
-
                                     ant1scan.append(np.copy(uvscan['antenna1'][:]))
                                     ant2scan.append(np.copy(uvscan['antenna2'][:]))
                                     uscan.append(np.copy(uvscan['uvw'][0, :]))
@@ -684,7 +653,7 @@ class MeasurementSet():
                                     i0scan += ndata
 
             # Concatenate all the scans in one single array. Notice that we separate real and imag and save them
-            # as floats. This is because ctypes doesn' t handle complex128.
+            # as floats. This is because ctypes doesn't handle complex128.
             self.averdata[si] = np.require(np.concatenate(datascanAv, axis=0),
                                            requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
 
@@ -792,8 +761,16 @@ class MeasurementSet():
                 self.logger.error("The dish diameter must be a number! (in meters)")
                 return False
 
-        self.tb.open(os.path.join(self.vis[0], 'ANTENNA'))
-        self.antnames = self.tb.getcol('NAME')
+        subdir = os.path.join(self.vis[0], 'ANTENNA')
+        with open_tb(subdir) as tb:
+            self.antnames = tb.getcol('NAME')
+            self.Nants = len(self.antnames)
+            self.logger.info(f"number of antennas = {self.Nants}")
+            try:
+                diameters = np.copy(tb.getcol('DISH_DIAMETER'))
+            except Exception:
+                self.logger.info("dish diameter column not found in antenna tables!")
+                diameters = np.zeros(len(self.antnames))
 
         if primary_beam_correction:
             self.logger.info("You selected to apply primary-beam correction.\n"
@@ -801,44 +778,37 @@ class MeasurementSet():
                              "with a Gaussian, so it may not be very accuracte far\n"
                              "from the pointing direction.")
             if isinstance(self.dish_diameter, float):
-                if self.dish_diameter == 0.0:
-                    try:
-                        tempfloat = np.copy(self.tb.getcol('DISH_DIAMETER'))
-                    except Exception:
-                        self.logger.info("dish diameter column not found in antenna tables!")
-                    tempfloat = np.zeros(len(self.antnames))
-                else:
+                if self.dish_diameter != 0.0:
                     self.logger.info(f"an antenna diameter of {self.dish_diameter:.3f}m will be applied")
-                    tempfloat = np.array([self.dish_diameter for a in self.antnames])
+                    diameters = np.array([self.dish_diameter for a in self.antnames])
 
             elif isinstance(self.dish_diameter, dict):
-                tempfloat = np.array([0.0 for a in self.antnames])
+                diameters = np.array([0.0 for a in self.antnames])
                 for anam in self.dish_diameter.keys():
                     for i, name in enumerate(self.antnames):
                         antids = re.search(anam, name)
                         if 'start' in dir(antids):
-                            tempfloat[i] = self.dish_diameter[anam]
+                            diameters[i] = self.dish_diameter[anam]
                 self.logger.info("manual antenna-size setting")
                 for i, name in enumerate(self.antnames):
-                    self.logger.info(f"antenna {name} has a diameter of {tempfloat[i]:.2f}m")
+                    self.logger.info(f"antenna {name} has a diameter of {diameters[i]:.2f}m")
 
             else:
                 self.logger.error("BAD dish_diameter! Should be a float or a dict!")
 
-            if np.max(tempfloat) == 0.0:
+            if np.max(diameters) == 0.0:
                 self.logger.error("The antenna diameters are not set in the ms. "
                                   "Please, set it manually or turn off primary-beam correction.")
                 return False
             # Negative means not to apply PB corr for that antenna
-            tempfloat[tempfloat == 0.0] = -1.0
-            FWHM = self.ldfac / tempfloat * (2.99e8)
+            diameters[diameters == 0.0] = -1.0
+            FWHM = self.ldfac / diameters * (2.99e8)
             sigma = FWHM / 2.35482 * (180. / np.pi) * 3600.
-            self.KfacWgt = 1. / (2. * sigma**2.) * (tempfloat > 0.0)  # (0.5*(tempfloat/1.17741)**2.)
-            self.userDiameters = tempfloat
+            self.KfacWgt = 1. / (2. * sigma**2.) * (diameters > 0.0)  # (0.5*(diameters/1.17741)**2.)
+            self.userDiameters = diameters
         else:
             self.KfacWgt = np.zeros(len(self.antnames))
 
-        self.tb.close()
         # May refine this function in future releases:
         #  self.wgtEquation = lambda D, Kf: -D*Kf
         return True
@@ -863,16 +833,10 @@ class MeasurementSet():
 
         for v in self.vis:
             # Get the columns of parallel-hand correlations:
-            success = self.ms.open(v)
-            if not success:
-                self.logger.error(f"'{v}' cannot be openned in write mode")
-                return False
-
             spws = list(map(int, self.iscan[v].keys()))
-
-            self.ms.selectinit(datadescid=spws[0])
-            polprods = [x[0] for x in list(self.ms.range(['corr_names'])['corr_names'])]
-            self.ms.close()
+            with open_ms(v) as ms:
+                ms.selectinit(datadescid=spws[0])
+                polprods = [x[0] for x in list(ms.range(['corr_names'])['corr_names'])]
 
             if self.stokes in polprods:
                 polii = [polprods.index(self.stokes)]
@@ -888,25 +852,19 @@ class MeasurementSet():
                 self.logger.error(f"Stokes not understood for '{v}', will not update the model column")
                 return False
 
-            if self.write_model == 1:
-                column = 'MODEL_DATA'
-            elif self.write_model in [2, 3]:
-                column = 'CORRECTED_DATA'
-
             # NEW CODE TO WRITE MODEL, BASED ON TB TOOL:
             for sp in spws:
                 for scan in self.iscan[v][sp].keys():
                     for select in self.iscan[v][sp][scan]:
                         self.logger.info(f"doing '{v}': spw {sp}, scan_id {scan}")
-                        self.tb.open(v, nomodify=False)
-                        tb2 = self.tb.selectrows(select[-1])
-                        moddata = tb2.getcol(column)
-                        re = np.transpose(model.output[select[0]][select[1]:select[1] + select[2], :])
-                        for nui, r in enumerate(select[3]):
-                            for poli in polii:
-                                moddata[poli, r, :] = re[nui, :]
-                        tb2.putcol(column, moddata)
-                        self.tb.close()
+                        with open_tb(v) as tb:
+                            tb2 = tb.selectrows(select[-1])
+                            moddata = tb2.getcol(column)
+                            re = np.transpose(model.output[select[0]][select[1]:select[1] + select[2], :])
+                            for nui, r in enumerate(select[3]):
+                                for poli in polii:
+                                    moddata[poli, r, :] = re[nui, :]
+                            tb2.putcol(column, moddata)
 
             self.logger.info(f"{column} written successfully")
 
@@ -936,7 +894,7 @@ class MeasurementSet():
 
             for sp in selspw:
                 if sp + 1 > len(maxchans):
-                    errstr = f"there are only {len(maxchans)} spw in the data, please revise the 'spw' parameter"
+                    errstr = f"There are only {len(maxchans)} spw in the data, please revise the 'spw' parameter."
                     logging.error(errstr)
                     return [False, errstr]
 
@@ -950,7 +908,7 @@ class MeasurementSet():
                 for channel_range in channel_ranges:
                     ch1, ch2 = list(map(int, channel_range.split('~')))
                     if ch1 > ch2:
-                        errstr = f"{ch1} is larger than {ch2}, revise channels for spw {sp}"
+                        errstr = f"Channel {ch1} is larger than {ch2}, revise channels for spw {sp}."
                         logging.error(errstr)
                         return [False, errstr]
                     ch2 = min([ch2, maxchans[sp] - 1])
