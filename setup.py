@@ -1,8 +1,7 @@
-# from distutils.core import setup, Extension
 from setuptools import setup, Extension, find_packages
 
 import platform
-######################
+
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
 BUILD_QUINN_FITTER = True
 
@@ -27,19 +26,15 @@ if BUILD_QUINN_FITTER:
                       define_macros=[('QUINN_FITTER', '0')],
                       libraries=['gsl', 'gslcblas', 'fftw3'],
                       extra_compile_args=["-Wno-deprecated", "-O3"])
-    # include_dirs=[np.get_include()],
-    # extra_link_args=_extra_link_args)
 else:
     c_ext = Extension("uvmultimodel",
                       ["uvmultimodel.cpp"],
                       define_macros=[('QUINN_FITTER', '1')],
                       libraries=['gsl', 'gslcblas'],
                       extra_compile_args=["-Wno-deprecated", "-O3"])
-    # include_dirs=[np.get_include()])
 
-fh = open("README.md", "r")
-long_description = fh.read()
-fh.close()
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
     name="NordicARC",
