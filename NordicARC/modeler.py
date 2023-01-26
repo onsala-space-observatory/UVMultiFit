@@ -10,8 +10,8 @@ from scipy import special        # type: ignore
 
 import uvmultimodel as uvmod     # type: ignore
 
-from .utils import get_list_of_strings, check_proper_motion         # type: ignore
-from .simplex import _mod_simplex                                   # type: ignore
+from .utils import get_list_of_strings, check_proper_motion
+from .simplex import _mod_simplex
 
 class Modeler():
     """ Class to deal with model equations and fitting procedures.

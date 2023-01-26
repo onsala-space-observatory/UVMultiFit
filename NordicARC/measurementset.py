@@ -12,8 +12,8 @@ from casatools import ms             # type: ignore
 from casatools import table          # type: ignore
 from casatools import coordsys       # type: ignore
 
-from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats    # type: ignore
-from .utils import is_casa_position, is_valid_stokes                         # type: ignore
+from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats
+from .utils import is_casa_position, is_valid_stokes
 
 @contextmanager
 def open_ms(msname: str):

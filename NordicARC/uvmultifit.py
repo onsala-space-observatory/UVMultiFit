@@ -14,8 +14,8 @@ from typing import List, Dict
 
 import numpy as np
 
-from .measurementset import MeasurementSet    # type: ignore
-from .modeler import Modeler                  # type: ignore
+from .measurementset import MeasurementSet
+from .modeler import Modeler
 
 def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) -> None:
     """Save fit results to file.
@@ -120,7 +120,7 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
                         toprint = tuple([freq] + prtpars[k][nu] + [ChiSq[k][nu]])
                         outf.write(formatting % toprint)
 
-def uvmultifit(vis: str, spw: int = 0, field: int = 0, scans: List = [],
+def uvmultifit(vis: str, spw: str = '0', field: int = 0, scans: List = [],
                column: str = 'data', uniform: bool = False,
                uvtaper: float = 0.0, chanwidth: int = 1, timewidth: int = 1,
                stokes: str = 'I', MJDrange: List[float] = [-1.0, -1.0], ldfac: float = 1.22,
