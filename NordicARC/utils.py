@@ -3,9 +3,11 @@ import re
 
 import logging
 
+from typing import List, Any, Union
+
 valid_casa_pos = re.compile(r"J2000 [0-9]{1,2}h[0-9]{2}m[0-9]{2}.[0-9]s -?[0-9]{1,2}d[0-9]{2}m[0-9]{2}.[0-9]s")
 
-def is_valid_python(param):
+def is_valid_python(param: str) -> bool:
     """Check if passed string is valied Python code.
 
     Args:
@@ -21,7 +23,7 @@ def is_valid_python(param):
         return False
     return True
 
-def is_casa_position(param):
+def is_casa_position(param: str) -> bool:
     """Check if string defines a valid casa position.
 
     Args:
@@ -36,7 +38,7 @@ def is_casa_position(param):
         return False
     return valid_casa_pos.fullmatch(param) is not None
 
-def is_valid_stokes(param):
+def is_valid_stokes(param: str) -> bool:
     """Check if string is one of the allowed Stokes parameters.
 
     Args:
@@ -51,7 +53,7 @@ def is_valid_stokes(param):
                'RR', 'LL', 'LR', 'RL']
     return isinstance(param, str) and param in allowed
 
-def is_list_of_floats(param, length=2):
+def is_list_of_floats(param: Any, length=2) -> bool:
     """Check if passed argument is a list of floats.
 
     Args:
@@ -64,7 +66,7 @@ def is_list_of_floats(param, length=2):
     logging.debug(f"is_list_of_floats({param}) ({length})")
     return isinstance(param, list) and len(param) == length and all(isinstance(elem, float) for elem in param)
 
-def is_list_of_int(param):
+def is_list_of_int(param: Any) -> bool:
     """Check if passed argument is a list of integers.
 
     Args:
@@ -85,7 +87,7 @@ def is_list_of_int(param):
             return False
     return True
 
-def get_list_of_strings(param):
+def get_list_of_strings(param: Any) -> List[str]:
     """Turn string argument into list of strings, if necessary.
 
     Args:
@@ -97,21 +99,21 @@ def get_list_of_strings(param):
     logging.debug(f"get_list_of_strings({param})")
     if isinstance(param, str):
         if len(param) == 0:
-            return None
+            return []
         return [param]
 
     if isinstance(param, list):
         if len(param) == 0:
             logging.warning("param is list of length zero")
-            return None
+            return []
         for i, p in enumerate(param):
             if not isinstance(p, str):
                 logging.warning(f"element {i} is not a string")
-                return None
+                return []
         return param
-    return None
+    return []
 
-def check_proper_motion(pm, model):
+def check_proper_motion(pm: Any, model: List[str]) -> List[List[float]]:
     result = [[0.0, 0.0] for i in model]
     if pm != 0.0:
         if len(pm) != len(model):
