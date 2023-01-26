@@ -131,8 +131,9 @@ def uvmultifit(vis, spw=0, field=0, scans=[], column='data', uniform=False,
     """Create instances of ``Modeler`` and ``MeasurementSet`` and perform a fit.
 
     The first group of arguments (``vis`` to ``dish_diameter``) are used to instantiate a
-    ``MeasurementSet`` object. The second group (``model`` to ``proper_motion``) are used to create
-    a ``Modeler`` object.
+    ``MeasurementSet`` object.
+
+    The second group (``model`` to ``proper_motion``) are used to create a ``Modeler`` object.
 
     The final four arguments are used when performing the actual fit and saving the data to a file.
 
@@ -143,9 +144,9 @@ def uvmultifit(vis, spw=0, field=0, scans=[], column='data', uniform=False,
             It can also be a string (or list of strings). These are the spectral window(s) and
             channel selection(s) to be fitted. For each spw, the user can select many channel
             ranges in the usual CASA way.
-            If one string is given, all ms listed in 'vis' are supposed to have the same
-            spectral configuration. If a list of strings is given, one per ms, this restriction
-            doesn't apply.
+            If one string is given, all measurement sets listed in 'vis' are supposed to have
+            the same spectral configuration.
+            If a list of strings is given, one per measurement set, this restriction doesn't apply.
        field (int or str):
             The id (or name) of the target source in the measurement set.
        scans (list): The id numbers of the scans to load.
