@@ -53,7 +53,6 @@ class MeasurementSet():
     """
 
     logger = logging.getLogger("measurement")
-    cs = coordsys()
 
     def __init__(self, vis, spw='0', field=0, scans=[], corrected=False,
                  uniform=False, uvtaper=0.0, chanwidth=1, timewidth=1, stokes='I',
@@ -143,7 +142,7 @@ class MeasurementSet():
             self.logger.warning("'phase_center' is not a CASA-formatted sky coordinate!")
             return None
 
-        csys = self.cs.newcoordsys(direction=True)
+        csys = coordsys().newcoordsys(direction=True)
         dirstr = phase_center.split()
         if len(dirstr) == 2:
             csys.setdirection(refcode="J2000", refval=phase_center)
