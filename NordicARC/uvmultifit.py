@@ -2333,7 +2333,7 @@ from the pointing direction.\n\n""")
         # Set number of spectral windows:
         gooduvm = uvmod.setNspw(int(self.Nspw))
 
-        if gooduvm != 0:
+        if gooduvm != int(self.Nspw):
             self._printError("\nError in the C++ extension!\n")
             return False
 
@@ -2427,7 +2427,7 @@ from the pointing direction.\n\n""")
                                     self.mymodel.ants[-1][0], self.mymodel.ants[-1][1],
                                     self.mymodel.isGain[-1], self.Nants)
 
-            if gooduvm != 10:
+            if not gooduvm:
                 self._printError("\nError in the C++ extension!\n")
                 return False
 
@@ -2458,7 +2458,7 @@ from the pointing direction.\n\n""")
 
         # Set number of threads:
         gooduvm = uvmod.setNCPU(int(self.NCPU))
-        if gooduvm != 0:
+        if gooduvm != int(self.NCPU):
             self._printError("\nError in the C++ extension!\n")
             return False
 
@@ -2524,7 +2524,7 @@ from the pointing direction.\n\n""")
         # Delta to estimate numerical derivatives:
         self.mymodel.minnum = self.minDp
 
-        if gooduvm != 10:
+        if not gooduvm:
             self._printError("\nError in the C++ extension!\n")
             return False
         else:
