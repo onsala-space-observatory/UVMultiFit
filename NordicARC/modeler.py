@@ -13,6 +13,20 @@ import uvmultimodel as uvmod     # type: ignore
 from .utils import get_list_of_strings, check_proper_motion
 from .simplex import _mod_simplex
 
+class Model:
+
+    def __init__(self, name, index, nparams):
+        self.name = name
+        self.index = index
+        self.nparams = nparams
+
+    def __repr__(self):
+        txt = "Model("
+        txt += f"name = {self.name}, "
+        txt += f"index = {self.index}, "
+        txt += f"nparams = {self.nparams})"
+        return txt
+
 class Modeler():
     """ Class to deal with model equations and fitting procedures.
 
@@ -24,18 +38,16 @@ class Modeler():
     logger = logging.getLogger("modeler")
     isNumerical = ['GaussianRing']
 
-    # the following models are implemented,
-    # the integer values are the number of parameters used
-    implemented_models = {'delta': 3,
-                          'Gaussian': 6,
-                          'disc': 6,
-                          'ring': 6,
-                          'sphere': 6,
-                          'bubble': 6,
-                          'expo': 6,
-                          'power-2': 6,
-                          'power-3': 6,
-                          'GaussianRing': 7}
+    implemented_models = [Model('delta',        index=0, nparams=3),
+                          Model('Gaussian',     index=1, nparams=6),
+                          Model('disc',         index=2, nparams=6),
+                          Model('ring',         index=3, nparams=6),
+                          Model('sphere',       index=4, nparams=6),
+                          Model('bubble',       index=5, nparams=6),
+                          Model('expo',         index=6, nparams=6),
+                          Model('power-2',      index=7, nparams=6),
+                          Model('power-3',      index=8, nparams=6),
+                          Model('GaussianRing', index=9, nparams=7)]
 
     def __init__(self, model: List[str] = ['delta'], var: List[str] = ['p[0], p[1], p[2]'],
                  p_ini: List[float] = [0.0, 0.0, 1.0], bounds: List = None,
@@ -146,7 +158,6 @@ class Modeler():
         self.wgtEquation = lambda D, Kf: -D * Kf
 
         # List of currently-supported model components:
-        self.allowedmod = list(self.implemented_models.keys())
         self.phase_gains = phase_gains
         self.amp_gains = amp_gains
 
@@ -293,6 +304,27 @@ class Modeler():
                 bounds[b][1] = None
         return bounds
 
+    def get_model_index(self, component):
+        model_names = [m.name for m in self.implemented_models]
+        if component not in model_names:
+            self.logger.error(f"model component '{component}' is not known!")
+            return -1
+        return model_names.index(component)
+
+    def is_valid_model(self, component, nparams):
+        """Check that model 'component' is among the implemented models and takes 'nparams' parameters"""
+
+        model_index = self.get_model_index(component)
+        if model_index == -1:
+            self.logger.error(f"model component '{component}' is not known!")
+            return False
+
+        if self.implemented_models[model_index].nparams != nparams:
+            self.logger.error(f"wrong number of variables ({nparams}) in '{component}' model")
+            return False
+
+        return True
+
     def check_model_consistency(self):
         """Get the number of parameters and check the model consistency"""
         self.logger.debug("Modeler::check_model_consistency")
@@ -301,27 +333,18 @@ class Modeler():
         # Typical function that can be used.
         lf = ['GaussLine', 'GaussLine', 'LorentzLine', 'LorentzLine', 'power', 'maximum', 'minimum']
         for i, component in enumerate(self.model):
-            if component not in self.implemented_models.keys():
-                # fmt = "Supported models are:" + " '%s' " * len(self.implemented)
-                # msg += fmt % tuple(self.implemented)
-                self.logger.error(f"model component '{component}' is not known!")
-                self.var = ''
-                return 0
-
             vic = self.var[i].count
             checkpars = [p.strip() for p in self.var[i].split(',')]
             nfuncs = sum(list(map(vic, lf)))  # 2*(self.var[i].count('GaussLine')+self.var[i].count('LorentzLine'))
             indices += self.get_parameter_indices(self.var[i])
 
-            nvars = len(checkpars) - nfuncs
-            if self.implemented_models[component] != nvars:
-                self.logger.error(f"wrong number of variables ({nvars}) in '{component}' model")
-                return 0
+            if not self.is_valid_model(component, len(checkpars) - nfuncs):
+                return False
 
         # Scalefix must be a string representing a function:
         if not isinstance(self.scalefix, str):
             self.logger.error("'scalefix' should be a string!")
-            return 0
+            return False
 
         indices += self.get_parameter_indices(self.scalefix)
         maxpar = max(indices)
@@ -331,16 +354,12 @@ class Modeler():
         self.takeModel = 'model_column' in self.fixed
         if self.takeModel:
             self.logger.info("MODEL COLUMN will be taken as fixed model.")
-            # "Skipping the 'fixedvar' column and all other fixed components")
             self.fixed = ['model_column']
             self.fixedvar = []
         else:
             for i, component in enumerate(self.fixed):
                 checkpars = self.fixedvar[i].split(',')
-                if component not in self.implemented_models.keys():
-                    self.logger.error(f"model component '{component}' is not known!")
-                elif self.implemented_models[component] != len(checkpars):
-                    self.logger.error(f"wrong number of variables ({len(checkpars)}) in '{component}' fixed model")
+                if not self.is_valid_model(component, len(checkpars)):
                     return False
         return indices
 
@@ -478,10 +497,11 @@ class Modeler():
                 self.logger.error(f"syntax error in component number {ii} of the variable model")
                 return False
 
-            if component not in self.allowedmod:
+            model_index = self.get_model_index(component)
+            if model_index == -1:
                 self.logger.error(f"component '{component}' is unknown")
                 return False
-            self.imod[ii] = self.allowedmod.index(component)
+            self.imod[ii] = model_index
         return True
 
     def _compile_fixed_model(self):
@@ -507,10 +527,11 @@ class Modeler():
                 self.logger.error(f"syntax error in component number {ii} of the fixed model")
                 return False
 
-            if component not in self.allowedmod:
+            model_index = self.get_model_index(component)
+            if model_index == -1:
                 self.logger.error(f"component '{component}' is unknown")
                 return False
-            self.ifixmod[ii] = self.allowedmod.index(component)
+            self.ifixmod[ii] = model_index
         return True
 
     def _compile_scale_factor(self):
@@ -770,7 +791,7 @@ class Modeler():
                     tempvar.append(res / m1 * np.power(-1., (mi - 1) / 2)
                                    / np.power(np.math.factorial((mi - 1) / 2), 2.))
             return tempvar
-        raise ValueError("Model %i was not correctly interpreted!\n" % imod)
+        raise ValueError("Model %i was not correctly interpreted!" % imod)
 
     def _compute_antenna_gain_corrections(self, pars, spwrange, nui):
         self.logger.debug("Modeler::_compute_antenna_gain_corrections")
@@ -1133,7 +1154,7 @@ class Modeler():
         self.logger.debug("model initiated")
         self.logger.debug(f"length of model: {str(len(self.model))}")
         N = len(self.p_ini)
-        maxNvar = max(self.implemented_models.values())
+        maxNvar = max(m.nparams for m in self.implemented_models)
         self.varbuffer = [np.zeros((len(self.model), maxNvar + self._hankelOrder, self.maxnfreq))
                           for i in range(N + 1)]
         self.varfixed = [np.zeros(self.maxnfreq) for i in range(N + 1)]
@@ -1272,7 +1293,7 @@ class Modeler():
             if self.OneFitPerChannel:
                 if np.sum(unflagged == 0.0) > 0:
                     ch = list(np.where(unflagged == 0.0))
-                    self.logger.error(f"not enough data for this time range, channels: {ch}")
+                    self.logger.error("not enough data for this time range, channels: {}".format(ch))
                     self.allflagged = True
                     notfit[si] = list(np.where(unflagged == 0.0)[0])
             else:
@@ -1308,7 +1329,6 @@ class Modeler():
         # CASE OF SPECTRAL-MODE FIT:
         if self.OneFitPerChannel:
             self.logger.debug(f"spectral mode fit")
-
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
             covariance = [[] for j in range(nspwtot)]
@@ -1319,7 +1339,7 @@ class Modeler():
             for si in range(nspwtot):
                 rang = np.shape(self.wgt[si])[1]
                 for nuidx in range(rang):
-                    self.logger.info(f"fitting channel {nuidx+1} of {rang} in spw {si}")
+                    self.logger.info("fitting channel {nuidx+1} of {} in spw {}".format(nuidx+1, rang, si))
                     self.currspw = si
                     self.currchan = nuidx
 
