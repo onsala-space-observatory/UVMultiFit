@@ -76,7 +76,6 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
         else:
             outf.write("# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.\n")
 
-        outf.write("###########################################\n")
         outf.write("#\n# MODEL CONSISTS OF:\n")
         for m, mod in enumerate(mdl.model):
             outf.write("# '" + mod + "' with variables: " + mdl.var[m] + "\n")
@@ -97,7 +96,7 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
                 outf.write(f"#  p[{p0i}] = {p0:.5e} with bounds: {str(mdl.bounds[p0i])}\n")
             else:
                 outf.write(f"#  p[{p0i}] = {p0:.5e} with no bounds\n")
-        outf.write("#\n##########################################\n")
+        outf.write("#\n")
 
         N = len(mdl.p_ini)
         parshead = [n for n in range(N) for i in range(2)]
