@@ -1,16 +1,16 @@
-from dataclasses import dataclass
-
-@dataclass
 class Simulation:
     """Class for describing a UVMultiFit simulation."""
-    array_config: str
-    center_freq: float
-    pixels: int
-    cell_size: float
-    freq_channels: int
-    channel_width: float
-    image_name: str
-    total_time: int
+
+    def __init__(self, array_config, center_freq, pixels, cell_size, freq_channels,
+                 channel_width, image_name, total_time):
+        self.array_config = array_config
+        self.center_freq = center_freq
+        self.pixels = pixels
+        self.cell_size = cell_size
+        self.freq_channels = freq_channels
+        self.channel_width = channel_width
+        self.image_name = image_name
+        self.total_time = total_time
 
 if __name__ == "__main__":
     sim = Simulation("alma.out10.cfg", center_freq=50.0, pixels=1000, cell_size=0.01,

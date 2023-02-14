@@ -1,5 +1,6 @@
 from setuptools import setup, Extension, find_packages
 
+import sys
 import platform
 
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
@@ -39,4 +40,4 @@ with open("README.md", "r") as fh:
 setup(packages=find_packages(include=["NordicARC"]),
       ext_modules=[c_ext],
       include_dirs=[include_gsl_dir],
-      long_description=long_description)
+      long_description=long_description,)
