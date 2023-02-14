@@ -15,6 +15,28 @@ from casatools import coordsys       # type: ignore
 from .utils import get_list_of_strings, is_list_of_int, is_list_of_floats
 from .utils import is_casa_position, is_valid_stokes
 
+class FieldData():
+
+    def __init__(self, datascanAv, weightscan, uscan, vscan, wscan, tscan, tArray, tIndex,
+                 RAscan, Decscan, Stretchscan, ant1scan, ant2scan, modelscanAv=None):
+        self.datascanAv = datascanAv
+        self.weightscan = weightscan
+        self.uscan = uscan
+        self.vscan = vscan
+        self.wscan = wscan
+        self.tscan = tscan
+        self.tArray = tArray
+        self.tIndex = tIndex
+        self.RAscan = RAscan
+        self.Decscan = Decscan
+        self.Stretchscan = Stretchscan
+        self.ant1scan = ant1scan
+        self.ant2scan = ant2scan
+        self.modelscanAv = modelscanAv
+
+    def __repr__(self):
+        return f"FieldData(tIndex = {self.tIndex[0]}...{self.tIndex[-1]})"
+
 @contextmanager
 def open_ms(msname: str):
     """A context manager to reattach to a measurement set table."""
@@ -387,6 +409,159 @@ class MeasurementSet():
 
         return maskfld, uvscan, times, datascan
 
+    def get_field_data(self, fieldid, scan, masksc, msname, vis_index, rang,
+                       sp, si, max_tIndex, i0scan, takeModel):
+        self.logger.info(f"reading scan #{scan}, field: {fieldid}")
+        F = self.get_field_id(msname, masksc, fieldid, takeModel, self.column)
+        maskfld, uvscan, times, datascan = F
+        if len(maskfld) == 0:
+            return None
+
+        # Compute the polarization product:
+        # Bad data has zero weight:
+        datascan['weight'][np.logical_not(np.isfinite(datascan['weight']))] = 0.0
+
+        nfreq = len(rang)
+        # All unflagged weights set to equal (if uniform):
+        if self.uniform:
+            datascan['weight'][datascan['weight'] > 0.0] = 1.0
+
+        datascan['weight'][datascan['weight'] < 0.0] = 0.0
+
+        copyweight = np.copy(datascan['weight'])
+        totalmask = datascan['flag']
+        origmasked = np.ma.array(datascan[self.column], mask=totalmask, dtype=np.complex128)
+
+        if takeModel:
+            origmodmasked = np.ma.array(datascan['model_data'],
+                                        mask=totalmask,
+                                        dtype=np.complex128)
+
+        # The weights are weighting the RESIDUALS, and not the ChiSq terms.
+        # Hence, we divide wgt_power by 2.:
+        origweight = np.power(copyweight, self.wgt_power / 2.)
+
+        # Completely flagged times/baselines:
+        origweight[np.sum(np.logical_not(totalmask), axis=1) == 0] = 0.0
+
+        datamask = 0.0
+        weightmask = 0.0
+        flagmask = 0.0
+        modelmask = 0.0
+
+        # Construct the required polarization from the correlation products:
+        polavg = [pol != 0.0 for pol in self.pol2aver[vis_index]]
+
+        if self.polmod[vis_index] == 2:
+            flagmask = np.ma.logical_and(
+                totalmask[self.polii[vis_index][0], :, :],
+                totalmask[self.polii[vis_index][1], :, :])
+            datamask = np.ma.average(origmasked[polavg, :].real, axis=0) + \
+                1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
+
+            if takeModel:
+                modelmask = np.ma.average(origmodmasked[polavg, :].real, axis=0) + \
+                    1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
+
+            weightmask = np.sum(origweight[polavg, :], axis=0)
+        else:
+            if self.polmod[vis_index] == 3:
+                flagmask = totalmask[self.polii[vis_index][0], :, :]
+            else:
+                flagmask = np.ma.logical_or(totalmask[self.polii[vis_index][0], :, :],
+                                            totalmask[self.polii[vis_index][1], :, :])
+
+            for pol in self.polii[vis_index]:
+                datamask += origmasked[pol, :] * self.pol2aver[vis_index][pol]
+                if takeModel:
+                    modelmask += origmodmasked[pol, :] * self.pol2aver[vis_index][pol]
+                weightmask += origweight[pol, :]
+
+            if self.polmod[vis_index] == 1:
+                datamask *= 1.j
+                if takeModel:
+                    modelmask *= 1.j
+
+        # Free some memory:
+        for key in list(datascan):
+            del datascan[key]
+        del datascan, origmasked, origweight
+        del copyweight, totalmask, flagmask
+        if takeModel:
+            del origmodmasked
+
+        # Mosaic-related corrections:
+        phshift = 3600. * 180. / np.pi * (self.phasedirs[vis_index][fieldid] - self.refpos)
+        strcos = np.cos(self.phasedirs[vis_index][fieldid][1])
+
+        if phshift[0] != 0.0 or phshift[1] != 0.0:
+            self.logger.info(f"offset: {phshift[0]/15.0:.2e} RA (tsec) "
+                             f"{phshift[1]:.2e} Dec (asec)")
+
+        # Average spectral channels:
+        _, ndata = np.shape(datamask)
+
+        # ntimes = len(times)
+        # ntav = int(max([1, round(float(ntimes) / self.timewidth)]))
+        datatemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
+        if takeModel:
+            modeltemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
+        weighttemp = np.ma.zeros((nfreq, ndata))
+
+        if self.chanwidth == 1:
+            concRan = [c[0] for c in rang]
+            datatemp[:, :] = datamask[concRan, :]
+            if takeModel:
+                modeltemp[:, :] = modelmask[concRan, :]
+            weighttemp[:, :] = weightmask[np.newaxis, :]
+        else:
+            for nu in range(nfreq):
+                datatemp[nu, :] = np.ma.average(
+                    datamask[rang[nu], :].real, axis=0) + \
+                    1.j * np.ma.average(datamask[rang[nu], :].imag, axis=0)
+                if takeModel:
+                    modeltemp[nu, :] = np.ma.average(
+                        modelmask[rang[nu], :].real, axis=0) + \
+                        1.j * np.ma.average(modelmask[rang[nu], :].imag, axis=0)
+                weighttemp[nu, :] = weightmask
+
+        shape = np.shape(uvscan['time'])
+        RAoff = np.full(shape, float(phshift[0]))
+        Decoff = np.full(shape, float(phshift[1]))
+        Stretch = np.full(shape, float(strcos))
+
+        ant1scan = np.copy(uvscan['antenna1'][:])
+        ant2scan = np.copy(uvscan['antenna2'][:])
+        uscan = np.copy(uvscan['uvw'][0, :])
+        vscan = np.copy(uvscan['uvw'][1, :])
+        wscan = np.copy(uvscan['uvw'][2, :])
+        tscan = np.copy(uvscan['time'][:])
+        tArray = np.copy(times)
+
+        tIndex = np.zeros(np.shape(uvscan['time']), dtype=np.int32)
+        for tid, tiii in enumerate(times):
+            tIndex[uvscan['time'] == tiii] = tid
+        tIndex += max_tIndex
+
+        datascanAv = np.transpose(datatemp)
+        if self.uniform:
+            weightscan = np.transpose(np.ones(np.shape(weighttemp)))
+        else:
+            weightscan = np.transpose(weighttemp)
+
+        # Useful info for function writeModel() and for pointing correction:
+        if scan not in self.iscan[msname][sp].keys():
+            self.iscan[msname][sp][scan] = []
+
+        self.iscan[msname][sp][scan].append(
+            [int(si), int(i0scan), int(ndata), list(rang), np.copy(maskfld)])
+        self.iscancoords[si].append([i0scan, i0scan + ndata, phshift[0], phshift[1]])
+        fieldData = FieldData(datascanAv, weightscan, uscan, vscan, wscan, tscan,
+                              tArray, tIndex, RAoff, Decoff, Stretch, ant1scan, ant2scan)
+        if takeModel:
+            fieldData.modelscanAv = np.transpose(modeltemp)
+        return fieldData
+
     def read_data(self, takeModel=False):
         """Reads the data, according to the properties ``vis, column, chanwidth``, etc.
 
@@ -433,8 +608,6 @@ class MeasurementSet():
         self.averfreqs = [[] for sp in nsprang]
         self.iscancoords = [[] for sp in nsprang]
 
-        # maxDist = 0.0
-
         # Read data for each spectral window:
         self.iscan = {}
         for vi in self.vis:
@@ -443,21 +616,8 @@ class MeasurementSet():
         for si in nsprang:
             self.logger.info(f"spectral index #{si} ({si+1} of {len(nsprang)})")
             # These are temporary lists of arrays that will be later concatenated:
-            datascanAv = []
-            modelscanAv = []
-            #   datascanim = []
-            weightscan = []
-            uscan = []
-            vscan = []
-            wscan = []
-            tscan = []
-            tArray = []
-            tIndex = []
-            ant1scan = []
-            ant2scan = []
-            RAscan = []
-            Decscan = []
-            Stretchscan = []
+            field_data = []
+            max_tIndex = 0
 
             i0scan = 0
 
@@ -468,279 +628,74 @@ class MeasurementSet():
                 DDSC = self.get_data_description(msname)
 
                 for spidx, spi in enumerate(vis[2]):
-                    if vis[3] + spidx == si:
-                        sp = spi[0]
-                        rang = spi[1]
-                        self.iscan[msname][sp] = {}
+                    if vis[3] + spidx != si:
+                        continue
+                    sp = spi[0]
+                    rang = spi[1]
+                    self.iscan[msname][sp] = {}
 
-                        DDs = np.where(DDSC == sp)[0]
-                        if len(DDs) > 1:
-                            self.logger.warning(f"spw {sp} has more than one Data Description ID!")
+                    DDs = np.where(DDSC == sp)[0]
+                    if len(DDs) > 1:
+                        self.logger.warning(f"spw {sp} has more than one Data Description ID!")
 
-                        maskspw = np.zeros(np.shape(crosscorr), dtype=bool)
-                        for ddi in DDs:
-                            maskspw = np.logical_or(maskspw, SPW == ddi)
-                        maskspw *= crosscorr
+                    maskspw = np.zeros(np.shape(crosscorr), dtype=bool)
+                    for ddi in DDs:
+                        maskspw = np.logical_or(maskspw, SPW == ddi)
+                    maskspw *= crosscorr
 
-                        # For the first ms in the list, read the frequencies of the spw.
-                        # All the other mss will be assumed to have the same frequencies:
-                        # if True:
-                        origfreqs = self.get_spectral_window(msname)
-                        self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
-                        nfreq = len(rang)
+                    # For the first ms in the list, read the frequencies of the spw.
+                    # All the other mss will be assumed to have the same frequencies:
+                    # if True:
+                    origfreqs = self.get_spectral_window(msname)
+                    self.averfreqs[si] = np.array([np.average(origfreqs[r]) for r in rang])
 
-                        self.logger.info(f"reading scans for spw {sp}")
-                        # Read all scans for this field id:
-                        for sc, scan in enumerate(self.sourscans[vis[1]]):
-                            masksc, fieldids = self.get_scan_mask(msname, scan, maskspw)
-
-                            for fieldid in fieldids:
-                                self.logger.info(f"reading scan #{scan} "
-                                                 f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
-                                F = self.get_field_id(msname, masksc, fieldid, takeModel, self.column)
-                                maskfld, uvscan, times, datascan = F
-                                if len(maskfld) != 0:
-                                    # NOTE: There is a bug in np.ma.array that casts complex
-                                    # to float under certain operations (e.g., np.ma.average).
-                                    # That's why we average real and imag separately.
-
-                                    # Compute the polarization product:
-
-                                    # Bad data has zero weight:
-                                    datascan['weight'][np.logical_not(np.isfinite(datascan['weight']))] = 0.0
-
-                                    # All unflagged weights set to equal (if uniform):
-                                    if self.uniform:
-                                        datascan['weight'][datascan['weight'] > 0.0] = 1.0
-
-                                    datascan['weight'][datascan['weight'] < 0.0] = 0.0
-                                    copyweight = np.copy(datascan['weight'])
-
-                                    totalmask = datascan['flag']
-                                    origmasked = np.ma.array(datascan[self.column], mask=totalmask, dtype=np.complex128)
-
-                                    if takeModel:
-                                        origmodmasked = np.ma.array(datascan['model_data'],
-                                                                    mask=totalmask,
-                                                                    dtype=np.complex128)
-
-                                    # The weights are weighting the RESIDUALS, and not the ChiSq terms.
-                                    # Hence, we divide wgt_power by 2.:
-                                    origweight = np.power(copyweight, self.wgt_power / 2.)
-
-                                    # Completely flagged times/baselines:
-                                    origweight[np.sum(np.logical_not(totalmask), axis=1) == 0] = 0.0
-
-                                    datamask = 0.0
-                                    weightmask = 0.0
-                                    flagmask = 0.0
-                                    modelmask = 0.0
-
-                                    # Construct the required polarization from the correlation products:
-                                    polavg = [pol != 0.0 for pol in self.pol2aver[vis[1]]]
-
-                                    if self.polmod[vis[1]] == 2:
-                                        flagmask = np.ma.logical_and(
-                                            totalmask[self.polii[vis[1]][0], :, :],
-                                            totalmask[self.polii[vis[1]][1], :, :])
-                                        datamask = np.ma.average(origmasked[polavg, :].real, axis=0) + \
-                                            1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
-
-                                        if takeModel:
-                                            modelmask = np.ma.average(origmodmasked[polavg, :].real, axis=0) + \
-                                                1.j * np.ma.average(origmasked[polavg, :].imag, axis=0)
-
-                                        weightmask = np.sum(origweight[polavg, :], axis=0)
-                                    else:
-                                        if self.polmod[vis[1]] == 3:
-                                            flagmask = totalmask[self.polii[vis[1]][0], :, :]
-                                        else:
-                                            flagmask = np.ma.logical_or(totalmask[self.polii[vis[1]][0], :, :],
-                                                                        totalmask[self.polii[vis[1]][1], :, :])
-
-                                        for pol in self.polii[vis[1]]:
-                                            datamask += origmasked[pol, :] * self.pol2aver[vis[1]][pol]
-                                            if takeModel:
-                                                modelmask += origmodmasked[pol, :] * self.pol2aver[vis[1]][pol]
-                                            weightmask += origweight[pol, :]
-
-                                        if self.polmod[vis[1]] == 1:
-                                            datamask *= 1.j
-                                            if takeModel:
-                                                modelmask *= 1.j
-
-                                    # Free some memory:
-                                    for key in list(datascan):
-                                        del datascan[key]
-                                    del datascan, origmasked, origweight
-                                    del copyweight, totalmask, flagmask
-                                    if takeModel:
-                                        del origmodmasked
-
-                                    # Mosaic-related corrections:
-                                    phshift = 3600. * 180. / np.pi * (self.phasedirs[vis[1]][fieldid] - self.refpos)
-                                    strcos = np.cos(self.phasedirs[vis[1]][fieldid][1])
-
-                                    if phshift[0] != 0.0 or phshift[1] != 0.0:
-                                        self.logger.info(f"offset: {phshift[0]/15.0:.2e} RA (tsec) "
-                                                         f"{phshift[1]:.2e} Dec (asec)")
-
-                                    # Average spectral channels:
-                                    _, ndata = np.shape(datamask)
-                                    # ntimes = len(times)
-                                    # ntav = int(max([1, round(float(ntimes) / self.timewidth)]))
-                                    datatemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
-                                    if takeModel:
-                                        modeltemp = np.ma.zeros((nfreq, ndata), dtype=np.complex128)
-                                    weighttemp = np.ma.zeros((nfreq, ndata))
-
-                                    if self.chanwidth == 1:
-                                        concRan = [c[0] for c in rang]
-                                        datatemp[:, :] = datamask[concRan, :]
-                                        if takeModel:
-                                            modeltemp[:, :] = modelmask[concRan, :]
-                                        weighttemp[:, :] = weightmask[np.newaxis, :]
-                                    else:
-                                        for nu in range(nfreq):
-                                            datatemp[nu, :] = np.ma.average(
-                                                datamask[rang[nu], :].real, axis=0) + \
-                                                1.j * np.ma.average(datamask[rang[nu], :].imag, axis=0)
-                                            if takeModel:
-                                                modeltemp[nu, :] = np.ma.average(
-                                                    modelmask[rang[nu], :].real, axis=0) + \
-                                                    1.j * np.ma.average(modelmask[rang[nu], :].imag, axis=0)
-                                            weighttemp[nu, :] = weightmask
-
-                                    # Average in time and apply uvtaper:
-                                    # GaussWidth = 2. * (self.uvtaper / 1.17741)**2.
-                                    RAoffi = np.zeros(np.shape(uvscan['time']))
-                                    Decoffi = np.copy(RAoffi)
-                                    Stretchi = np.copy(RAoffi)
-
-                                    #  if self.timewidth ==1:
-
-                                    RAoffi[:] = float(phshift[0])
-                                    Decoffi[:] = float(phshift[1])
-                                    Stretchi[:] = float(strcos)
-
-                                    ant1scan.append(np.copy(uvscan['antenna1'][:]))
-                                    ant2scan.append(np.copy(uvscan['antenna2'][:]))
-                                    uscan.append(np.copy(uvscan['uvw'][0, :]))
-                                    vscan.append(np.copy(uvscan['uvw'][1, :]))
-                                    wscan.append(np.copy(uvscan['uvw'][2, :]))
-                                    tscan.append(np.copy(uvscan['time'][:]))
-                                    tArray.append(np.copy(times))
-
-                                    tIndexi = np.zeros(np.shape(uvscan['time']), dtype=np.int32)
-                                    for tid, tiii in enumerate(times):
-                                        tIndexi[uvscan['time'] == tiii] = tid
-
-                                    if len(tIndex) > 1:
-                                        tIndexi += np.max(tIndex[-1]) + 1
-                                    tIndex.append(tIndexi)
-
-                                    RAscan.append(RAoffi)
-                                    Decscan.append(Decoffi)
-                                    Stretchscan.append(Stretchi)
-
-                                    datascanAv.append(np.transpose(datatemp))
-                                    if takeModel:
-                                        modelscanAv.append(np.transpose(modeltemp))
-                                    if self.uniform:
-                                        weightscan.append(np.transpose(np.ones(np.shape(weighttemp))))
-                                    else:
-                                        weightscan.append(np.transpose(weighttemp))
-
-                                    # Useful info for function writeModel() and for pointing correction:
-                                    if scan not in self.iscan[msname][sp].keys():
-                                        self.iscan[msname][sp][scan] = []
-
-                                    self.iscan[msname][sp][scan].append(
-                                        [int(si), int(i0scan), int(ndata), list(rang), np.copy(maskfld)])
-                                    self.iscancoords[si].append([i0scan, i0scan + ndata, phshift[0], phshift[1]])
-
-                                    i0scan += ndata
+                    self.logger.info(f"reading scans for spw {sp}")
+                    # Read all scans for this field id:
+                    for sc, scan in enumerate(self.sourscans[vis[1]]):
+                        masksc, fieldids = self.get_scan_mask(msname, scan, maskspw)
+                        for fieldid in fieldids:
+                            self.logger.info(f"reading scan #{scan} "
+                                             f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
+                            fD = self.get_field_data(fieldid, scan, masksc, msname, vis[1],
+                                                     rang, sp, si, max_tIndex, i0scan, takeModel)
+                            print(fD)
+                            field_data.append(fD)
+                            max_tIndex = np.max(fD.tIndex) + 1
+                            i0scan += np.shape(fD.datascanAv)[0]
 
             # Concatenate all the scans in one single array. Notice that we separate real and imag and save them
             # as floats. This is because ctypes doesn't handle complex128.
-            self.averdata[si] = np.require(np.concatenate(datascanAv, axis=0),
-                                           requirements=['C', 'A'])  # , np.concatenate(datascanim, axis=0)]
+            self.averdata[si] = np.require(np.concatenate([fd.datascanAv for fd in field_data], axis=0),
+                                           requirements=['C', 'A'])
 
             if takeModel:
-                self.avermod[si] = np.require(np.concatenate(modelscanAv, axis=0),
+                self.avermod[si] = np.require(np.concatenate([fd.modelscanAv for fd in field_data], axis=0),
                                               requirements=['C', 'A'])
 
-            self.averweights[si] = np.require(np.concatenate(weightscan, axis=0),
+            self.averweights[si] = np.require(np.concatenate([fd.weightscan for fd in field_data], axis=0),
                                               dtype=np.float64, requirements=['C', 'A'])
-            self.u[si] = np.require(np.concatenate(uscan, axis=0),
+            self.u[si] = np.require(np.concatenate([fd.uscan for fd in field_data], axis=0),
                                     dtype=np.float64, requirements=['C', 'A'])
-            self.v[si] = np.require(np.concatenate(vscan, axis=0),
+            self.v[si] = np.require(np.concatenate([fd.vscan for fd in field_data], axis=0),
                                     dtype=np.float64, requirements=['C', 'A'])
-            self.w[si] = np.require(np.concatenate(wscan, axis=0),
+            self.w[si] = np.require(np.concatenate([fd.wscan for fd in field_data], axis=0),
                                     dtype=np.float64, requirements=['C', 'A'])
-            self.t[si] = np.require(np.concatenate(tscan, axis=0),
+            self.t[si] = np.require(np.concatenate([fd.tscan for fd in field_data], axis=0),
                                     dtype=np.float64, requirements=['C', 'A'])
-            self.tArr[si] = np.require(np.concatenate(tArray, axis=0),
+            self.tArr[si] = np.require(np.concatenate([fd.tArray for fd in field_data], axis=0),
                                        dtype=np.float64, requirements=['C', 'A'])
-            self.tIdx[si] = np.require(np.concatenate(tIndex, axis=0),
+            self.tIdx[si] = np.require(np.concatenate([fd.tIndex for fd in field_data], axis=0),
                                        dtype=np.int32, requirements=['C', 'A'])
-            self.RAshift[si] = np.require(np.concatenate(RAscan, axis=0),
+            self.RAshift[si] = np.require(np.concatenate([fd.RAscan for fd in field_data], axis=0),
                                           dtype=np.float64, requirements=['C', 'A'])
-            self.Decshift[si] = np.require(np.concatenate(Decscan, axis=0),
+            self.Decshift[si] = np.require(np.concatenate([fd.Decscan for fd in field_data], axis=0),
                                            dtype=np.float64, requirements=['C', 'A'])
-            self.Stretch[si] = np.require(np.concatenate(Stretchscan, axis=0),
+            self.Stretch[si] = np.require(np.concatenate([fd.Stretchscan for fd in field_data], axis=0),
                                           dtype=np.float64, requirements=['C', 'A'])
-            self.ant1[si] = np.require(np.concatenate(ant1scan, axis=0),
+            self.ant1[si] = np.require(np.concatenate([fd.ant1scan for fd in field_data], axis=0),
                                        dtype=np.int32, requirements=['C', 'A'])
-            self.ant2[si] = np.require(np.concatenate(ant2scan, axis=0),
+            self.ant2[si] = np.require(np.concatenate([fd.ant2scan for fd in field_data], axis=0),
                                        dtype=np.int32, requirements=['C', 'A'])
-
-            # Free some memory:
-            #   del uu, vv, ww, avercomplflat, weightflat
-            del datatemp, weighttemp, uvscan  # , avercompl, averwgt
-            for dda in datascanAv:
-                del dda
-            #   for dda in datascanim:
-            #     del dda
-            if takeModel:
-                for dda in modelscanAv:
-                    del dda
-            for dda in weightscan:
-                del dda
-            for dda in tscan:
-                del dda
-            for dda in uscan:
-                del dda
-            for dda in vscan:
-                del dda
-            for dda in wscan:
-                del dda
-            for dda in RAscan:
-                del dda
-            for dda in Decscan:
-                del dda
-            for dda in Stretchscan:
-                del dda
-            for dda in ant1scan:
-                del dda
-            for dda in ant2scan:
-                del dda
-            for dda in tArray:
-                del dda
-            for dda in tIndex:
-                del dda
-
-            del datascanAv  # , datascanim
-            del weightscan, tscan, uscan, vscan, wscan, tArray, tIndex
-            del RAscan, Decscan, Stretchscan, ant1scan, ant2scan
-            if takeModel:
-                del modelscanAv
-
-            # try:
-            #     del GaussFact
-            # except Exception:
-            #     pass
-            # gc.collect()
 
         # Initial and final times of observations (time reference for proper motions):
         self.t0 = np.min([np.min(ti) for ti in self.t])
