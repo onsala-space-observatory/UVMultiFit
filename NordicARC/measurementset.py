@@ -51,13 +51,13 @@ def open_ms(msname: str):
         mstool.close()
 
 @contextmanager
-def open_tb(msname: str):
+def open_tb(msname: str, nomodify=True):
     """A context manager to open a disk file containing an existing casa table."""
 
     tbtool = table()
     try:
         logging.debug(f"open measurementset {msname}")
-        tbtool.open(msname)
+        tbtool.open(msname, nomodify=nomodify)
         yield tbtool
     finally:
         logging.debug(f"close measurementset {msname}")
@@ -658,7 +658,6 @@ class MeasurementSet():
                                              f"({sc+1} of {len(self.sourscans[vis[1]])}), field: {fieldid}")
                             fD = self.get_field_data(fieldid, scan, masksc, msname, vis[1],
                                                      rang, sp, si, max_tIndex, i0scan, takeModel)
-                            print(fD)
                             field_data.append(fD)
                             max_tIndex = np.max(fD.tIndex) + 1
                             i0scan += np.shape(fD.datascanAv)[0]
@@ -820,7 +819,7 @@ class MeasurementSet():
                 for scan in self.iscan[v][sp].keys():
                     for select in self.iscan[v][sp][scan]:
                         self.logger.info(f"doing '{v}': spw {sp}, scan_id {scan}")
-                        with open_tb(v) as tb:
+                        with open_tb(v, nomodify=False) as tb:
                             tb2 = tb.selectrows(select[-1])
                             moddata = tb2.getcol(column)
                             re = np.transpose(model.output[select[0]][select[1]:select[1] + select[2], :])
@@ -882,23 +881,9 @@ class MeasurementSet():
         return [True, output]
 
 if __name__ == "__main__":
-    # data = MeasurementSet('foo', spw=['0'])
-    # data.check_measurementset()
-    # print(data)
-
     data = MeasurementSet('../test-cases/Disc/Disc.alma.out10.noisy.ms')  # , stokes='YY')
     data.check_measurementset()
     data.read_data()
-    # print(data.channeler('')[0])
-    # print(data.channeler('0')[0])
-    # print(data.channeler('1')[0])
-    # print(data.channeler('0~3')[0])
-    # print(data.channeler('0,2,3')[0])
-    # print(data.channeler('1,3,5')[0])
-    # print(data.channeler('*:10~50')[0])
-    # print(data.channeler('1~3:30~40')[0])
-    # data.dump()
-    # print(data)
 
     # data = MeasurementSet('../test-cases/Disc/Disc.alma.out10.noisy.ms', field='Disc.alma.out10_0',
     #                       phase_center='J2000 12h34m56.0s 01d02m03.0s')
