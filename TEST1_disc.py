@@ -17,8 +17,14 @@ cl = componentlist()
 ia = image()
 qa = quanta()
 
-sim = Simulation(array_config="alma.out10.cfg", center_freq=50.0, pixels=1000, cell_size=0.01,
-                 freq_channels=100, channel_width=0.01, image_name="Disc", total_time=300)
+sim = Simulation(array_config="alma.out10.cfg",
+                 center_freq=50.0,
+                 pixels=1000,
+                 cell_size=0.01,
+                 freq_channels=100,
+                 channel_width=0.01,
+                 image_name="Disc",
+                 total_time=300)
 
 Nu = f"{sim.center_freq}GHz"
 cell = f"{sim.cell_size}arcsec"

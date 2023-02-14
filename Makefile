@@ -1,4 +1,4 @@
-CASADIR=/home/data/casa-6.4.0-16
+CASADIR=/home/data/casa-6.1.2-7-pipeline-2020.1.0.36
 PYTHON=$(CASADIR)/bin/python3
 
 install:
