@@ -118,7 +118,7 @@ r = uvm.uvmultifit(vis=vis, spw='0',
                    p_ini=initial, pbeam=pbeam,
                    bounds=modbounds)
 
-S = np.array([2.435e-01, 1.000e+00, 2.000e-01, 5.000e-01, 6.000e+01])
+S = np.array([1.0000, 1.000e+00, 2.000e-01, 5.000e-01, 6.000e+01])
 
 print(f"disc flux at 50GHz (Jy): {r['Parameters'][0]:7.3f} +/- {r['Uncertainties'][0]:.3f}, true: {S[0]:7.3f}")
 print(f"disc spectral index:     {r['Parameters'][1]:7.3f} +/- {r['Uncertainties'][1]:.3f}, true: {S[1]:7.3f}")
