@@ -110,6 +110,17 @@ void show_info(const char *var, PyObject *obj)
     std::cout << ", size " << size << std::endl;
 }
 
+#define DELTA        0
+#define GAUSSIAN     1
+#define DISC         2
+#define RING         3
+#define SPHERE       4
+#define BUBBLE       5
+#define EXPO         6
+#define POWER_2      7
+#define POWER_3      8
+#define GAUSSIANRING 9
+
 /* Docstrings */
 static char module_docstring[] =
     "This module provides an interface for least-square visibility fitting.";
@@ -265,11 +276,6 @@ static PyObject *clearPointers(PyObject *self, PyObject *args)
       case 1:
         break;
       case 2:
-        // NCPU = -1;
-        // Nspw = -1;
-        // npar = -1;
-        // Nants = -1;
-        // ncomp = -1;
         master.t0.resize(1);
         master.t1.resize(1);
         isModel = false;
@@ -526,31 +532,31 @@ void *writemod(void *work)
 
                                 if (UVRad > 0.0) {
                                     switch (mod.models[m]) {
-                                      case 1:
+                                      case GAUSSIAN:
                                         Ampli = exp(-0.3606737602*UVRad*UVRad);
                                         break;
-                                      case 2:
+                                      case DISC:
                                         Ampli = 2.0*gsl_sf_bessel_J1(UVRad)/UVRad;
                                         break;
-                                      case 3:
+                                      case RING:
                                         Ampli = gsl_sf_bessel_J0(UVRad);
                                         break;
-                                      case 4:
+                                      case SPHERE:
                                         Ampli = 3.0*(sin(UVRad)-UVRad*cos(UVRad))/(UVRad*UVRad*UVRad);
                                         break;
-                                      case 5:
+                                      case BUBBLE:
                                         Ampli = sin(UVRad)/UVRad;
                                         break;
-                                      case 6:
+                                      case EXPO:
                                         Ampli = pow(1.+2.0813689810056077*UVRad*UVRad,-1.5);
                                         break;
-                                      case 7:
+                                      case POWER_2:
                                         Ampli = 0.459224094*gsl_sf_bessel_K0(UVRad);
                                         break;
-                                      case 8:
+                                      case POWER_3:
                                         Ampli = exp(-UVRad*1.3047660265);
                                         break;
-                                    default:
+                                      default:
                                         Ampli = tempAmp;
                                     }
                                 } else {
