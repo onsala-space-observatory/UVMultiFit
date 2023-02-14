@@ -553,14 +553,14 @@ class Modeler():
     #
     #  GET UNBOUND PARAMETER SPACE FROM BOUND PARAMETERS
     #
-    def getPar2(self, mode=0):
+    def _getPar2(self, mode=0):
         """ Function to change fitting parameters to/from the unbound space from/to the bound space.
 
         It also comptues the gradient for the Jacobian matrix. Unbound values are in index 0, gradient is
         in index 1, and bound values are in index 2. The equations for the changes of variables are taken
         from the MINUIT package."""
 
-        self.logger.debug("Modeler::getPar2")
+        self.logger.debug("Modeler::_getPar2")
         if self.bounds is None:
             self.par2[1, :] = 1.0
             if mode == 0:
@@ -625,7 +625,7 @@ class Modeler():
             partol = functol
         Chi2 = 0
         self.par2[2, :] = pars
-        self.getPar2()
+        self._getPar2()
 
         Hessian2 = np.zeros(np.shape(self.Hessian), dtype=np.float64)
         Gradient2 = np.zeros(np.shape(self.Gradient), dtype=np.float64)
@@ -674,7 +674,7 @@ class Modeler():
                 Dpar = 0.0
                 TheorImpr = -10.0
             self.par2[0, :] += Dpar
-            self.getPar2(mode=1)
+            self._getPar2(mode=1)
             if goodsol:
                 self.Hessian[:, :] = 0.0
                 self.Gradient[:] = 0.0
@@ -720,14 +720,14 @@ class Modeler():
                 self.par2[0, :] = backupP
                 Hessian2[:, :] = backupHess
                 Gradient2[:] = backupGrad
-                self.getPar2(mode=1)
+                self._getPar2(mode=1)
                 break
 
             if CurrChi < Chi2:
                 self.par2[0, :] = backupP
                 Hessian2[:, :] = backupHess
                 Gradient2[:] = backupGrad
-                self.getPar2(mode=1)
+                self._getPar2(mode=1)
             else:
                 CurrChi = Chi2
                 backupHess[:, :] = Hessian2
@@ -740,7 +740,7 @@ class Modeler():
                              + "Please, check if the parameter values are meaningful.\n")
             sys.stdout.flush()
 
-        self.getPar2(mode=1)
+        self._getPar2(mode=1)
 
         try:
             return True, [self.par2[2, :], np.linalg.pinv(self.Hessian), Chi2]
@@ -1339,7 +1339,7 @@ class Modeler():
             for si in range(nspwtot):
                 rang = np.shape(self.wgt[si])[1]
                 for nuidx in range(rang):
-                    self.logger.info("fitting channel {nuidx+1} of {} in spw {}".format(nuidx+1, rang, si))
+                    self.logger.info("fitting channel {} of {} in spw {}".format(nuidx+1, rang, si))
                     self.currspw = si
                     self.currchan = nuidx
 
