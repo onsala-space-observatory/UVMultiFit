@@ -27,9 +27,9 @@ class Modeler():
     # the following models are implemented,
     # the integer values are the number of parameters used
     implemented_models = {'delta': 3,
+                          'Gaussian': 6,
                           'disc': 6,
                           'ring': 6,
-                          'Gaussian': 6,
                           'sphere': 6,
                           'bubble': 6,
                           'expo': 6,
