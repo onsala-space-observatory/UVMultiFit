@@ -73,10 +73,10 @@ class Modeler():
 
         self.var = get_list_of_strings(var)  # variables of the model components.
         self.scalefix = scalefix
-        self._hankelOrder = HankelOrder if self.is_numerical_model(self.model) else 0
+        self._hankel_order = HankelOrder if self.is_numerical_model(self.model) else 0
         self.p_ini = p_ini
         self.bounds = self.check_bounds(bounds, p_ini)
-        self.OneFitPerChannel = OneFitPerChannel
+        self._spectral_mode = OneFitPerChannel
 
         # Lists of compiled functions (one per model component).
         # These will take p and nu and return the variables of the model:
@@ -190,8 +190,8 @@ class Modeler():
         txt += f"fixedvar = {self.fixedvar}, "
         txt += f"scalefix = {self.scalefix}, "
         txt += f"NCPU = {self._NCPU}, "
-        txt += f"fluxOnly = {self._only_flux}, "
-        txt += f"hankelOrder = {self._hankelOrder}, "
+        txt += f"flux_only = {self._only_flux}, "
+        txt += f"hankel_order = {self._hankel_order}, "
         txt += f"phase_gains = {self.phase_gains}, "
         txt += f"phase_gains = {self.phase_gains})"
         return txt
@@ -246,23 +246,31 @@ class Modeler():
         self._NCPU = no_of_cpus
 
     @property
-    def fluxOnly(self):
+    def flux_only(self):
         return self._only_flux
 
-    @fluxOnly.setter
-    def fluxOnly(self, flag):
+    @flux_only.setter
+    def flux_only(self, flag):
         self._only_flux = flag
         if flag and len(self.p_ini) != len(self.model):
             self.logger.error(f"only_flux=True, but number of parameters ({len(self.p_ini)}) "
                               f"!= number of model components ({len(self.model)}).")
 
     @property
-    def hankelOrder(self):
-        return self._hankelOrder
+    def hankel_order(self):
+        return self._hankel_order
 
-    @hankelOrder.setter
-    def hankelOrder(self, flag):
-        self._hankelOrder = flag
+    @hankel_order.setter
+    def hankel_order(self, order):
+        self._hankel_order = order
+
+    @property
+    def spectral_mode(self):
+        return self._spectral_mode
+
+    @spectral_mode.setter
+    def spectral_mode(self, flag):
+        self._spectral_mode = flag
 
     @classmethod
     def get_parameter_indices(cls, par):
@@ -756,7 +764,7 @@ class Modeler():
         """ Compute elements of Taylor expansion of the source's Hankel transform."""
 
         self.logger.debug("Modeler::_grid_model")
-        n = self._hankelOrder - 1
+        n = self._hankel_order - 1
 
         if imod == 'GaussianRing':   # Gaussian Ring
 
@@ -873,7 +881,7 @@ class Modeler():
 
         self.logger.debug("Modeler::residuals")
 
-        #  varsize = self.maxNvar + self._hankelOrder
+        #  varsize = self.maxNvar + self._hankel_order
         if mode in [0, -3]:
             self.calls = 0
         else:
@@ -1155,7 +1163,7 @@ class Modeler():
         self.logger.debug(f"length of model: {str(len(self.model))}")
         N = len(self.p_ini)
         maxNvar = max(m.nparams for m in self.implemented_models)
-        self.varbuffer = [np.zeros((len(self.model), maxNvar + self._hankelOrder, self.maxnfreq))
+        self.varbuffer = [np.zeros((len(self.model), maxNvar + self._hankel_order, self.maxnfreq))
                           for i in range(N + 1)]
         self.varfixed = [np.zeros(self.maxnfreq) for i in range(N + 1)]
         self.dpar = np.zeros(N, dtype=np.float64)
@@ -1290,7 +1298,7 @@ class Modeler():
         # Check if there is data available:
             unflagged = np.sum(self.wgt[si][self.fittablebool[si], :] != 0.0, axis=0)
             # ntot = np.sum(self.fittablebool[si])
-            if self.OneFitPerChannel:
+            if self._spectral_mode:
                 if np.sum(unflagged == 0.0) > 0:
                     ch = list(np.where(unflagged == 0.0))
                     self.logger.error("not enough data for this time range, channels: {}".format(ch))
@@ -1300,7 +1308,7 @@ class Modeler():
                 datatot += np.sum(unflagged)
 
         #   self.output[si][:] = 0.0
-        if datatot == 0 and not self.OneFitPerChannel:
+        if datatot == 0 and not self._spectral_mode:
             self.logger.error("not enough data for this time range")
             self.allflagged = True
             return None
@@ -1327,7 +1335,7 @@ class Modeler():
 
         ##################
         # CASE OF SPECTRAL-MODE FIT:
-        if self.OneFitPerChannel:
+        if self._spectral_mode:
             self.logger.debug(f"spectral mode fit")
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
@@ -1414,7 +1422,7 @@ class Modeler():
 
         #####
         # Set the 'result' property:
-        if not self.OneFitPerChannel:
+        if not self._spectral_mode:
             fit_results = {'Frequency': ms.averfreqs[0][0], 'Parameters': np.array(fitparams),
                            'Uncertainties': np.array(fiterrors), 'Reduced Chi squared': ChiSq,
                            'Fit': fit, 'Degrees of Freedom': Nvis}
@@ -1450,6 +1458,6 @@ if __name__ == "__main__":
     print(mod)
 
     mod.NCPU = 8
-    mod.fluxOnly = False
-    mod.hankelOrder = 40
+    mod.flux_only = False
+    mod.hankel_order = 40
     mod.dump()
