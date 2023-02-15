@@ -43,7 +43,7 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
     ChiSq = results["Reduced Chi squared"]
     fitparams = results["Parameters"]
     fiterrors = results["Uncertainties"]
-    if not mdl.OneFitPerChannel:
+    if not mdl.spectral_mode:
         prtpars = []
         for pp, ppar in enumerate(fitparams):
             prtpars.append(ppar)
@@ -101,22 +101,23 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
         N = len(mdl.p_ini)
         parshead = [n for n in range(N) for i in range(2)]
 
-        headstr = ("# Frequency (Hz)     " + "  p[%i]       err[%i]   " * N + "   red. ChiSq\n") \
-            % tuple(parshead)
-        outf.write(headstr)
+        #                    1         2         3         4         5         6
+        #          01234567890123456789012345678901234567890123456789012345678901234567890123456789
+        headstr = "#          GHz" + "       p[%i]      err[%i]" * N + "  red.ChiSq\n"
+        outf.write(headstr % tuple(parshead))
 
-        formatting = "%.12e   " + "%.4e " * (2 * N) + "   %.4e \n"
-        if not mdl.OneFitPerChannel:
-            toprint = tuple([np.average(ms.averfreqs)] + prtpars + [ChiSq])
+        formatting = "%14.9f" + "%11.4e %11.4e" * N + "%11.4e\n"
+        if not mdl.spectral_mode:
+            toprint = tuple([np.average(ms.averfreqs)/1.0e9] + prtpars + [ChiSq])
             outf.write(formatting % toprint)
 
         else:
             for spwvi in ms.spwlist:
-                for r, rr in enumerate(spwvi[2]):
+                for r, _ in enumerate(spwvi[2]):
                     k = spwvi[3] + r
                     # rang = rr[1]
                     for nu, freq in enumerate(ms.averfreqs[k]):
-                        toprint = tuple([freq] + prtpars[k][nu] + [ChiSq[k][nu]])
+                        toprint = tuple([freq/1.0e9] + prtpars[k][nu] + [ChiSq[k][nu]])
                         outf.write(formatting % toprint)
 
 def uvmultifit(vis: str, spw: str = '0', field: int = 0, scans: List = [],
