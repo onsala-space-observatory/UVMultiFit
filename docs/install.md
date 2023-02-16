@@ -1,27 +1,19 @@
 # Installation
 
-Steps to install the `UVMultiFit` package:
+Steps to install the `UVMultiFit` package for a **CASA 6.x** environment using **python 3.x**:
 
 ## Install dependencies
 
-### CASA
+Our C++ extension makes use of the `fftw` and `gsl` libraries, so we
+need to install two packages for the compilation to succeed:
 
-These instructions assume you have a `casa` version 6.x installed,
-either the normal release or with the ALMA and/or VLA pipeline
-included. The instructions below use an installation of
-`casa-6.4.0-16` (ALMA pipeline) as an
-example.
-
-**Find out, where `casa` is installed** on your computer as you will need
-this information during the installation of `UVMultiFit`.
-
-### For Linux (Ubuntu-like), in a terminal:
+#### For Linux (Ubuntu-like), in a terminal:
 
 ``` bash
 $ sudo apt-get install libgsl-dev libfftw3-dev
 ```
 
-### For Mac OS, in a terminal:
+#### For Mac OS, in a terminal:
 
 If using Mac Ports:
 
@@ -35,93 +27,77 @@ If using Homebrew:
 $ brew install gsl fftw
 ```
 
-## Clone the repository or update your installation
+## Clone the github repository or update your installation
+
+> NOTE THAT WE WANT THE **casa6** BRANCH!
 
 Pick a directory where you want to install `UVMultiFit`, e.g.
 
 ``` bash
 $ cd ~
-$ mkdir -p casa/NordicARC
-$ cd casa/NordicARC
-$ git clone https://github.com/onsala-space-observatory/UVMultiFit.git
+$ mkdir -p NordicARC
+$ cd NordicARC
+$ git clone --branch casa6 https://github.com/onsala-space-observatory/UVMultiFit.git
 $ cd UVMultiFit
 ```
 
 If you already had a `git` based version installed, pull in the latest changes:
 
 ``` bash
-$ git pull
+$ git pull origin/casa6
 ```
 
-## Compile the C++ module
+## Build and install the python package
 
-Open the `Makefile` and edit the first line, where it says
+These instructions assume you have a CASA version 6.x installed,
+either the normal release or with the ALMA and/or VLA pipeline
+included.
+
+The instructions below use an installation of `casa-6.4.0-16` (ALMA
+pipeline) as an example.
+
+You may want to install the package inside your CASA environment,
+which would have the advantage that all users of that environment will
+be able to use UVMultiFit. But it will require that you have write
+permission to that environment.
+
+In that case, **find out, where `casa` is installed** on your computer
+and adjust the paths and version numbers below appropriately.  In the
+example below this is in `/opt/casa-6.4.0-16`.
+
+Then set the following two environment variables, adjusting
+the paths and version numbers to your needs. For an installation into
+your personal python environment, simply skip this step:
 
 ``` bash
-CASADIR=/home/data/casa-6.4.0-16
+$ PATH=/opt/casa-6.4.0-16/bin:$PATH
+$ PYTHONPATH=/opt/casa-6.4.0-16/lib/py/lib/python3.8/site-packages
 ```
 
-and replace with the path of your own `casa` installation. If you have
-write access to the directories underneath `$CASADIR`, you may then
-run
+Now, in order to build the package, which will include compilation of
+the C++ extension, run the following command:
 
 ``` bash
-$ make install
+$ python3 -m pip install .
 ```
 
-This should make `uvmultifit` available also to other users, running
-from the same casa installation.
-
-Alternatively, you can install to your local user `PYTHONPATH` by running
+If successful, you may check that you can load the C++ module as follows:
 
 ``` bash
-$ make user
+$ python3
+Python 3.8.10 (default, Jun 25 2021, 20:16:58)
+[GCC 5.3.1 20160406 (Red Hat 5.3.1-6)] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import uvmultimodel as uvmod
+>>> dir(uvmod)
+['QuinnFF', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__',
+ 'clearPointers', 'modelcomp', 'setData', 'setModel', 'setNCPU', 'setNspw', 'setWork']
 ```
-
-You may check that you can load the module and execute some of its
-support functions. Move into the `test` folder and start up `casa`
-
-
-``` bash
-$ cd test
-$ <CASADIR>/bin/casa   # replace `CASADIR` with the correct path from above!
-```
-
-and run the short unit test in that folder:
-
-``` python
-    CASA <1>: %run test_uvmultimodel.py
-```
-
-which should produce output like this
-
->
-> C++ shared library loaded successfully
->
-> ....
-> ----------------------------------------------------------------------
-> Ran 4 tests in 0.000s
->
-> OK
 
 ## Running the test suite
 
-Still in the `test` directory, and with `casa` running, run any of the tests via
-
-    CASA <2>: execfile("<test>.py")
-
 ## Running your own model:
 
-Now, this can be done from any directory.
-
-* Start up `casa` and run
-
-        CASA <1>: from NordicARC import uvmultifit as uvm
-        CASA <2>: help(uvm.uvmultifit)                 # to get the help text
-        CASA <3>: myfit = uvm.uvmultifit(vis=..., ...) # fit your model ...
-
- * ENJOY!
-
-Any feedback and bug report should be sent either to the ARC Nordic
-Node (contact@nordic-alma.se) or to the source maintainer
-(michael.olberg@chalmers.se).
+Any feedback and bug report should be sent either to the
+[Nordic ARC Node](mailto:contact@nordic-alma.se) or to the source maintainer
+[Michael Olberg](mailto:michael.olberg@chalmers.se).

@@ -1,12 +1,14 @@
+# mkdocs.yml
 site_name: UVMultiFit
 site_url: https://github.com/onsala-space-observatory/UVMultiFit
-nav:
-   - Home: index.md
-   - Installation: install.md
 
 theme:
-   name: "material"
+   name: "readthedocs"
 
 plugins:
    - mkdocstrings
 
+nav:
+   - Home: index.md
+   - Installation: install.md
+   - Manual: manual.md
