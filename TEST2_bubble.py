@@ -38,6 +38,8 @@ si = {"type": "disk", "flux": 1.0,
 
 skymodel = sim.image_name+'.model'
 vis = "{0}/{0}.alma.out10.noisy.ms".format(sim.image_name)
+print(vis)
+
 if not Path(skymodel).exists():
     if Path("Disc/Disc.alma.out10.noisy.ms").exists():
         os.system('cp -r %s.model  %s.model' % ("Disc", sim.image_name))
@@ -125,3 +127,7 @@ print(f" Model {sim.image_name}. Maximum Flux deviation: {maxdev:.4f} %")
 ModD = diameter + np.linspace(0, diameter_delta, np.shape(r['Frequency'][0])[0])
 maxdev = 100.*np.max(np.abs(r['Parameters'][0][:, 1] - ModD)/ModD)
 print(f" Model {sim.image_name}. Maximum Size deviation: {maxdev:.4f} %")
+
+default = "modelfit.dat"
+if Path(default).exists():
+    os.rename(default, os.path.basename(__file__).replace(".py", ".out"))

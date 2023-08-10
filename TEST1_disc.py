@@ -38,6 +38,7 @@ si = {"type": "disk", "flux": 1.0,
       "direction": "J2000 10h00m00.0s -30d00m00.0s"}
 
 vis = "{0}/{0}.alma.out10.noisy.ms".format(sim.image_name)
+print(vis)
 
 if not Path(vis).exists():
     config = '.'.join(sim.array_config.split('.')[:-1])
@@ -125,3 +126,7 @@ print(f"disc spectral index:     {r['Parameters'][1]:7.3f} +/- {r['Uncertainties
 print(f"disc size (as):          {r['Parameters'][2]:7.3f} +/- {r['Uncertainties'][2]:.3f}, true: {S[2]:7.3f}")
 print(f"disc axis ratio:         {r['Parameters'][3]:7.3f} +/- {r['Uncertainties'][3]:.3f}, true: {S[3]:7.3f}")
 print(f"disc pos.angle (deg):    {r['Parameters'][4]:7.3f} +/- {r['Uncertainties'][4]:.3f}, true: {S[4]:7.3f}")
+
+default = "modelfit.dat"
+if Path(default).exists():
+    os.rename(default, os.path.basename(__file__).replace(".py", ".out"))
