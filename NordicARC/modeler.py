@@ -298,7 +298,7 @@ class Modeler():
                 bounds[b] = [None, None]
                 continue
             if len(bounds[b]) != 2:
-                cls.logger.error(f"bounds should come in pairs of two")
+                cls.logger.error("bounds should come in pairs of two")
                 bounds[b] = [None, None]
                 continue
             if bounds[b][0] and p_ini[b] <= bounds[b][0]:
@@ -1336,7 +1336,7 @@ class Modeler():
         ##################
         # CASE OF SPECTRAL-MODE FIT:
         if self._spectral_mode:
-            self.logger.debug(f"spectral mode fit")
+            self.logger.debug("spectral mode fit")
             fitparams = [[] for j in range(nspwtot)]
             fiterrors = [[] for j in range(nspwtot)]
             covariance = [[] for j in range(nspwtot)]

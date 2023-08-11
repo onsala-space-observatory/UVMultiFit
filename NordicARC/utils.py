@@ -3,7 +3,7 @@ import re
 
 import logging
 
-from typing import List, Any, Union
+from typing import List, Any
 
 valid_casa_pos = re.compile(r"J2000 [0-9]{1,2}h[0-9]{2}m[0-9]{2}.[0-9]s -?[0-9]{1,2}d[0-9]{2}m[0-9]{2}.[0-9]s")
 
