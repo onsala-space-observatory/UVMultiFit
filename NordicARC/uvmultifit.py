@@ -102,10 +102,10 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
 
         #                    1         2         3         4         5         6
         #          01234567890123456789012345678901234567890123456789012345678901234567890123456789
-        headstr = "#          GHz" + "       p[%i]      err[%i]" * N + "  red.ChiSq\n"
+        headstr = "#          GHz" + "        p[%i]       err[%i]" * N + "   red.ChiSq\n"
         outf.write(headstr % tuple(parshead))
 
-        formatting = "%14.9f" + "%11.4e %11.4e" * N + "%11.4e\n"
+        formatting = "%14.9f" + "%12.4e %12.4e" * N + "%12.4e\n"
         if not mdl.spectral_mode:
             toprint = tuple([np.average(ms.averfreqs)/1.0e9] + prtpars + [ChiSq])
             outf.write(formatting % toprint)
