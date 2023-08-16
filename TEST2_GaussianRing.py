@@ -73,7 +73,8 @@ if not Path(vis).exists():
 model = [sim.image_name]
 NuF = float(Nu.split('G')[0])*1.e9
 modvars = "p[3],p[4],p[0],p[1],1.0,0.0,p[2]"
-modbounds = [[0.0, None], [0.0, diameter*1.5], [sigma*0.8, sigma*1.2], [-1.0, 1.0], [-1.0, 1.0]]
+modbounds = [[0.0, None], [0.0, diameter*1.5], [sigma*0.8, sigma*1.5], [-1.0, 1.0], [-1.0, 1.0]]
+print(modbounds)
 
 size = float(si["major"].split('a')[0])
 minor = float(si["minor"].split('a')[0])
