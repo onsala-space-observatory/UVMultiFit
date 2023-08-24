@@ -1,10 +1,24 @@
 from setuptools import setup, Extension, find_packages
 
 import sys
+import os
 import platform
 
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
 BUILD_QUINN_FITTER = True
+
+if len(sys.argv) > 2 and sys.argv[2].startswith("--prefix="):
+    CASA_INSTALLATION = sys.argv[2].split("=")[1]
+else:
+    CASA_INSTALLATION = os.getenv("CASA_INSTALLATION")
+
+print("using CASA_INSTALLATION", CASA_INSTALLATION)
+
+# typically you won't have to change anything below this line
+CASA_PYTHON_INCLUDE = CASA_INSTALLATION + "/include/python3.6m"
+CASA_PYTHON_SITE_PACKAGES = CASA_INSTALLATION + "/lib/python3.6/site-packages"
+CASA_NUMPY_INCLUDE = CASA_PYTHON_SITE_PACKAGES + "/numpy/core/include"
+np_include = [CASA_PYTHON_INCLUDE, CASA_NUMPY_INCLUDE]
 
 # DIRECTORY TO THE GSL LIBRARIES:
 if platform.system() == "Linux":
@@ -39,5 +53,5 @@ with open("README.md", "r") as fh:
 
 setup(packages=find_packages(include=["NordicARC"]),
       ext_modules=[c_ext],
-      include_dirs=[include_gsl_dir],
+      include_dirs=[include_gsl_dir] + np_include,
       long_description=long_description,)

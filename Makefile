@@ -1,11 +1,11 @@
-CASADIR=/home/data/casa-6.1.2-7-pipeline-2020.1.0.36
+CASADIR=/media/olberg/d1c658f8-95c1-49a9-ab3e-b77c48f5dbe3/data/casa-6.1.2-7-pipeline-2020.1.0.36/lib/py
 PYTHON=$(CASADIR)/bin/python3
 
 install:
-	$(PYTHON) setup.py install --prefix=$(CASADIR)/lib/py
+	$(PYTHON) setup.py install --prefix=$(CASADIR)
 
 user:
-	$(PYTHON) setup.py install --user
+	export CASA_INSTALLATION=$(CASADIR); $(PYTHON) setup.py install --user
 
 clean:
 	rm -fvR build
