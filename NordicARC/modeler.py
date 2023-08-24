@@ -1102,7 +1102,7 @@ class Modeler():
 
             del PBFactor
 
-            self.fittablebool[-1] = np.require(np.copy(self.fittable[-1]).astype(np.int8),
+            self.fittablebool[-1] = np.require(np.copy(self.fittable[-1]).astype(np.bool),
                                                requirements=['C', 'A'])
 
             gooduvm = uvmod.setData(spidx, self.uv[-1][0], self.uv[-1][1], self.uv[-1][2],
@@ -1297,7 +1297,6 @@ class Modeler():
 
         # Check if there is data available:
             unflagged = np.sum(self.wgt[si][self.fittablebool[si], :] != 0.0, axis=0)
-            # ntot = np.sum(self.fittablebool[si])
             if self._spectral_mode:
                 if np.sum(unflagged == 0.0) > 0:
                     ch = list(np.where(unflagged == 0.0))
@@ -1307,7 +1306,6 @@ class Modeler():
             else:
                 datatot += np.sum(unflagged)
 
-        #   self.output[si][:] = 0.0
         if datatot == 0 and not self._spectral_mode:
             self.logger.error("not enough data for this time range")
             self.allflagged = True
