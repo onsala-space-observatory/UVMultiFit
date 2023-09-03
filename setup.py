@@ -7,33 +7,27 @@ import platform
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
 BUILD_QUINN_FITTER = True
 
-if len(sys.argv) > 2 and sys.argv[2].startswith("--prefix="):
-    CASA_INSTALLATION = sys.argv[2].split("=")[1]
-else:
-    CASA_INSTALLATION = os.getenv("CASA_INSTALLATION")
-
-print("using CASA_INSTALLATION", CASA_INSTALLATION)
-
-# typically you won't have to change anything below this line
-CASA_PYTHON_INCLUDE = CASA_INSTALLATION + "/include/python3.6m"
-CASA_PYTHON_SITE_PACKAGES = CASA_INSTALLATION + "/lib/python3.6/site-packages"
-CASA_NUMPY_INCLUDE = CASA_PYTHON_SITE_PACKAGES + "/numpy/core/include"
-np_include = [CASA_PYTHON_INCLUDE, CASA_NUMPY_INCLUDE]
+# print(sys.path)
+np_include = [os.environ["PYTHONPATH"] + "/numpy/core/include/", ]
+print(np_include)
 
 # DIRECTORY TO THE GSL LIBRARIES:
+
 if platform.system() == "Linux":
     include_gsl_dir = "/usr/include"
 elif platform.system() == "Darwin":
-    include_gsl_dir = "/opt/local/include"
+    include_gsl_dir = "/opt/local/include"               # typical for Macports
+    # include_gsl_dir = "/usr/local/include"               # typical for homebrew
 else:
     print("Unsupported platform: " + platform.system())
-    exit()
+    sys.exit(1)
 
 # "-export-dynamic" doesn't work on Mac
 if platform.system() == "Linux":
     _extra_link_args = ["-Xlinker", "-export-dynamic"]
 elif platform.system() == "Darwin":
-    _extra_link_args = ["-Xlinker", "-L/opt/local/lib"]
+    _extra_link_args = ["-Xlinker", "-L/opt/local/lib"]  # typical for Macports
+    # _extra_link_args = ["-Xlinker", "-L/usr/local/lib"]  # typical for homebrew
 
 if BUILD_QUINN_FITTER:
     c_ext = Extension("uvmultimodel",

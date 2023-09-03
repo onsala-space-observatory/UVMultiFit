@@ -35,8 +35,8 @@ Pick a directory where you want to install `UVMultiFit`, e.g.
 
 ``` bash
 $ cd ~
-$ mkdir -p NordicARC
-$ cd NordicARC
+$ mkdir -p ARC
+$ cd ARC
 $ git clone --branch casa6 https://github.com/onsala-space-observatory/UVMultiFit.git
 $ cd UVMultiFit
 ```
