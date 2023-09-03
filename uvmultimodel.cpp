@@ -1081,8 +1081,8 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
     QuinnFringe *FringeFit = new QuinnFringe(Nants, vis.nt[IFFit], vis.nnu[IFFit],
                                              vis.ObsVis[IFFit], mod.ModVis[IFFit],
                                              vis.ants[0][IFFit], vis.ants[1][IFFit],
-                                             vis.dt[IFFit],vis.fittable[IFFit],
-                                             vis.freqs[IFFit],vis.wgt[0][IFFit]);
+                                             vis.dt[IFFit], vis.fittable[IFFit],
+                                             vis.freqs[IFFit], vis.wgt[0][IFFit]);
     int result = FringeFit->GFF(refant, doGlobal, doModel);
     if (result != 0) {
         ret = Py_BuildValue("i", result);

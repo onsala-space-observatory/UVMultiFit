@@ -1,4 +1,3 @@
-import sys
 import re
 import time
 import logging
@@ -13,6 +12,7 @@ import uvmultimodel as uvmod     # type: ignore
 from .utils import get_list_of_strings, check_proper_motion
 from .simplex import _mod_simplex
 
+
 class Model:
 
     def __init__(self, name, index, nparams):
@@ -26,6 +26,7 @@ class Model:
         txt += f"index = {self.index}, "
         txt += f"nparams = {self.nparams})"
         return txt
+
 
 class Modeler():
     """ Class to deal with model equations and fitting procedures.
@@ -620,6 +621,7 @@ class Modeler():
     def LMMin(self, pars):
         """ Implementation of the Levenberg-Marquardt algorithm.
             Not to be called directly by the user. """
+
         self.logger.debug("Modeler::LMMin")
         NITER = int(self.LMtune[3] * len(pars))
         self.calls = 0
@@ -743,10 +745,8 @@ class Modeler():
                 backupP[:] = self.par2[0, :]
 
         if controlIter == NITER:
-            sys.stdout.write("REACHED MAXIMUM NUMBER OF ITERATIONS!\n"
-                             + "The algorithm may not have converged!\n"
-                             + "Please, check if the parameter values are meaningful.\n")
-            sys.stdout.flush()
+            self.logger.warning("Reached maximum number of iterations! The algorithm may not have converged!")
+            # self.logger.warning("Please, check if the parameter values are meaningful.")
 
         self._getPar2(mode=1)
 
@@ -880,6 +880,7 @@ class Modeler():
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
         self.logger.debug("Modeler::residuals")
+        # f = open("casa6", "a")
 
         #  varsize = self.maxNvar + self._hankel_order
         if mode in [0, -3]:
@@ -976,6 +977,8 @@ class Modeler():
                              + "Maybe the current fitted value of flux (and/or size) is negative!"
                              + "Please, set BOUNDS to the fit!")
 
+        # print("ChiSq: %.7f" % (ChiSq,), file=f)
+        # f.close()
         if mode in [-1, -2, -3]:
             if dof:
                 self.calls = 0
