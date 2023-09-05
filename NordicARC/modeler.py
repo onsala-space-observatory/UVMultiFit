@@ -1105,7 +1105,7 @@ class Modeler():
 
             del PBFactor
 
-            self.fittablebool[-1] = np.require(np.copy(self.fittable[-1]).astype(np.bool),
+            self.fittablebool[-1] = np.require(np.copy(self.fittable[-1]).astype(bool),
                                                requirements=['C', 'A'])
 
             gooduvm = uvmod.setData(spidx, self.uv[-1][0], self.uv[-1][1], self.uv[-1][2],
