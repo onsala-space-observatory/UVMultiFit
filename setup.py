@@ -1,4 +1,5 @@
 from setuptools import setup, Extension, find_packages
+from numpy.distutils.core import setup
 
 import sys
 import os
@@ -7,12 +8,7 @@ import platform
 # SET THIS TO TRUE IF YOU WANT TO PLAY WITH FRINGE FITTING:
 BUILD_QUINN_FITTER = True
 
-# print(sys.path)
-np_include = [os.environ["PYTHONPATH"] + "/numpy/core/include/", ]
-print(np_include)
-
 # DIRECTORY TO THE GSL LIBRARIES:
-
 if platform.system() == "Linux":
     include_gsl_dir = "/usr/include"
 elif platform.system() == "Darwin":
@@ -47,5 +43,7 @@ with open("README.md", "r") as fh:
 
 setup(packages=find_packages(include=["NordicARC"]),
       ext_modules=[c_ext],
-      include_dirs=[include_gsl_dir] + np_include,
+      setup_requires=["numpy"],
+      # install_requires=["numpy"],
+      include_dirs=[include_gsl_dir],
       long_description=long_description,)
