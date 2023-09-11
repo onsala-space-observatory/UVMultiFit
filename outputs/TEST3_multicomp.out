@@ -1,0 +1,23 @@
+# MODELFITTING RESULTS FOR MS: Discs_Gaussian/Discs_Gaussian.alma.out10.noisy.ms
+# NOTICE THAT THE REDUCED CHI SQUARE SHOWN HERE IS THE VALUE
+# *BEFORE* THE RE-SCALING OF THE VISIBILITY WEIGHTS.
+# HOWEVER, THE PARAMETER UNCERTAINTIES ARE *ALREADY* GIVEN
+# FOR A REDUCED CHI SQUARE OF 1.
+# AVG. NUMBER OF DEGREES OF FREEDOM: 3675000
+# PRIMARY-BEAM CORRECTION HAS NOT BEEN APPLIED.
+#
+# MODEL CONSISTS OF:
+# 'disc' with variables: 0.,0.,p[0],p[1],1.,0.
+# 'disc' with variables: 0.,0.,-p[0]*p[2]**2.,p[1]*p[2],1.,0.
+# 'Gaussian' with variables: 0.,p[3],p[4],p[5],1.,0.
+#
+# INITIAL PARAMETER VALUES:
+#  p[0] = 1.73400e-01 with bounds: [0.0, None]
+#  p[1] = 6.50000e-01 with bounds: [0.0, None]
+#  p[2] = 4.00000e-01 with bounds: [0.0, None]
+#  p[3] = -1.50000e+00 with bounds: [-15, 15]
+#  p[4] = 6.00000e-01 with bounds: [0.0, None]
+#  p[5] = 5.20000e-01 with bounds: [0.0, None]
+#
+#          GHz        p[0]       err[0]        p[1]       err[1]        p[2]       err[2]        p[3]       err[3]        p[4]       err[4]        p[5]       err[5]   red.ChiSq
+ 149.995000000  1.1948e+00   3.1267e-02  4.7107e-01   3.0666e-03  6.1584e-01   1.3251e-02 -2.0000e+00   9.5465e-05  4.9989e-01   1.7406e-04  4.0116e-01   2.4360e-04  1.4037e-01
