@@ -65,8 +65,8 @@ def save_results(outfile: str, results: Dict, mdl: Modeler, ms: MeasurementSet) 
         outf.write(f"# AVG. NUMBER OF DEGREES OF FREEDOM: {DOG}\n")
         if ms.pbeam:
             if isinstance(ms.dish_diameter, float):
-                outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. "
-                           "USING A DISH DIAMETER OF: {ms.dish_diameter:.3f} METERS\n")
+                outf.write(f"# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. "
+                           f"USING A DISH DIAMETER OF: {ms.dish_diameter:.3f} METERS\n")
             else:
                 outf.write("# PRIMARY-BEAM CORRECTION HAS BEEN APPLIED. USING: \n")
                 for i, name in enumerate(ms.antnames):
