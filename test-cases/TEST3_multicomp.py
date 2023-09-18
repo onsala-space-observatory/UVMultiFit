@@ -58,12 +58,10 @@ s = [{"type": "disk",
 
 imname = sim.image_name
 skymodel = sim.image_name+'.model'
-vis = "{0}/{0}.alma.out10.noisy.ms".format(sim.image_name)
+vis = "{0}/{0}.{1}.noisy.ms".format(sim.image_name, os.path.splitext(sim.array_config)[0])
 
 if not Path(vis).exists():
     cl.done()
-    config = '.'.join(sim.array_config.split('.')[:-1])
-
     print('Generating %s' % sim.image_name)
 
     for si in s:
@@ -114,7 +112,6 @@ S = Pars
 # S = [fluxes[0], sizes[0], sizes[1]/sizes[0], doff, fluxes[2], sizes[2]]
 # S = [%.3e, %.3e, %.3e, %.3e, %.3e, %.3e] % tuple(Pars)
 
-# visname = '%s' % ('%s/%s.%s.noisy.ms' % (imname, imname, config))
 for idx, shape in enumerate(shapes):
     if shape == 'disk':
         shapes[idx] = 'disc'

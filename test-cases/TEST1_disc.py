@@ -37,11 +37,10 @@ si = {"type": "disk", "flux": 1.0,
       "freq": Nu, "spectral_index": 1.0,
       "direction": "J2000 10h00m00.0s -30d00m00.0s"}
 
-vis = "{0}/{0}.alma.out10.noisy.ms".format(sim.image_name)
+vis = "{0}/{0}.{1}.noisy.ms".format(sim.image_name, os.path.splitext(sim.array_config)[0])
 print(vis)
 
 if not Path(vis).exists():
-    config = '.'.join(sim.array_config.split('.')[:-1])
 
     print('Generating %s' % sim.image_name)
     cl.done()

@@ -38,7 +38,7 @@ si = {"type": "disk", "flux": 1.0,
       "direction": "J2000 10h00m00.0s -30d00m00.0s"}
 
 skymodel = sim.image_name+'.model'
-vis = "{0}/{0}.alma.out10.noisy.ms".format(sim.image_name)
+vis = "{0}/{0}.{1}.noisy.ms".format(sim.image_name, os.path.splitext(sim.array_config)[0])
 print(vis)
 
 if not Path(skymodel).exists():
@@ -65,18 +65,17 @@ if not Path(skymodel).exists():
         sys.exit(1)
 
 if not Path(vis).exists():
-    config = '.'.join(sim.array_config.split('.')[:-1])
-
     print('Generating %s' % sim.image_name)
 
     simobserve(project=sim.image_name, skymodel=skymodel,
                totaltime=totaltime, antennalist=sim.array_config)
 
     LAS = 1.0/(image_size/3600.0*np.pi/180.0)*3.0e8/(sim.center_freq*1.0e9)
-    flagdata(f"{sim.image_name}/{sim.image_name}.alma.out10.ms",
+    config = os.path.splitext(sim.array_config)[0]
+    flagdata(f"{sim.image_name}/{sim.image_name}.{config}.ms",
              mode="manual", uvrange=f"<{LAS:.1f}m")
 
-    flagdata(f"{sim.image_name}/{sim.image_name}.alma.out10.noisy.ms",
+    flagdata(f"{sim.image_name}/{sim.image_name}.{config}.noisy.ms",
              mode="manual", uvrange=f"<{LAS:.1f}m")
 
 model = [sim.image_name]
