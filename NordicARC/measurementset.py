@@ -180,27 +180,25 @@ class MeasurementSet():
         return refpos
 
     def get_field_index(self, vi, msname):
-        field_index = -1
-        phasedir = None
+        field_index = []
+        phasedir = {}
         with open_ms(msname) as ms:
             allfields = list(ms.range('fields')['fields'])
             if isinstance(self.field, int):
-                field_index = self.field
+                field_index.append(self.field)
             elif is_list_of_int(self.field):
-                field_index = int(self.field[vi])
+                field_index.append(int(self.field[vi]))
             else:
                 aux = str(self.field)
                 self.field = [aux for v in self.vis]
-                field_found = False
                 for f, field in enumerate(allfields):
                     if self.field[vi] in field:
-                        field_found = True
-                        field_index = f
-                        break
-                    if not field_found:
-                        self.logger.error(f"field '{self.field[vi]}' is not in '{msname}'")
-                        return field_index, None
-            phasedir = ms.range('phase_dir')['phase_dir']['direction'][:, field_index]
+                        field_index.append(f)
+                if len(field_index) == 0:
+                    self.logger.error(f"field '{self.field[vi]}' is not in '{msname}'")
+                    return field_index
+            for f in field_index:
+                phasedir[f] = ms.range('phase_dir')['phase_dir']['direction'][:, f]
         return field_index, phasedir
 
     def check_measurementset(self):
@@ -215,9 +213,10 @@ class MeasurementSet():
         for vi, v in enumerate(self.vis):
             self.field_id.append([])
             field_index, phasedir = self.get_field_index(vi, v)
-            if field_index != -1:
-                self.field_id[-1].append(field_index)
-                phasedirs[vi][field_index] = phasedir
+            if len(field_index) > 0:
+                for f in field_index:
+                    self.field_id[-1].append(f)
+                phasedirs[vi] = phasedir
             else:
                 return False
         if self.refpos is None:
@@ -670,7 +669,6 @@ class MeasurementSet():
             if takeModel:
                 self.avermod[si] = np.require(np.concatenate([fd.modelscanAv for fd in field_data], axis=0),
                                               requirements=['C', 'A'])
-
             self.averweights[si] = np.require(np.concatenate([fd.weightscan for fd in field_data], axis=0),
                                               dtype=np.float64, requirements=['C', 'A'])
             self.u[si] = np.require(np.concatenate([fd.uscan for fd in field_data], axis=0),
