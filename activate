@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/media/olberg/d1c658f8-95c1-49a9-ab3e-b77c48f5dbe3/data/casa-6.1.2-7-pipeline-2020.1.0.36"
+VIRTUAL_ENV="/opt/casa-6.5.6-22-py3.8.el7"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
@@ -57,8 +57,8 @@ export PYTHONPATH
 
 if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT:-}" ] ; then
     _OLD_VIRTUAL_PS1="${PS1:-}"
-    if [ "x(casa6.1.2) " != x ] ; then
-	PS1="(casa6.1.2) ${PS1:-}"
+    if [ "x(casa6) " != x ] ; then
+	PS1="(casa6) ${PS1:-}"
     else
     if [ "`basename \"$VIRTUAL_ENV\"`" = "__" ] ; then
         # special case for Aspen magic directories
