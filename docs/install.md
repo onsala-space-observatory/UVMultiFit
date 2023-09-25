@@ -53,8 +53,7 @@ These instructions assume you have a CASA version 6.x installed,
 either the normal release or with the ALMA and/or VLA pipeline
 included.
 
-The instructions below use an installation of `casa-6.4.0-16` (ALMA
-pipeline) as an example.
+The instructions below use an installation of `casa-6.5.6-22` as an example.
 
 You may want to install the package inside your CASA environment,
 which would have the advantage that all users of that environment will
