@@ -49,6 +49,7 @@
 #OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 */
+
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include <pthread.h>
@@ -60,10 +61,13 @@
 #include <complex>
 #include <vector>
 #include <string>
+#include <assert.h>
 
 #if QUINN_FITTER == 0
 #include "QuinnFringe.h"
 #endif
+
+typedef std::complex<double> cplx64;
 
 // NPY_BOOL: 0
 // NPY_INT8: 1
@@ -82,32 +86,123 @@ static std::string NPTYPES[] = {"NPY_BOOL", "NPY_INT8", "NPY_UINT8", "NPY_INT16"
                                 "NPY_INT32", "NPY_UINT32", "NPY_INT64", "NPY_UINT64",
                                 "NPY_???", "NPY_???", "NPY_FLOAT32", "NPY_FLOAT64",
                                 "NPY_???", "NPY_COMPLEX64", "NPY_COMPLEX128" };
-#undef DEBUG
-void show_info(const char *var, PyObject *obj)
-{
-    if (obj == NULL) return;
 
-#ifndef DEBUG
-    return;
+#define NMAX 5
+
+#undef DEBUG
+
+#ifdef DEBUG
+int bsum(const char *var, PyObject *obj)
+{
+    int total = 0;
+    int size = PyArray_SIZE((PyArrayObject *)obj);
+    int8_t *ptr = (int8_t *)PyArray_DATA(obj);
+
+    assert(PyArray_TYPE((PyArrayObject *)obj) == 5);
+    for (int i = 0; i < size; i++) {
+        total += ptr[i];
+    }
+    printf("%s: sum of %d elements = %d\n", var, size, total);
+    return total;
+}
+
+int isum(const char *var, PyObject *obj)
+{
+    int total = 0;
+    int size = PyArray_SIZE((PyArrayObject *)obj);
+    int32_t *ptr = (int32_t *)PyArray_DATA(obj);
+
+    assert(PyArray_TYPE((PyArrayObject *)obj) == 5);
+    for (int i = 0; i < size; i++) {
+        total += ptr[i];
+    }
+    printf("%s: sum of %d elements = %d\n", var, size, total);
+    return total;
+}
+
+double dsum(const char *var, PyObject *obj)
+{
+    double total = 0;
+    int size = PyArray_SIZE((PyArrayObject *)obj);
+    double *ptr = (double *)PyArray_DATA(obj);
+
+    assert(PyArray_TYPE((PyArrayObject *)obj) == 12);
+    for (int i = 0; i < size; i++) {
+        total += ptr[i];
+    }
+    printf("%s: sum of %d elements = %le\n", var, size, total);
+    return total;
+}
+
+cplx64 csum(const char *var, PyObject *obj)
+{
+    cplx64 total = 0;
+    int size = PyArray_SIZE((PyArrayObject *)obj);
+    cplx64 *ptr = (cplx64 *)PyArray_DATA(obj);
+
+    assert(PyArray_TYPE((PyArrayObject *)obj) == 15);
+    for (int i = 0; i < size; i++) {
+        total += ptr[i];
+    }
+    printf("%s: sum of %d elements = (%le, %le)\n", var, size, std::real(total), std::imag(total));
+    return total;
+}
 #endif
 
+void show_info(const char *var, PyObject *obj, int index = -1)
+{
+    int i;
+
+    if (obj == NULL) return;
+
+#ifdef DEBUG
     int ndim = PyArray_NDIM((PyArrayObject *)obj);
     int type = PyArray_TYPE((PyArrayObject *)obj);
     int size = PyArray_SIZE((PyArrayObject *)obj);
 
-    std::cout << "'" << std::setw(10) << var
-              << "' " << "is an array (" << PyArray_CheckExact(obj) << "):"
-              << " of type " << std::setw(14) << NPTYPES[type]
-              << " and dimension " << ndim;
+    if (index >= 0) {
+        printf("%s[%d]: an array (%d) of type %s and dimension %d",
+               var, index, PyArray_CheckExact(obj), NPTYPES[type].c_str(), ndim);
+    } else {
+        printf("%s: an array (%d) of type %s and dimension %d",
+               var, PyArray_CheckExact(obj), NPTYPES[type].c_str(), ndim);
+    }
     if (ndim > 1) {
-        std::cout << " [";
+        printf(" [");
         for (int i = 0; i < ndim; i++) {
-            std::cout << " " << PyArray_DIM((PyArrayObject *)obj, i)
-                      << (i == ndim-1 ? " ]" : " x");
+            printf(" %ld %c", PyArray_DIM((PyArrayObject *)obj, i),
+                   (i == ndim-1 ? ']' : 'x'));
         }
     }
+    printf(", size %d\n", size);
+    int nmax = size > NMAX ? NMAX : size;
 
-    std::cout << ", size " << size << std::endl;
+    switch (type) {
+      case  0:
+      case  1:
+        for (i = 0; i < nmax; i++) printf("[%d]: %d\n", i, ((int8_t *)PyArray_DATA(obj))[i]);
+        bsum(var, obj);
+        break;
+      case  5:
+        for (i = 0; i < nmax; i++) printf("[%d]: %d\n", i, ((int32_t *)PyArray_DATA(obj))[i]);
+        isum(var, obj);
+        break;
+      case 12:
+        for (i = 0; i < nmax; i++) printf("[%d]: %le\n", i, ((double *)PyArray_DATA(obj))[i]);
+        dsum(var, obj);
+        break;
+      case 15:
+        for (i = 0; i < nmax; i++)
+            printf("[%d]: (%le, %le)\n", i,
+                   std::real(((cplx64 *)PyArray_DATA(obj))[i]),
+                   std::imag(((cplx64 *)PyArray_DATA(obj))[i]));
+        csum(var, obj);
+        break;
+      default:
+        printf("type unsupported!\n");
+        break;
+    }
+#endif
 }
 
 #define DELTA        0
@@ -160,19 +255,17 @@ static PyMethodDef module_methods[] = {
     {"setModel", setModel, METH_VARARGS, setModel_docstring},
     {"setNCPU", setNCPU, METH_VARARGS, setNCPU_docstring},
     {"modelcomp", modelcomp, METH_VARARGS, uvmultimodel_docstring},
-    {"setWork", setWork, METH_VARARGS, setWork_docstring},
+    {"setWork", setWork, METH_NOARGS, setWork_docstring},
     {"QuinnFF", QuinnFF, METH_VARARGS, QuinnFF_docstring},
     {"clearPointers", clearPointers, METH_VARARGS, clearPointers_docstring},
     {NULL, NULL, 0, NULL}
 };
 
-typedef std::complex<double> cplx64;
-
 static int Nspw, NCPU, nui, cIF, ncomp, npar, maxnchan=0, HankelOrder=80;
 static int mode, Nants;
 static double cosDecRef, sinDecRef;
 static bool compFixed, isModel, MixedG;
-static int NparMax = 7; // Degrees of freedom for components (i.e., RA, Dec, Flux, Major, Ratio, PA, Inner).
+static int NparMax = 7;   // max number of model parameters: RA, Dec, Flux, Major, Ratio, PA, Inner
 
 // ALL POINTERS TO DATA AND METADATA:
 struct DATA {
@@ -241,7 +334,6 @@ static struct PyModuleDef moduledef = {
 /* Initialize the module */
 PyMODINIT_FUNC PyInit_uvmultimodel(void)
 {
-    // PyObject *m = Py_InitModule3("uvmultimodel", module_methods, module_docstring);
     PyObject *m = PyModule_Create(&moduledef);
     if (m == NULL) return NULL;
 
@@ -393,7 +485,7 @@ void *writemod(void *work)
 
         if (vis.fittable[cIF][t]!=0) {
             for (i = nu0; i < nu1; i++) {
-                j = (nui!=-1) ? 0 : i;
+                j = (nui != -1) ? 0 : i;
                 k = vis.nnu[cIF]*t+i;
 
                 kT = MixedG ? vis.nnu[cIF]*currTIdx+i : vis.nnu[cIF];
@@ -522,7 +614,7 @@ void *writemod(void *work)
                             EllipChanged = false;
                         }
 
-                        if ( !PBlimit && (p == 0 || EllipChanged || (mod.vars[p][currow[3]] != mod.vars[0][currow[3]] || mod.vars[p][currow[6]] != mod.vars[0][currow[6]]) )) {
+                        if (!PBlimit && (p == 0 || EllipChanged || (mod.vars[p][currow[3]] != mod.vars[0][currow[3]] || mod.vars[p][currow[6]] != mod.vars[0][currow[6]]))) {
                             if (mod.models[m] != 0) {
                                 UVRad = Ellip*(mod.vars[p][currow[3]]/2.0);
                                 tempAmp = 1.0;
@@ -596,7 +688,7 @@ void *writemod(void *work)
                 if (compFixed && (mode != -5)) { // Add from model array (scaling with flux)
                     if (vis.isGain[cIF][t]!=0) {
                         for (p = 0; p < pmax; p++) {
-                            if (vis.isGain[cIF][t]!=0) {
+                            if (vis.isGain[cIF][t] != 0) {
                                 tempR = mod.ModVis[cIF][k].real()*mod.fixp[p][j];
                                 tempI = mod.ModVis[cIF][k].imag()*mod.fixp[p][j];
                                 tempRe[p] += totGain[p].real()*tempR - totGain[p].imag()*tempI;
@@ -661,20 +753,8 @@ void *writemod(void *work)
 }
 // END OF CODE FOR THE WORKERS
 
-// SET THE NUMBER OF IFS (IT REINITIATES ALL SHARED DATA VARIABLES!):
-// USAGE FROM PYTHON: setNspw(i) where i is the number of SPW
-static PyObject *setNspw(PyObject *self, PyObject *args)
+int setupSPW(int i)
 {
-    int i = 0;
-    if (!PyArg_ParseTuple(args, "i",&i)) {
-        fprintf(stderr, "failed to call setNspw!\n");
-        fflush(stdout);
-        return NULL;
-    }
-#ifdef DEBUG
-    printf("inside uvmod.setNspw: %i\n", i);
-#endif
-
     vis.nnu.resize(i);
     vis.nt.resize(i);
     master.t0.resize(i);
@@ -703,8 +783,22 @@ static PyObject *setNspw(PyObject *self, PyObject *args)
     vis.Stretch.resize(i);
     mod.Gain.resize(i);
 
-    Nspw = i;
-    // printf("successfully set Nspw to %i\n", Nspw);
+    return i;
+}
+
+// SET THE NUMBER OF IFS (IT REINITIATES ALL SHARED DATA VARIABLES!):
+// USAGE FROM PYTHON: setNspw(i) where i is the number of SPW
+static PyObject *setNspw(PyObject *self, PyObject *args)
+{
+    int i = 0;
+    if (!PyArg_ParseTuple(args, "i",&i)) {
+        fprintf(stderr, "failed to call setNspw!\n");
+        return NULL;
+    }
+#ifdef DEBUG
+    printf("inside uvmod.setNspw: %i\n", i);
+#endif
+    Nspw = setupSPW(i);
 
     PyObject *ret = Py_BuildValue("i", Nspw);
     return ret;
@@ -715,32 +809,18 @@ static PyObject *setNspw(PyObject *self, PyObject *args)
 static PyObject *setNCPU(PyObject *self, PyObject *args)
 {
     int i, j, k, k0, k1;
+
     if (!PyArg_ParseTuple(args, "i", &i)) {
         fprintf(stderr, "failed to call setNCPU!\n");
-        fflush(stdout);
         return NULL;
     }
 #ifdef DEBUG
     printf("inside uvmod.setNCPU: %i\n",i);
 #endif
 
-    // printf("Preparing memory for %i workers\n", i);
-    // for (j = 0; j < NCPU; j++) {
-    // delete[] worker[j].t0;
-    // delete[] worker[j].t1;
-    // }
-
-    // if (NCPU > 0) {
-    //     // delete[] worker;
-    //     // delete[] mod.Chi2;
-    //     // delete[] mod.WorkHess;
-    //     // delete[] mod.WorkGrad;
-    // }
-
     worker.resize(i);
-    // printf("Preparing workers for %i spectral windows\n", Nspw);
     for (k = 0; k < i; k++) {
-        if (Nspw <= 0) Nspw = 1;
+        if (Nspw <= 0) Nspw = setupSPW(1);
         worker[k].t0.resize(Nspw);
         worker[k].t1.resize(Nspw);
         worker[k].Iam = k;
@@ -763,10 +843,6 @@ static PyObject *setNCPU(PyObject *self, PyObject *args)
     mod.WorkHess.resize(i);
     mod.WorkGrad.resize(i);
     mod.Chi2.resize(i);
-    // for (int j = 0; j < i; j++) {
-    //     mod.WorkHess[j] = NULL;
-    //     mod.WorkGrad[j] = NULL;
-    // }
     NCPU = i;
 
     PyObject *ret = Py_BuildValue("i", NCPU);
@@ -788,7 +864,6 @@ static PyObject *setData(PyObject *self, PyObject *args)
                           &pfreqs, &pfittable, &pwgtcorr, &dtime, &tArr, &tIdx, &RAoffset, &Decoffset,
                           &Stretchoff, &ant1l, &ant2l, &iG, &Nants)) {
         fprintf(stderr, "failed to call setData!\n");
-        fflush(stdout);
         return NULL;
     }
 
@@ -796,52 +871,52 @@ static PyObject *setData(PyObject *self, PyObject *args)
     printf("inside uvmod.setData: IF: %i, Ants: %i\n", IF, Nants);
 #endif
 
-    show_info("pu", pu);
-    show_info("pv", pv);
-    show_info("pw", pw);
+    show_info("vis.uv[0]", pu, IF);
+    show_info("vis.uv[1]", pv, IF);
+    show_info("vis.uv[2]", pw, IF);
 
     vis.uv[0][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pu, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.uv[1][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pv, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.uv[2][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pw, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("pwgt", pwgt);
-    show_info("pwgtcorr", pwgtcorr);
+    show_info("vis.wgt[0]", pwgt, IF);
+    show_info("vis.wgt[1]", pwgtcorr, IF);
     vis.wgt[0][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pwgt, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.wgt[1][IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pwgtcorr, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("preal", preal);
-    show_info("poreal", poreal);
+    show_info("vis.ObsVis", preal, IF);
+    show_info("mod.ModVis", poreal, IF);
     vis.ObsVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(preal, NPY_COMPLEX128, NPY_IN_ARRAY));
     mod.ModVis[IF] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(poreal, NPY_COMPLEX128, NPY_IN_ARRAY));
 
-    show_info("pfreqs", pfreqs);
+    show_info("vis.freqs", pfreqs, IF);
     vis.freqs[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(pfreqs, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("pfittable", pfittable);
+    show_info("vis.fittable", pfittable, IF);
     vis.fittable[IF] = (int8_t *)PyArray_DATA(PyArray_FROM_OTF(pfittable, NPY_INT8, NPY_IN_ARRAY));
 
-    show_info("dtime", dtime);
+    show_info("vis.dt", dtime, IF);
     vis.dt[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(dtime, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("tArr", tArr);
+    show_info("vis.dttArray", tArr, IF);
     vis.dtArray[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(tArr, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("tIdx", tIdx);
+    show_info("vis.dtIndex", tIdx, IF);
     vis.dtIndex[IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(tIdx, NPY_INT, NPY_IN_ARRAY));
 
-    show_info("RAoffset", RAoffset);
-    show_info("Decoffset", Decoffset);
-    show_info("Stretchoff", Stretchoff);
+    show_info("vis.RAshift", RAoffset, IF);
+    show_info("vis.Decshift", Decoffset, IF);
+    show_info("vis.Stretch", Stretchoff, IF);
     vis.RAshift[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(RAoffset, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.Decshift[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(Decoffset, NPY_DOUBLE, NPY_IN_ARRAY));
     vis.Stretch[IF] = (double *)PyArray_DATA(PyArray_FROM_OTF(Stretchoff, NPY_DOUBLE, NPY_IN_ARRAY));
 
-    show_info("ant1l", ant1l);
-    show_info("ant2l", ant2l);
+    show_info("vis.ants[0]", ant1l, IF);
+    show_info("vis.ants[1]", ant2l, IF);
     vis.ants[0][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant1l, NPY_INT, NPY_IN_ARRAY));
     vis.ants[1][IF] = (int *)PyArray_DATA(PyArray_FROM_OTF(ant2l, NPY_INT, NPY_IN_ARRAY));
 
-    show_info("iG", iG);
+    show_info("vis.isGain", iG, IF);
     vis.isGain[IF] = (int8_t *)PyArray_DATA(PyArray_FROM_OTF(iG, NPY_INT8, NPY_IN_ARRAY));
 
     vis.nt[IF] = PyArray_DIM(preal, 0);
@@ -851,7 +926,8 @@ static PyObject *setData(PyObject *self, PyObject *args)
         maxnchan = vis.nnu[IF];
     }
 #ifdef DEBUG
-    printf("inside uvmod.setData: vis.nnu[%d]: %i (maxchan = %i)\n", IF, vis.nnu[IF], maxnchan);
+    printf("inside uvmod.setData: vis.nt[%d]: %i, vis.nnu[%d]: %i (maxchan = %i)\n",
+           IF, vis.nt[IF], IF, vis.nnu[IF], maxnchan);
 #endif
 
     Py_RETURN_TRUE;
@@ -869,12 +945,13 @@ PyObject *setModel(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "OOOOOOOOOOOii", &modArr, &HessArr, &GradArr,
                           &VarArr, &FixArr, &dparArr,
                           &propRA, &propDec, &refpos,
-                          &parDep, &aG,&isFixed, &isMixed)) {
+                          &parDep, &aG, &isFixed, &isMixed)) {
         fprintf(stderr, "failed to call setModel!\n");
-        fflush(stdout);
         return NULL;
     }
 #ifdef DEBUG
+    printf("inside uvmod.setModel: parDep is list? %i\n", PyList_Check(parDep));
+    printf("inside uvmod.setModel: len(parDep) = %d\n", (int)PyList_Size(parDep));
     printf("inside uvmod.setModel: isFixed: %i, isMixed: %i\n", isFixed, isMixed);
 #endif
 
@@ -883,13 +960,13 @@ PyObject *setModel(PyObject *self, PyObject *args)
     compFixed = isFixed == 1;
     MixedG = isMixed == 1;
 
-    show_info("modArr", modArr);
-    show_info("HessArr", HessArr);
-    show_info("GradArr", GradArr);
-    show_info("dparArr", dparArr);
-    show_info("propRA", propRA);
-    show_info("propDec", propDec);
-    show_info("refpos", refpos);
+    show_info("mod.models", modArr);
+    show_info("mod.Hessian", HessArr);
+    show_info("mod.Gradient", GradArr);
+    show_info("mod.dpar", dparArr);
+    show_info("mod.muRA", propRA);
+    show_info("mod.muDec", propDec);
+    show_info("vis.phaseCenter", refpos);
 
     mod.models = (int *)PyArray_DATA(PyArray_FROM_OTF(modArr, NPY_INT32, NPY_IN_ARRAY));
     mod.Hessian = (double *)PyArray_DATA(PyArray_FROM_OTF(HessArr, NPY_DOUBLE, NPY_IN_ARRAY));
@@ -903,9 +980,15 @@ PyObject *setModel(PyObject *self, PyObject *args)
     sinDecRef = sin(vis.phaseCenter[1]);
 
     ncomp = PyArray_DIM(modArr, 0);
+#ifdef DEBUG
+    for (i = 0; i < ncomp; i++)
+        printf("setModel: model[%d] = %d\n", i, mod.models[i]);
+#endif
     npar = PyArray_DIM(GradArr, 0);
     Nants = (int)PyList_Size(parDep);
 #ifdef DEBUG
+    printf("setModel: ncomp = %ld\n", PyArray_DIM(modArr, 0));
+    printf("setModel: npar = %ld\n", PyArray_DIM(GradArr, 0));
     printf("setModel: Nants = %d\n", Nants);
 #endif
 
@@ -914,6 +997,7 @@ PyObject *setModel(PyObject *self, PyObject *args)
 
     for (i = 0; i < Nants; i++) {
         mod.nparAnt[i] = PyArray_DIM(PyList_GetItem(parDep, i), 0);
+        show_info("mod.parAnt", PyList_GetItem(parDep, i), i);
         mod.parAnt[i] = (int *)PyArray_DATA(PyArray_FROM_OTF(PyList_GetItem(parDep, i), NPY_INT32, NPY_IN_ARRAY));
     }
 
@@ -923,7 +1007,7 @@ PyObject *setModel(PyObject *self, PyObject *args)
             mod.Gain[IF][j].resize(mod.nparAnt[j]);
             for (i = 0; i < mod.nparAnt[j]; i++) {
                 tempArr = PyList_GetItem(PyList_GetItem(PyList_GetItem(aG, IF), j), i);
-                // vsize = PyArray_SIZE(tempArr);
+                show_info("mod.Gain", tempArr, IF);
                 mod.Gain[IF][j][i] = (cplx64 *)PyArray_DATA(PyArray_FROM_OTF(tempArr, NPY_COMPLEX128, NPY_IN_ARRAY));
             }
         }
@@ -931,21 +1015,21 @@ PyObject *setModel(PyObject *self, PyObject *args)
 
     HankelOrder = PyArray_DIM(PyList_GetItem(VarArr, 0), 1) - NparMax;
 #ifdef DEBUG
-    printf("setModel: parameters: %d %d %d\n", HankelOrder, NparMax, npar);
+    printf("setModel - HankelOrder: %d, NparMax:  %d, npar: %d\n", HankelOrder, NparMax, npar);
 #endif
 
-    // delete[] mod.vars;
-    // delete[] mod.fixp;
     mod.vars.resize(npar+1);
     mod.fixp.resize(npar+1);
 
     for (i = 0; i < (npar+1); i++) {
         tempArr = PyList_GetItem(VarArr, i);
+        show_info("mod.vars", tempArr, i);
         mod.vars[i] = (double *)PyArray_DATA(PyArray_FROM_OTF(tempArr, NPY_DOUBLE, NPY_IN_ARRAY));
     }
 
     for (i = 0; i < (npar+1); i++) {
         tempArr = PyList_GetItem(FixArr, i);
+        show_info("mod.fixp", tempArr, i);
         mod.fixp[i] = (double *)PyArray_DATA(PyArray_FROM_OTF(tempArr, NPY_DOUBLE, NPY_IN_ARRAY));
     }
 
@@ -962,29 +1046,12 @@ static PyObject *setWork(PyObject *self, PyObject *args)
         mod.WorkHess[i].resize(npar*npar);
         mod.WorkGrad[i].resize(npar);
     }
-    //   printf("     setWork %i\n\n",NCPU);
+#ifdef DEBUG
+    printf("inside uvmod.setWork: using %i CPUs\n", NCPU);
+#endif
 
-    PyObject *ret = Py_BuildValue("i", 10);
-    return ret;
+    Py_RETURN_TRUE;
 }
-
-// Deallocate the memory allocated with setWork.
-// USAGE FROM PYTHON: unsetWork() with no arguments.
-//                    (obviously, setWork must be run first!)
-// static PyObject *unsetWork(PyObject *self, PyObject *args)
-// {
-//     // int i;
-//     printf("\n UNSET WORK! %i\n", NCPU);
-//     // for (i = 0; i < NCPU; i++) {
-//     //     if (mod.WorkHess[i]) delete mod.WorkHess[i];
-//     //     if (mod.WorkGrad[i]) delete mod.WorkGrad[i];
-//     // }
-
-//     // delete WorkHess;
-//     // delete WorkGrad;
-//     PyObject *ret = Py_BuildValue("i", 10);
-//     return ret;
-// }
 
 /* Main Python function. It spreads the work through the workers */
 // USAGE FROM PYTHON: modelcomp(IF, nui, opts) (see Python code for info).
@@ -998,12 +1065,8 @@ static PyObject *modelcomp(PyObject *self, PyObject *args)
     /* Parse the input tuple */
     if (!PyArg_ParseTuple(args, "iii", &cIF, &nui, &mode)) {
         fprintf(stderr, "failed to call modelcomp!\n");
-        fflush(stdout);
         return NULL;
     }
-#ifdef DEBUG
-    printf("inside uvmod.modelcomp: IF: %i nui: %i mode: %i\n", cIF, nui, mode);
-#endif
 
     // Zero the workers memory:
     for (i = 0; i < NCPU; i++) {
@@ -1053,6 +1116,9 @@ static PyObject *modelcomp(PyObject *self, PyObject *args)
         }
     }
 
+#ifdef DEBUG
+    printf("uvmod.modelcomp: IF: %i nui: %i mode: %i ChiSq: %.8e\n", cIF, nui, mode, totChi);
+#endif
     /* Update references and set the return value */
     PyObject *ret = Py_BuildValue("d", totChi);
 
@@ -1066,7 +1132,6 @@ static PyObject *QuinnFF(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "iiii", &IFFit, &refant, &doModel, &doGlobal)) {
         fprintf(stderr, "failed to call QuinnFringe!\n");
-        fflush(stdout);
         return NULL;
     }
     PyObject *ret;

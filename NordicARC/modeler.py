@@ -63,8 +63,8 @@ class Modeler():
         self.logger.debug("modeler::__init__")
         self.model = get_list_of_strings(model)
 
-        self.propRA = np.zeros(len(model), dtype=np.float64)
-        self.propDec = np.zeros(len(model), dtype=np.float64)
+        self.propRA = np.zeros(len(self.model), dtype=np.float64)
+        self.propDec = np.zeros(len(self.model), dtype=np.float64)
         self.fixed = fixed
         if isinstance(fixedvar, list) and all(isinstance(elem, (int, float)) for elem in fixedvar):
             self.fixedvar = fixedvar
@@ -168,13 +168,11 @@ class Modeler():
         self.gainFunction = [self.phase_gainsNuT, self.amp_gainsNuT, self.phase_gainsNu,
                              self.amp_gainsNu, self.phase_gainsT, self.amp_gainsT]
         self.check_model_consistency()
-        if mixed_phase != mixed_amp:
-            self.logger.error("inconsistent 'amp_gains' and 'phase_gains'")
         self.useGains = list(self.phase_gainsNuT.keys()) + list(self.amp_gainsNuT.keys()) \
             + list(self.phase_gainsNu.keys()) + list(self.amp_gainsNu.keys()) \
             + list(self.phase_gainsT.keys()) + list(self.amp_gainsT.keys())
 
-        self.isMixed = mixed_phase
+        self.isMixed = mixed_phase or mixed_amp
 
     def dump(self):
         temp = vars(self)
@@ -355,6 +353,12 @@ class Modeler():
             self.logger.error("'scalefix' should be a string!")
             return False
 
+        for gains in [self.phase_gainsNuT, self.amp_gainsNuT,
+                      self.phase_gainsNu,  self.amp_gainsNu,
+                      self.phase_gainsT,   self.amp_gainsT]:
+            for key in gains:
+                indices += self.get_parameter_indices(gains[key])
+
         indices += self.get_parameter_indices(self.scalefix)
         maxpar = max(indices)
         if len(self.p_ini) != maxpar + 1:
@@ -455,6 +459,7 @@ class Modeler():
     def _compile_gains(self):
         """ Compile the functions related to the antenna gains."""
         self.logger.debug("Modeler::_compile_gains")
+
         if self.isMixed:
             self.phaseAntsFunc = [lambda t, nu, p: 0.0 for i in range(self.Nants)]
             self.ampAntsFunc = [lambda t, nu, p: 1.0 for i in range(self.Nants)]
@@ -662,6 +667,7 @@ class Modeler():
                         self.varbuffer[j][midx, i, :nnu] = tv
 
         CurrChi = self.residuals(self.par2[2, :], -1, dof=False)
+        print(f"CurrChi: {CurrChi}")
         Hessian2[:, :] = self.Hessian * (self.par2[1, :])[np.newaxis, :] * (self.par2[1, :])[:, np.newaxis]
         Gradient2[:] = self.Gradient * self.par2[1, :]
         backupHess[:, :] = Hessian2
@@ -808,10 +814,10 @@ class Modeler():
             Nchan = len(self.freqs[spw])
             Nint = len(self.dtArr[spw])
             for i in self.useGains:
-                for j, pardep in self.parDependence[i]:
+                for j, pardep in enumerate(self.parDependence[i]):
                     ptemp = list(pars)   # [pi for pi in pars]
                     if j > 0:
-                        j2 = pardep[j] - 1
+                        j2 = pardep - 1
                         ptemp[j2] += self.dpar[j2]
                     if nui == -1:
                         if self.isMixed:
@@ -880,9 +886,7 @@ class Modeler():
         then the "writeModel" method of the parent UVMultiFit instance is called."""
 
         self.logger.debug("Modeler::residuals")
-        # f = open("casa6", "a")
 
-        #  varsize = self.maxNvar + self._hankel_order
         if mode in [0, -3]:
             self.calls = 0
         else:
@@ -977,8 +981,6 @@ class Modeler():
                              + "Maybe the current fitted value of flux (and/or size) is negative!"
                              + "Please, set BOUNDS to the fit!")
 
-        # print("ChiSq: %.7f" % (ChiSq,), file=f)
-        # f.close()
         if mode in [-1, -2, -3]:
             if dof:
                 self.calls = 0
@@ -1051,7 +1053,7 @@ class Modeler():
             self.fittablebool.append([])
             self.isGain.append([])
 
-            self.iscancoords = self.iscancoords
+            self.iscancoords = ms.iscancoords
 
             self.freqs.append(np.require(ms.averfreqs[spidx], requirements=['C', 'A']))
             self.maxnfreq = max(self.maxnfreq, len(ms.averfreqs[spidx]))
@@ -1072,7 +1074,7 @@ class Modeler():
             PBFactor = -np.sqrt(ms.KfacWgt[ms.ant1[spidx]] * ms.KfacWgt[ms.ant2[spidx]])
 
             # Set number of antennas and whether each one has a fittable gain:
-            self.Nants = self.Nants
+            self.Nants = ms.Nants
             self.isGain[-1] = np.require(np.zeros(len(ms.t[spidx]), dtype=np.int8), requirements=['C', 'A'])
             for i in self.useGains:
                 mask0 = self.ants[-1][0] == i
@@ -1083,8 +1085,8 @@ class Modeler():
             del ulambda, vlambda, wlambda
 
             # Time spent on observation:
-            self.dt[-1] = np.require(ms.t[spidx] - self.t0, requirements=['C', 'A'])
-            self.dtArr[-1] = np.require(ms.tArr[spidx] - self.t0, requirements=['C', 'A'])
+            self.dt[-1] = np.require(ms.t[spidx] - ms.t0, requirements=['C', 'A'])
+            self.dtArr[-1] = np.require(ms.tArr[spidx] - ms.t0, requirements=['C', 'A'])
             self.dtIdx[-1] = np.require(ms.tIdx[spidx], requirements=['C', 'A'])
 
             # Array to save the residuals (or model, or any output from the C++ library):
@@ -1211,7 +1213,7 @@ class Modeler():
             return False
 
         goodinit = uvmod.setWork()
-        if goodinit != 10:
+        if not goodinit:
             self.logger.error("Memory allocation error!")
 
         # self.bounds = self.bounds
@@ -1414,6 +1416,7 @@ class Modeler():
                 # There are 0 'really-free' parameters?! Watch out!!
                 ChiSq = fit[2]
             Nvis = ndata
+            self.logger.info(f"number of visibilities (deg.of freedom): {Nvis}")
 
             fiterrors = [np.sqrt(fit[1][i, i] * ChiSq) for i in range(npars)]
             covariance = fit[1] * ChiSq

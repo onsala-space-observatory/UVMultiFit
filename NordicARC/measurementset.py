@@ -410,7 +410,6 @@ class MeasurementSet():
 
     def get_field_data(self, fieldid, scan, masksc, msname, vis_index, rang,
                        sp, si, max_tIndex, i0scan, takeModel):
-        self.logger.info(f"reading scan #{scan}, field: {fieldid}")
         F = self.get_field_id(msname, masksc, fieldid, takeModel, self.column)
         maskfld, uvscan, times, datascan = F
         if len(maskfld) == 0:
